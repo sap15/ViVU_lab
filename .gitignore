@@ -131,7 +131,7 @@ coverage_report.csv
 # Directorios de datos locales
 # ---------------------------------------------------------------------------
 
-data/
+/data/
 datasets/
 raw_data/
 processed_data/

@@ -51,6 +51,9 @@ data:
   chain_id: A
   protein_id: PKP2
   native_wt_id: PKP2_WT
+  infer_is_mutation_from_diff: true
+  require_explicit_is_mutation: false
+  require_custom_complex_energy_phenotype: false
 
   # Convención de claves/identificadores del proyecto.
   variant_id_pattern: "pos_<position>_<wt_aa>_<mut_aa>"
@@ -127,6 +130,25 @@ features:
     - sequential_relation
 
   graph_groups: []
+  use_global_energy: false
+  allow_var_features_for_audit: true
+
+  node_feature_policy:
+    allow_nonnumeric_node_features: false
+    on_nonnumeric_selected_feature: error
+    on_nonnumeric_unselected_feature: warn
+
+  excluded_from_encoder_base:
+    - diff_polarity
+
+  derived_numeric_features:
+    diff_polarity_numeric:
+      enabled: false
+      source: diff_polarity
+      requires_explicit_mapping: true
+      default_for_wt_companion: 0.0
+      default_for_truncation: 0.0
+      add_mask: true
 
   # Metadatos que deben conservarse pero no entrar automáticamente en x.
   node_metadata:
@@ -254,6 +276,26 @@ features:
     - lost_fraction_seq
     - lost_residues_seq
     - res_depth_missing
+
+targets:
+  supervised_phenotype:
+    enabled: false
+    name: custom_complex_energy_phenotype
+    required: false
+
+audit:
+  mutation_node_detection:
+    diff_probes:
+      - diff_mass
+      - diff_charge
+      - diff_pI
+      - diff_size
+      - diff_polarity
+      - diff_hb_donors
+      - diff_hb_acceptors
+    expected_missense_mutation_nodes: 1
+    expected_wt_mutation_nodes: 0
+    expected_truncation_mutation_nodes: 0
 
 model:
   architecture: siamese_shared_encoder
