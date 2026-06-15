@@ -301,6 +301,54 @@ Debe utilizarse:
 
 La política aplicada debe registrarse en `run_manifest.json`.
 
+## 5.6. Esquema real observado del HDF5 actual
+
+La validación y la auditoría del dataset deben reflejar el esquema real
+observado del HDF5 actual, no un esquema idealizado.
+
+- El HDF5 actual contiene `node_features`, `edge_features`, `graph_features`,
+  variables `diff_*`, máscaras `mask_diff_*`, variables auxiliares `var_*` y
+  `custom_structure_energy`.
+- El HDF5 actual no contiene `custom_complex_energy_phenotype`. Su ausencia no
+  debe bloquear la carga ni producir un error de validación en la fase actual.
+  Debe registrarse como warning y desactivar cualquier entrenamiento
+  supervisado que dependa de ese target.
+- El HDF5 actual no contiene `is_mutation` como canal explícito almacenado.
+  `is_mutation` debe reconstruirse durante la carga usando los canales `diff_*`
+  disponibles y una política declarada en configuración.
+- Para un mutante missense debe detectarse exactamente un nodo mutado.
+- Para un WT companion y para variantes truncadas/`STOP` deben detectarse cero
+  nodos mutados.
+- `custom_structure_energy` puede existir como graph feature, pero no debe
+  entrar en el encoder base. Se trata inicialmente como confusor, variable de
+  auditoría, variable de estratificación, análisis post hoc o ablación
+  explícita.
+- Las variables `var_*`, por ejemplo `var_HSE`, `var_SASA`, `var_SSnum` o
+  `var_contact_count_rings_*`, pueden auditarse y utilizarse en la construcción
+  declarada de diferencias estructurales, pero no deben introducirse como
+  inputs base por defecto.
+- `diff_polarity` puede aparecer como campo no numérico o como codificación que
+  no debe asumirse compatible con el encoder base. El HDF5 original no debe
+  modificarse para corregirlo ni reescribirse para forzar un tipo numérico.
+- `diff_polarity` no entra en el encoder base salvo que exista una conversión
+  numérica declarada explícitamente, por ejemplo `diff_polarity_numeric`, con
+  mapping documentado y máscara asociada.
+- En WT companion, los canales diferenciales numéricos que sí entren al encoder
+  deben permanecer en cero o quedar enmascarados según la política declarada.
+- Los `diff_*` precomputados son inputs auxiliares o diferenciales del loader,
+  no la comparación relacional principal del modelo.
+- `r_delta` se calcula después del encoder a partir de `h_mut` y `h_wt` reales:
+  `concat(h_mut, h_wt, h_mut - h_wt, abs(h_mut - h_wt), h_mut * h_wt)`. No
+  depende de restar directamente un canal textual como `diff_polarity` ni
+  compara implícitamente un mutante frente a un vector cero.
+- La conectividad se acepta con `edge_features/_index` en orientación `(E, 2)`.
+  Para PyTorch Geometric debe convertirse en memoria a `(2, E)` sin modificar
+  los HDF5 originales.
+
+La ausencia de estos campos opcionales o la reconstrucción de `is_mutation`
+deben quedar documentadas por run en la auditoría del dataset y en el
+`run_manifest.json`.
+
 ---
 
 # 6. Grupos de features

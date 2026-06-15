@@ -94,3 +94,37 @@ for path in sorted(Path("sample_data/examples").glob("*.hdf5")):
 Consulta `sample_schema.json` para ver la jerarquía, los nombres y el orden de
 features, dtypes, shapes, máscaras, reglas de `is_mutation` y emparejamiento
 Mutante–WT.
+
+## Notas sobre el esquema real del HDF5
+
+El esquema real observado en los HDF5 actuales debe prevalecer sobre cualquier
+suposición derivada del informe o de código legacy.
+
+- Los HDF5 actuales contienen `node_features`, `edge_features`,
+  `graph_features`, grupos `diff_*`, máscaras `mask_diff_*`, variables `var_*`
+  y `custom_structure_energy`.
+- Los HDF5 actuales no contienen `custom_complex_energy_phenotype`.
+- Los HDF5 actuales no contienen `is_mutation` como canal explícito
+  almacenado. Ese canal debe reconstruirse durante la carga a partir de los
+  canales `diff_*` disponibles.
+- Para mutantes missense debe detectarse exactamente un nodo mutado.
+- Para WT companion y para variantes truncadas/`STOP` debe detectarse cero
+  nodos mutados.
+- `custom_structure_energy` existe, pero no debe entrar en el encoder base. Se
+  conserva como variable de auditoría, confusor, estratificación, análisis
+  post hoc o ablación explícita.
+- Las variables `var_*`, por ejemplo `var_HSE`, `var_SASA`, `var_SSnum` o
+  `var_contact_count_rings_*`, pueden auditarse o utilizarse en la construcción
+  declarada de diferencias estructurales, pero no deben activarse como input
+  base si la configuración no lo declara de forma explícita.
+- `diff_polarity` puede aparecer codificado de forma no numérica. La auditoría
+  debe reportarlo como warning y recomendar su exclusión del encoder base.
+- `diff_polarity` no se usa como input base del encoder. Si se desea usarlo,
+  debe definirse una feature derivada como `diff_polarity_numeric` con mapping
+  explícito y máscara asociada.
+- `edge_features/_index` se observa con orientación `(E, 2)`. Para PyTorch
+  Geometric debe convertirse a `(2, E)` durante la carga, sin modificar el HDF5
+  original.
+
+Estas notas son documentales y operativas. No autorizan a regenerar, corregir o
+reescribir los HDF5 originales del proyecto.
