@@ -1,0 +1,236 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Variables de entorno y credenciales
+.env
+.env.*
+!.env.example
+
+# Distribución y empaquetado
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# ---------------------------------------------------------------------------
+# Jupyter / Google Colab
+# ---------------------------------------------------------------------------
+
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# Archivos temporales de Colab
+/content/
+drive/
+MyDrive/
+
+# ---------------------------------------------------------------------------
+# Datos estructurales y científicos grandes
+# ---------------------------------------------------------------------------
+
+*.h5
+*.hdf5
+*.hdf
+*.pdb
+*.cif
+*.mmcif
+*.bcif
+*.mmtf
+
+# Permitir únicamente las muestras pequeñas y explícitas del repositorio
+!sample_data/examples/
+!sample_data/examples/*.h5
+!sample_data/examples/*.hdf5
+!sample_data/examples/**/*.h5
+!sample_data/examples/**/*.hdf5
+
+# Permitir esquemas y documentación de la muestra
+!sample_data/README.md
+!sample_data/sample_schema.json
+
+# ---------------------------------------------------------------------------
+# Tensores, embeddings, arrays y modelos entrenados
+# ---------------------------------------------------------------------------
+
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.joblib
+
+# Permitir únicamente pequeños fixtures sintéticos si se añaden explícitamente
+!tests/fixtures/**/*.npy
+!tests/fixtures/**/*.npz
+!tests/fixtures/**/*.pkl
+
+# ---------------------------------------------------------------------------
+# Resultados de entrenamiento y análisis
+# ---------------------------------------------------------------------------
+
+runs/
+results/
+outputs/
+checkpoints/
+artifacts/
+logs/
+reports/generated/
+
+# Resultados frecuentes del proyecto
+embeddings/
+clustering/
+shortcuts/
+figures/
+tensorboard/
+wandb/
+
+# Archivos generados por runs
+run_manifest.json
+config_resolved.yaml
+environment.json
+git_state.json
+metrics.csv
+metrics.json
+gradient_audit.json
+dataset_audit.json
+dataset_audit.csv
+rejected_cases.csv
+feature_inventory.json
+coverage_report.csv
+
+# ---------------------------------------------------------------------------
+# Directorios de datos locales
+# ---------------------------------------------------------------------------
+
+data/
+datasets/
+raw_data/
+processed_data/
+inputs_pdb/
+mutantes_output/
+proc_*/
+wt_companion*/
+legacy_data/
+
+# Permitir documentación o marcadores dentro de carpetas vacías
+!data/README.md
+!data/.gitkeep
+!datasets/README.md
+!datasets/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Archivos del proyecto que no deben subirse por tamaño
+# ---------------------------------------------------------------------------
+
+proc_*.hdf5
+wt_companion*.hdf5
+PKP2_WT.pdb
+pos_*.pdb
+
+# ---------------------------------------------------------------------------
+# Logs, temporales y cachés
+# ---------------------------------------------------------------------------
+
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.cache/
+tmp/
+temp/
+
+# ---------------------------------------------------------------------------
+# IDEs y editores
+# ---------------------------------------------------------------------------
+
+.vscode/
+.idea/
+*.code-workspace
+
+# Permitir configuración compartida futura de VS Code si se decide versionarla
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ---------------------------------------------------------------------------
+# Sistema operativo
+# ---------------------------------------------------------------------------
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+# ---------------------------------------------------------------------------
+# Herramientas y experimentos opcionales
+# ---------------------------------------------------------------------------
+
+wandb/
+mlruns/
+lightning_logs/
+ray_results/
+optuna_storage/
+.prof/
+profile_results/
+
+# ---------------------------------------------------------------------------
+# Archivos comprimidos y copias de datos
+# ---------------------------------------------------------------------------
+
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Permitir paquetes pequeños de ejemplo si se autorizan explícitamente
+!sample_data/examples/*.zip
+
+# ---------------------------------------------------------------------------
+# Reglas finales del proyecto
+# ---------------------------------------------------------------------------
+
+# Nunca subir archivos HDF5, PDB, checkpoints o embeddings completos.
+# Solo se permiten muestras pequeñas en sample_data/examples/.
+#
+# Antes de hacer commit:
+#   git status --short
+#   git check-ignore -v RUTA_DEL_ARCHIVO
+#
+# Si se necesita versionar un archivo ignorado de forma excepcional:
+# 1. comprobar que es pequeño y no contiene información sensible;
+# 2. añadir una excepción específica, no una excepción global;
+# 3. documentar la decisión en docs/decisiones_arquitectonicas.md.

@@ -1,0 +1,201 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "gnn-siamese-pkp2"
+version = "0.1.0"
+description = "GNN siamesa Edge-Aware para el análisis mecanístico de mutantes missense de PKP2 mediante comparación Mutante-WT."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [
+    { name = "Proyecto GNN siamés PKP2" }
+]
+keywords = [
+    "bioinformatics",
+    "structural-bioinformatics",
+    "graph-neural-networks",
+    "protein-variants",
+    "missense-variants",
+    "pkp2",
+    "pytorch-geometric",
+    "contrastive-learning",
+]
+
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: POSIX :: Linux",
+]
+
+# Las dependencias de ejecución se mantienen inicialmente vacías para evitar
+# duplicarlas con requirements-colab.txt y, especialmente, para no fijar
+# versiones arbitrarias de PyTorch/PyTorch Geometric antes de validar Colab.
+#
+# Cuando se estabilice el entorno, las dependencias comunes y seguras podrán
+# trasladarse aquí, manteniendo extras separados para desarrollo, Colab y
+# análisis.
+dependencies = []
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "build",
+]
+analysis = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "networkx",
+    "umap-learn",
+]
+data = [
+    "h5py",
+    "PyYAML",
+    "tqdm",
+    "packaging",
+    "typing-extensions",
+]
+logging = [
+    "tensorboard",
+]
+
+
+[project.urls]
+Documentation = "https://github.com/TU_USUARIO/GNN_siames_PKP2/tree/main/docs"
+Repository = "https://github.com/TU_USUARIO/GNN_siames_PKP2"
+Issues = "https://github.com/TU_USUARIO/GNN_siames_PKP2/issues"
+
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["gnn_siamese*"]
+exclude = ["tests*", "notebooks*", "sample_data*", "legacy*"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+minversion = "7.0"
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:pkg_resources.*",
+]
+
+markers = [
+    "unit: pruebas unitarias rápidas",
+    "integration: pruebas de integración entre módulos",
+    "slow: pruebas lentas que no se ejecutan en el ciclo rápido",
+    "colab: pruebas específicas del entorno Google Colab",
+    "gpu: pruebas que requieren GPU",
+    "hdf5: pruebas que leen o generan archivos HDF5",
+    "smoke: smoke tests del pipeline completo",
+]
+
+
+[tool.coverage.run]
+branch = true
+source = ["gnn_siamese"]
+omit = [
+    "tests/*",
+    "notebooks/*",
+]
+
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests", "scripts"]
+extend-exclude = [
+    "notebooks",
+    "runs",
+    "outputs",
+    "results",
+    "checkpoints",
+    "sample_data",
+    "legacy",
+]
+
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "B",
+    "UP",
+    "C4",
+    "SIM",
+    "RUF",
+]
+ignore = [
+    "E501",
+]
+
+
+[tool.ruff.lint.isort]
+known-first-party = ["gnn_siamese"]
+
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "src"
+packages = ["gnn_siamese"]
+check_untyped_defs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = true
+exclude = [
+    "notebooks/",
+    "runs/",
+    "outputs/",
+    "results/",
+    "checkpoints/",
+    "legacy/",
+]
+
+
+[tool.setuptools.dynamic]
+# Sección reservada para una futura versión derivada de Git o de un archivo
+# interno. Actualmente la versión se declara de forma explícita en [project].

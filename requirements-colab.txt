@@ -1,0 +1,96 @@
+# Dependencias generales para ejecutar el proyecto GNN_siames_PKP2 en Google Colab.
+#
+# Instalación:
+#   python -m pip install -r requirements-colab.txt
+#
+# IMPORTANTE:
+# - PyTorch no se fija aquí porque Google Colab ya suele incluir una versión.
+# - PyTorch Geometric debe instalarse después de comprobar la versión real de
+#   Python, PyTorch y CUDA disponible en la sesión.
+# - No añadir versiones arbitrarias de torch, torch-geometric, torch-scatter,
+#   torch-sparse, torch-cluster o torch-spline-conv sin verificar primero su
+#   compatibilidad con el entorno.
+# - El notebook 00_validar_entorno.ipynb deberá registrar las versiones
+#   utilizadas en cada ejecución y en run_manifest.json.
+
+# Cálculo científico y manipulación de datos
+numpy
+pandas
+scipy
+
+# Machine learning clásico, métricas y baselines
+scikit-learn
+
+# Visualización
+matplotlib
+
+# Lectura y escritura de grafos HDF5
+h5py
+
+# Configuración YAML
+PyYAML
+
+# Barras de progreso
+tqdm
+
+# Grafos, vecindarios y análisis de red
+networkx
+
+# Reducción dimensional para visualización
+umap-learn
+
+# Tests
+pytest
+
+# Utilidades recomendadas para configuración, validación y CLI
+typing-extensions
+packaging
+
+# Registro y monitorización del entrenamiento
+tensorboard
+
+# Dependencias opcionales del proyecto.
+# Descomentar únicamente cuando el módulo correspondiente se implemente y pruebe.
+#
+# pyarrow          # Exportación eficiente a Parquet
+# joblib           # Persistencia y paralelización de baselines
+# psutil           # Auditoría de memoria y recursos
+# rich             # Salida de terminal estructurada
+# wandb            # Seguimiento externo de experimentos
+# xgboost          # Baseline tabular
+# lightgbm         # Baseline tabular
+# hdbscan          # Clustering basado en densidad
+# biopython        # Lectura y validación adicional de estructuras PDB
+
+# ---------------------------------------------------------------------------
+# PyTorch y PyTorch Geometric
+# ---------------------------------------------------------------------------
+# No incluir aquí hasta validar la sesión de Colab.
+#
+# Comprobación mínima:
+#
+#   import platform
+#   import torch
+#
+#   print("Python:", platform.python_version())
+#   print("PyTorch:", torch.__version__)
+#   print("CUDA de PyTorch:", torch.version.cuda)
+#   print("CUDA disponible:", torch.cuda.is_available())
+#
+# Después debe instalarse una versión compatible de PyTorch Geometric siguiendo
+# la documentación oficial correspondiente a la versión detectada.
+#
+# Paquetes que pueden ser necesarios según la combinación elegida:
+#
+# torch-geometric
+# torch-scatter
+# torch-sparse
+# torch-cluster
+# torch-spline-conv
+#
+# La instalación final validada deberá registrarse en:
+#
+# - notebooks/00_validar_entorno.ipynb
+# - README.md
+# - run_manifest.json
+# - environment.json

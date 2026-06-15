@@ -1,0 +1,730 @@
+# Configuración base conservadora del proyecto GNN siamés PKP2.
+#
+# Este archivo declara la arquitectura objetivo y los valores iniciales.
+# No implica que todos los módulos estén ya implementados.
+#
+# Principios:
+# - encoder compartido Mutante–WT;
+# - NNConv sensible a atributos de arista;
+# - contraste principal entre dos vistas del mismo mutante;
+# - WT como referencia relacional, no como positivo fuerte;
+# - custom_structure_energy fuera del encoder base;
+# - calidad estructural como máscara/filtro, no como input base;
+# - r_delta como baseline relacional;
+# - MLP_delta y projection_pair desactivadas inicialmente;
+# - clustering en el espacio original normalizado;
+# - split inicial leave-position-out;
+# - rutas configurables, sin rutas personales fijas.
+
+project:
+  name: gnn_siamese_pkp2
+  version: "0.1.0"
+  seed: 42
+  description: >-
+    GNN siamesa Edge-Aware para aprender representaciones estructurales,
+    bioquímicas y relacionales de mutantes missense de PKP2 mediante
+    comparación pareada Mutante-WT.
+
+paths:
+  # Directorio raíz con los HDF5 de producción.
+  # Debe proporcionarse por CLI, variable de entorno o configuración local.
+  hdf5_root: null
+
+  # Archivo HDF5 con mutantes reales.
+  mutants_hdf5: null
+
+  # Archivo HDF5 con WT companions.
+  wt_companion_hdf5: null
+
+  # Directorio de salida de ejecuciones.
+  runs_root: runs
+
+  # Esquema documentado de la muestra.
+  sample_schema: sample_data/sample_schema.json
+
+  # Muestra reducida opcional para auditorías y smoke tests.
+  sample_data_root: sample_data
+
+data:
+  format: hdf5
+  resolution: residue
+  chain_id: A
+  protein_id: PKP2
+  native_wt_id: PKP2_WT
+
+  # Convención de claves/identificadores del proyecto.
+  variant_id_pattern: "pos_<position>_<wt_aa>_<mut_aa>"
+  mutant_key_pattern: "residue-srv:<chain>:<position>:<wt_name>-><mut_name>:<variant_id>"
+  wt_key_pattern: "residue-srv:<chain>:<position>:<wt_name>-><wt_name>:PKP2_WT"
+
+  # Emparejamiento Mutante–WT.
+  pairing:
+    enabled: true
+    strategy: chain_position_wt_aa
+    require_same_chain: true
+    require_same_position: true
+    require_same_wt_aa: true
+    reject_missing_wt: true
+    reject_ambiguous_wt: true
+
+  # Carga.
+  lazy_loading: true
+  cache_in_memory: false
+  strict_validation: true
+  allow_empty_targets: true
+
+  # Normalización.
+  normalize_node_features: true
+  normalize_edge_features: true
+  fit_scalers_on_train_only: true
+  epsilon: 1.0e-8
+
+  # Política de valores ausentes.
+  missing_values:
+    policy: mask
+    fill_value: 0.0
+    reject_nan: true
+    reject_inf: true
+    keep_availability_masks: true
+    treat_masked_zero_as_missing: true
+
+  # Nodo mutado.
+  mutation_node:
+    source: diff_features
+    probes:
+      - diff_mass
+      - diff_charge
+      - diff_pI
+      - diff_size
+    epsilon: 1.0e-12
+    require_exactly_one_for_missense: true
+    wt_expected_count: 0
+    create_is_mutation_channel: true
+
+  # Calidad estructural.
+  use_quality_as_input: false
+  quality:
+    use_as_mask: true
+    use_as_filter: true
+    use_as_weight: false
+    use_for_stratification: true
+    reject_low_quality: false
+
+  # Features globales.
+  use_global_energy: false
+  global_features_as_input: []
+
+features:
+  # Los grupos exactos se resolverán contra sample_schema.json.
+  node_groups:
+    - structure
+    - biochemistry
+    - diff_bioq
+
+  edge_groups:
+    - distance
+    - contact
+    - sequential_relation
+
+  graph_groups: []
+
+  # Metadatos que deben conservarse pero no entrar automáticamente en x.
+  node_metadata:
+    - _chain_id
+    - _name
+    - _position
+
+  edge_metadata:
+    - _index
+    - _name
+
+  # Grupo estructural base previsto.
+  structure:
+    enabled: true
+    names:
+      - bsa
+      - hse
+      - res_depth
+      - rsa
+      - sasa
+      - sec_struct
+
+  # Grupo bioquímico base previsto.
+  biochemistry:
+    enabled: true
+    names:
+      - hb_acceptors
+      - hb_donors
+      - hydrophobicity
+      - polarity
+      - res_charge
+      - res_mass
+      - res_pI
+      - res_size
+      - res_type
+
+  # Diferencias bioquímicas Mutante–WT.
+  diff_bioq:
+    enabled: true
+    names:
+      - diff_mass
+      - diff_charge
+      - diff_pI
+      - diff_size
+      - diff_hb_donors
+      - diff_hb_acceptors
+      - diff_polarity
+    require_masks: true
+    mask_prefix: mask_
+
+  # Diferencias todavía no validadas en la muestra.
+  diff_bioq_optional:
+    enabled: false
+    names:
+      - diff_hbond_count
+      - diff_hydrophobicity
+    reason: >-
+      Las máscaras observadas en la muestra indican indisponibilidad;
+      no deben interpretarse como cambios biológicos iguales a cero.
+
+  # Features estructurales diferenciales futuras.
+  diff_struct_node:
+    enabled: false
+    names: []
+
+  # Features auxiliares y futuras.
+  domains:
+    enabled: false
+    names: []
+
+  shells:
+    enabled: false
+    radii_angstrom:
+      - 5.0
+      - 10.0
+      - 15.0
+      - 25.0
+
+  network:
+    enabled: false
+    names: []
+
+  dynamics:
+    enabled: false
+    names: []
+
+  esm_llr:
+    enabled: false
+    names: []
+
+  # Edge features.
+  distance:
+    enabled: true
+    names:
+      - distance
+
+  contact:
+    enabled: true
+    names:
+      - covalent
+      - electrostatic
+      - vanderwaals
+
+  sequential_relation:
+    enabled: true
+    names:
+      - seq_sep
+
+  same_chain:
+    enabled: false
+    names:
+      - same_chain
+    reason: >-
+      En grafos monoméricos de cadena A puede ser constante y redundante.
+
+  # Confusores que se conservan para auditoría, no como inputs base.
+  confounders:
+    - custom_structure_energy
+    - custom_complex_energy_phenotype
+    - graph_num_nodes
+    - graph_num_edges
+    - delta_nodes
+    - wt_length
+    - mut_length
+    - lost_fraction_seq
+    - lost_residues_seq
+    - res_depth_missing
+
+model:
+  architecture: siamese_shared_encoder
+  encoder_type: nnconv
+
+  hidden_dim: 128
+  graph_dim: 128
+  num_layers: 3
+  dropout: 0.1
+  activation: relu
+  normalization: batch_norm
+  residual_connections: true
+
+  # Ambas ramas deben utilizar la misma instancia.
+  shared_weights: true
+
+  edge_aware:
+    enabled: true
+    require_edge_attr: true
+    aggregation: mean
+
+  pooling:
+    global:
+      enabled: true
+      method: mean
+
+    mutation_node:
+      enabled: true
+
+    immediate_neighbors:
+      enabled: true
+      method: attention
+
+    local_shell:
+      enabled: false
+      radius_angstrom: 5.0
+
+    regional_shell:
+      enabled: false
+      radius_angstrom: 15.0
+
+    availability_mask:
+      enabled: true
+
+    fusion:
+      method: concat
+      normalization: layer_norm
+      mlp_enabled: true
+      output_dim: 128
+
+  projection_instance:
+    enabled: true
+    input: h_encoder_mut
+    hidden_dim: 128
+    output_dim: 64
+    num_layers: 2
+    normalize_output: true
+
+  relational:
+    baseline: r_delta
+    include:
+      - h_mut
+      - h_wt
+      - directed_difference
+      - absolute_difference
+      - elementwise_product
+
+    severity:
+      enabled: true
+      metric: euclidean
+      epsilon: 1.0e-8
+
+    mechanism_direction:
+      enabled: true
+      epsilon: 1.0e-8
+
+  mlp_delta:
+    enabled: false
+    input: r_delta
+    hidden_dim: 256
+    output_dim: 128
+    num_layers: 2
+    dropout: 0.1
+    require_explicit_loss: true
+    require_gradient_audit: true
+    require_weight_change: true
+    require_comparison_with_r_delta: true
+
+  projection_pair:
+    enabled: false
+    input: r_delta
+    hidden_dim: 128
+    output_dim: 64
+    num_layers: 2
+    normalize_output: true
+    share_weights_with_projection_instance: false
+
+  bio_head:
+    enabled: false
+    output_dim: 128
+    require_explicit_loss: true
+
+  reconstruction_decoder:
+    enabled: false
+
+augmentation:
+  enabled: true
+  num_views: 2
+
+  # Augmentations conservadoras.
+  feature_dropout:
+    enabled: true
+    probability: 0.02
+    protect:
+      - is_mutation
+      - diff_
+      - mask_
+      - var_
+      - res_id
+      - res_id_norm
+
+  feature_jitter:
+    enabled: true
+    std: 0.005
+    protect:
+      - is_mutation
+      - diff_
+      - mask_
+      - var_
+
+  edge_dropout:
+    enabled: true
+    probability: 0.01
+
+  preserve_mutation_node: true
+  preserve_variant_identity: true
+
+training:
+  device: auto
+  epochs: 100
+  batch_size: 16
+  learning_rate: 0.001
+  weight_decay: 0.0001
+
+  optimizer: adamw
+  scheduler: cosine
+
+  num_workers: 0
+  pin_memory: auto
+  persistent_workers: false
+
+  mixed_precision:
+    enabled: auto
+    gpu_only: true
+
+  gradient_clip_norm: 1.0
+  gradient_accumulation_steps: 1
+
+  early_stopping:
+    enabled: true
+    monitor: validation_loss
+    mode: min
+    patience: 15
+    min_delta: 0.0
+
+  checkpointing:
+    enabled: true
+    save_best: true
+    save_last: true
+    monitor: validation_loss
+    mode: min
+
+  smoke_test:
+    enabled: false
+    max_pairs: 8
+    epochs: 2
+    batch_size: 4
+
+  overfit_test:
+    enabled: false
+    max_pairs: 4
+    epochs: 50
+
+loss:
+  main: nt_xent
+  temperature: 0.2
+
+  # Contraste principal entre dos vistas del mismo mutante.
+  positive_pair: same_mutant_augmentations
+
+  # WT no es positivo contrastivo fuerte por defecto.
+  use_wt_as_strong_positive: false
+
+  lambda_rec: 0.0
+  lambda_var: 0.0
+  lambda_wt: 0.0
+  lambda_delta: 0.0
+
+  false_negative_mask:
+    enabled: false
+    mode: none
+    same_position: false
+    structural_neighbors: false
+    compare_modes:
+      - none
+      - same_position
+      - structural_hard
+      - structural_soft
+    structural_hard:
+      enabled: false
+    structural_soft:
+      enabled: false
+      alpha: 0.5
+      alpha_candidates:
+        - 0.25
+        - 0.5
+    ca_distance_threshold_angstrom: 8.0
+    heavy_atom_contact_threshold_angstrom: 4.5
+    min_valid_negatives: 8
+    min_valid_negative_fraction: 0.25
+    resample_policy: by_position_or_neighborhood
+    fallback_if_insufficient_negatives: vicreg_or_barlow
+    log_per_anchor_statistics: true
+    w_ij_semantics:
+      valid_negative: 1.0
+      hard_mask: 0.0
+      soft_mask: alpha
+    mask_scope: within_batch_only
+    does_not_replace_split: leave_neighborhood_out
+
+  relative_wt:
+    mode: none
+    distance: euclidean
+    margin: 0.0
+    stop_gradient: false
+
+  delta:
+    enabled: false
+    consistency_weight: 0.0
+    variance_weight: 0.0
+    covariance_weight: 0.0
+    descriptor_prediction_weight: 0.0
+    target_groups: []
+
+  reconstruction:
+    enabled: false
+    priority: short_term_after_reproducible_baseline
+    requires:
+      - validated_dataset
+      - shared_encoder
+      - reproducible_self_supervised_baseline
+      - basic_gradient_audit
+      - smoke_test
+      - checkpointing
+    node_mask_fraction: 0.15
+    reconstruct_node_features: true
+    reconstruct_contact_types: false
+    reconstruct_distance_bins: false
+    valid_targets_only: true
+    apply_loss_only_on_masked_and_valid: true
+    explicit_observed_mask_required: true
+    explicit_hidden_mask_required: true
+    explicit_missing_mask_required: true
+    exclude_features:
+      - is_mutation
+      - custom_structure_energy
+    exclude_feature_prefixes:
+      - mask_
+    exclude_metadata:
+      - identifiers
+      - absolute_positions
+      - targets
+      - confounders
+    node_feature_weight: 0.0
+    edge_feature_weight: 0.0
+    compare_against:
+      - nt_xent_without_reconstruction
+      - nt_xent_with_masked_reconstruction
+      - best_negative_free_without_reconstruction
+      - best_negative_free_with_masked_reconstruction
+
+split:
+  type: leave_position_out
+  validation_fraction: 0.15
+  test_fraction: 0.15
+  group_key: position
+  shuffle_groups: true
+  seed: 42
+
+  enforce_no_position_overlap: true
+  enforce_no_variant_overlap: true
+
+  leave_neighborhood_out:
+    enabled: false
+    ca_distance_angstrom: 12.0
+    graph_distance_max: 2
+    reference_structure: null
+
+  leave_domain_out:
+    enabled: false
+
+  leave_structural_region_out:
+    enabled: false
+
+evaluation:
+  representations:
+    export:
+      - h_encoder_mut
+      - h_encoder_wt
+      - r_delta
+      - severity
+      - mechanism_direction
+      - z_instance
+
+    conditional:
+      z_delta:
+        export_only_if_trained: true
+      z_instance_pair:
+        export_only_if_trained: true
+      z_bio:
+        export_only_if_trained: true
+
+  clustering:
+    enabled: true
+    primary_space: r_delta
+    normalize_input: true
+    reduction_before_clustering: none
+
+    methods:
+      - kmeans
+      - hdbscan
+
+    kmeans:
+      k_min: 2
+      k_max: 10
+      n_init: 20
+
+    hdbscan:
+      enabled: false
+      min_cluster_size: 10
+      min_samples: null
+
+    umap:
+      enabled: true
+      purpose: visualization_only
+      n_neighbors: 15
+      min_dist: 0.1
+      metric: euclidean
+      random_state: 42
+
+    pca:
+      enabled: true
+
+    metrics:
+      - silhouette
+      - davies_bouldin
+      - calinski_harabasz
+      - cluster_sizes
+      - singleton_count
+
+  stability:
+    enabled: true
+    seeds:
+      - 42
+      - 43
+      - 44
+    bootstrap_iterations: 0
+
+audit:
+  dataset:
+    enabled: true
+    validate_schema: true
+    validate_shapes: true
+    validate_dtypes: true
+    validate_nan_inf: true
+    validate_edge_index: true
+    validate_mutation_node: true
+    validate_pairing: true
+    validate_masks: true
+
+  gradients:
+    enabled: true
+    track_every_n_epochs: 1
+    modules:
+      - encoder
+      - pooling_fusion
+      - projection_instance
+      - projection_pair
+      - mlp_delta
+      - bio_head
+      - reconstruction_decoder
+
+    record:
+      - parameter_count
+      - optimizer_group
+      - connected_losses
+      - mean_gradient_norm
+      - median_gradient_norm
+      - zero_gradient_fraction
+      - none_gradient_fraction
+      - has_nan_or_inf
+      - relative_weight_change
+      - status
+
+  shortcuts:
+    enabled: true
+    variables:
+      - custom_structure_energy
+      - graph_num_nodes
+      - graph_num_edges
+      - delta_nodes
+      - wt_length
+      - mut_length
+      - lost_fraction_seq
+      - lost_residues_seq
+      - res_depth_missing
+      - position
+
+    tests:
+      - correlation_with_pc1
+      - correlation_with_pcs
+      - correlation_with_umap
+      - correlation_with_severity
+      - association_with_clusters
+      - permutation_test
+      - global_only_baseline
+
+  leakage:
+    enabled: true
+    check_position_overlap: true
+    check_variant_overlap: true
+    check_scaler_fit_on_train_only: true
+
+reproducibility:
+  deterministic: true
+  seed_python: 42
+  seed_numpy: 42
+  seed_torch: 42
+  seed_cuda: 42
+  seed_dataloader: 42
+  seed_clustering: 42
+
+  save_resolved_config: true
+  save_environment: true
+  save_git_state: true
+  save_feature_inventory: true
+  save_split_assignments: true
+
+logging:
+  level: INFO
+  console: true
+  file: true
+  tensorboard: true
+  wandb:
+    enabled: false
+    project: null
+
+outputs:
+  create_run_manifest: true
+  manifest_filename: run_manifest.json
+  resolved_config_filename: config_resolved.yaml
+  environment_filename: environment.json
+  git_state_filename: git_state.json
+  metrics_filename: metrics.csv
+  gradient_audit_filename: gradient_audit.json
+  dataset_audit_filename: dataset_audit.json
+
+  directories:
+    checkpoints: checkpoints
+    embeddings: embeddings
+    clustering: clustering
+    shortcuts: shortcuts
+    figures: figures
+    logs: logs

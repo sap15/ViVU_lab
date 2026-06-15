@@ -1,0 +1,2162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_name": "GNN_siamese_PKP2_HDF5_sample_schema",
+  "schema_version": "1.0.0",
+  "purpose": "Descripción verificable del esquema real de proc_483p.hdf5 y wt_companion.hdf5; no contiene los datos completos.",
+  "source_files": {
+    "mutants": {
+      "file_name": "proc_483p.hdf5",
+      "role": "483 grafos mutantes missense y 1 grafo WT nativo",
+      "root_graph_count": 484,
+      "missense_graph_count": 483,
+      "native_wt_graph_count": 1,
+      "native_wt_keys": [
+        "residue-srv:A:419:Leucine->Leucine:PKP2_WT"
+      ],
+      "node_count_range": [
+        10,
+        62
+      ],
+      "edge_count_range": [
+        20,
+        340
+      ],
+      "representative_graph_key": "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D"
+    },
+    "wt_companions": {
+      "file_name": "wt_companion.hdf5",
+      "role": "Un grafo WT companion por posición mutada",
+      "root_graph_count": 356,
+      "unique_positions": 356,
+      "node_count_range": [
+        10,
+        58
+      ],
+      "edge_count_range": [
+        21,
+        310
+      ],
+      "representative_graph_key": "residue-srv:A:100:Glycine->Glycine:PKP2_WT"
+    },
+    "pairing_coverage": {
+      "unique_mutated_positions": 356,
+      "unique_wt_companion_positions": 356,
+      "mutated_positions_without_wt_companion": [],
+      "coverage_complete": true
+    }
+  },
+  "root_layout": {
+    "type": "group_collection",
+    "description": "Cada clave de la raíz representa un grafo.",
+    "graph_key_pattern": "residue-srv:{chain_id}:{position}:{wt_aa_full}->{mut_aa_full}:{suffix}",
+    "graph_key_regex": "^residue-srv:([^:]+):(\\d+):([A-Za-z]+)->([A-Za-z]+):(.+)$",
+    "mutant_suffix_pattern": "pos_{position}_{wt_aa}_{mut_aa}",
+    "wt_companion_suffix": "PKP2_WT",
+    "variant_id": {
+      "stored_as": "root group key",
+      "example_mutant": "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D",
+      "example_wt_companion": "residue-srv:A:100:Glycine->Glycine:PKP2_WT",
+      "note": "No existe un dataset interno separado llamado variant_id."
+    },
+    "fields_parsed_from_graph_key": {
+      "chain_id": "Cadena A",
+      "position": "Posición entera",
+      "wt_aa_full": "Aminoácido WT en nombre completo",
+      "mut_aa_full": "Aminoácido mutante en nombre completo",
+      "wt_aa": "Derivado a código de una letra",
+      "mut_aa": "Derivado a código de una letra"
+    }
+  },
+  "graph_layout": {
+    "type": "group",
+    "required_children": [
+      "node_features",
+      "edge_features",
+      "graph_features"
+    ],
+    "node_features": {
+      "type": "group",
+      "path": "/{variant_id}/node_features",
+      "node_axis": 0,
+      "node_count_symbol": "N",
+      "feature_datasets": {
+        "_chain_id": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "|S1",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "|S1": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "|S1": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "_name": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "|S17",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "|S17": 439,
+            "|S16": 17,
+            "|S14": 1,
+            "|S15": 26,
+            "|S13": 1
+          },
+          "observed_dtypes_wt_companions": {
+            "|S13": 343,
+            "|S12": 13
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "_position": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            3
+          ],
+          "symbolic_shape": [
+            "N",
+            3
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 3,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(3,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(3,)": 356
+          }
+        },
+        "bsa": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "diff_charge": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "int64": 343,
+            "float64": 13
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "diff_hb_acceptors": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "int64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "diff_hb_donors": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "int64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "diff_hbond_count": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "diff_hydrophobicity": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "diff_mass": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "diff_pI": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "diff_polarity": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(4,)": 356
+          }
+        },
+        "diff_size": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "int64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "hb_acceptors": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "int64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "int64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "int64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "hb_donors": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "int64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "int64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "int64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "hse": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            3
+          ],
+          "symbolic_shape": [
+            "N",
+            3
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 3,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(3,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(3,)": 356
+          }
+        },
+        "hydrophobicity": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "is_truncation_node": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_charge": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_hb_acceptors": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_hb_donors": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_hbond_count": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_hydrophobicity": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_mass": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_pI": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_polarity": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mask_diff_size": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "polarity": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            4
+          ],
+          "symbolic_shape": [
+            "N",
+            4
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 4,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(4,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(4,)": 356
+          }
+        },
+        "res_charge": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 323,
+            "int64": 161
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 242,
+            "int64": 114
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "res_depth": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "res_depth_missing": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "res_id": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "res_id_norm": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "res_mass": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "res_pI": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "res_size": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "int64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "int64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "int64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "res_type": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            20
+          ],
+          "symbolic_shape": [
+            "N",
+            20
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 20,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(20,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(20,)": 356
+          }
+        },
+        "rsa": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "sasa": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "sec_struct": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            3
+          ],
+          "symbolic_shape": [
+            "N",
+            3
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 3,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(3,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(3,)": 356
+          }
+        },
+        "var_HSE": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            2
+          ],
+          "symbolic_shape": [
+            "N",
+            2
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 2,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(2,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(2,)": 356
+          }
+        },
+        "var_SASA": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "var_SSnum": {
+          "type": "dataset",
+          "representative_shape": [
+            22
+          ],
+          "symbolic_shape": [
+            "N"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "var_contact_count_rings_canon": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            4
+          ],
+          "symbolic_shape": [
+            "N",
+            4
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 4,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(4,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(4,)": 356
+          }
+        },
+        "var_contact_count_rings_coarse": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            3
+          ],
+          "symbolic_shape": [
+            "N",
+            3
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 3,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(3,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(3,)": 356
+          }
+        },
+        "var_contact_count_rings_fine": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            5
+          ],
+          "symbolic_shape": [
+            "N",
+            5
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 5,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(5,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(5,)": 356
+          }
+        },
+        "variant_res": {
+          "type": "dataset",
+          "representative_shape": [
+            22,
+            20
+          ],
+          "symbolic_shape": [
+            "N",
+            20
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 20,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(20,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(20,)": 356
+          }
+        }
+      }
+    },
+    "edge_features": {
+      "type": "group",
+      "path": "/{variant_id}/edge_features",
+      "edge_axis": 0,
+      "edge_count_symbol": "E",
+      "feature_datasets": {
+        "_index": {
+          "type": "dataset",
+          "representative_shape": [
+            69,
+            2
+          ],
+          "symbolic_shape": [
+            "E",
+            2
+          ],
+          "representative_dtype": "int64",
+          "width_after_flattening": 2,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "int64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "int64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "(2,)": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(2,)": 356
+          }
+        },
+        "_name": {
+          "type": "dataset",
+          "representative_shape": [
+            69
+          ],
+          "symbolic_shape": [
+            "E"
+          ],
+          "representative_dtype": "|S35",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "|S35": 439,
+            "|S33": 14,
+            "|S29": 2,
+            "|S31": 25,
+            "|S27": 1,
+            "|S32": 3
+          },
+          "observed_dtypes_wt_companions": {
+            "|S27": 342,
+            "|S25": 13,
+            "|S26": 1
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "covalent": {
+          "type": "dataset",
+          "representative_shape": [
+            69
+          ],
+          "symbolic_shape": [
+            "E"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "distance": {
+          "type": "dataset",
+          "representative_shape": [
+            69
+          ],
+          "symbolic_shape": [
+            "E"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "electrostatic": {
+          "type": "dataset",
+          "representative_shape": [
+            69
+          ],
+          "symbolic_shape": [
+            "E"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "same_chain": {
+          "type": "dataset",
+          "representative_shape": [
+            69
+          ],
+          "symbolic_shape": [
+            "E"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "seq_sep": {
+          "type": "dataset",
+          "representative_shape": [
+            69
+          ],
+          "symbolic_shape": [
+            "E"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "vanderwaals": {
+          "type": "dataset",
+          "representative_shape": [
+            69
+          ],
+          "symbolic_shape": [
+            "E"
+          ],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        }
+      }
+    },
+    "edge_index": {
+      "stored_path": "/{variant_id}/edge_features/_index",
+      "type": "dataset",
+      "stored_symbolic_shape": [
+        "E",
+        2
+      ],
+      "stored_dtype": "int64",
+      "stored_orientation": "Una arista por fila: [source_node, target_node].",
+      "pyg_orientation_after_loading": [
+        2,
+        "E"
+      ],
+      "pyg_conversion": "transpose(_index)",
+      "index_base": 0,
+      "validation_rule": "Índices dentro de [0,N-1].",
+      "top_level_edge_index_dataset_present": false
+    },
+    "graph_features": {
+      "type": "group",
+      "path": "/{variant_id}/graph_features",
+      "feature_datasets": {
+        "anchor_position": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "custom_structure_energy": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float32": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "(1,)": 356
+          }
+        },
+        "delta_chain_len": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "delta_nodes": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "graph_num_edges": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "graph_num_nodes": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "is_truncation": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "lost_fraction_seq": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "lost_residues_seq": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mean_edge_distance": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "mut_length": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "stop_position": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "tail_lost_wt": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        },
+        "wt_length": {
+          "type": "dataset",
+          "representative_shape": [],
+          "symbolic_shape": [],
+          "representative_dtype": "float64",
+          "width_after_flattening": 1,
+          "present_in_all_mutant_graphs": true,
+          "present_in_all_wt_companion_graphs": true,
+          "observed_dtypes_mutants": {
+            "float64": 484
+          },
+          "observed_dtypes_wt_companions": {
+            "float64": 356
+          },
+          "observed_tail_shapes_mutants": {
+            "()": 484
+          },
+          "observed_tail_shapes_wt_companions": {
+            "()": 356
+          }
+        }
+      },
+      "note": "Los escalares suelen tener shape []; custom_structure_energy usa shape [1] y float32 en WT companions."
+    }
+  },
+  "feature_order_and_matrix_construction": {
+    "raw_hdf5_node_feature_order": {
+      "ordering_rule": "Orden alfabético de claves no metadata",
+      "feature_names": [
+        "bsa",
+        "diff_charge",
+        "diff_hb_acceptors",
+        "diff_hb_donors",
+        "diff_hbond_count",
+        "diff_hydrophobicity",
+        "diff_mass",
+        "diff_pI",
+        "diff_polarity",
+        "diff_size",
+        "hb_acceptors",
+        "hb_donors",
+        "hse",
+        "hydrophobicity",
+        "is_truncation_node",
+        "mask_diff",
+        "mask_diff_charge",
+        "mask_diff_hb_acceptors",
+        "mask_diff_hb_donors",
+        "mask_diff_hbond_count",
+        "mask_diff_hydrophobicity",
+        "mask_diff_mass",
+        "mask_diff_pI",
+        "mask_diff_polarity",
+        "mask_diff_size",
+        "polarity",
+        "res_charge",
+        "res_depth",
+        "res_depth_missing",
+        "res_id",
+        "res_id_norm",
+        "res_mass",
+        "res_pI",
+        "res_size",
+        "res_type",
+        "rsa",
+        "sasa",
+        "sec_struct",
+        "var_HSE",
+        "var_SASA",
+        "var_SSnum",
+        "var_contact_count_rings_canon",
+        "var_contact_count_rings_coarse",
+        "var_contact_count_rings_fine",
+        "variant_res"
+      ],
+      "flattened_width": 100,
+      "note": "Incluye var_*, máscaras e is_truncation_node."
+    },
+    "model_base_node_matrix": {
+      "matrix_name": "x",
+      "source_path": "/{variant_id}/node_features",
+      "ordering_rule": "sorted(keys), excluyendo '_*', 'var_*', 'mask_*' e 'is_truncation_node'",
+      "feature_names_in_order": [
+        "bsa",
+        "diff_charge",
+        "diff_hb_acceptors",
+        "diff_hb_donors",
+        "diff_hbond_count",
+        "diff_hydrophobicity",
+        "diff_mass",
+        "diff_pI",
+        "diff_polarity",
+        "diff_size",
+        "hb_acceptors",
+        "hb_donors",
+        "hse",
+        "hydrophobicity",
+        "polarity",
+        "res_charge",
+        "res_depth",
+        "res_depth_missing",
+        "res_id",
+        "res_id_norm",
+        "res_mass",
+        "res_pI",
+        "res_size",
+        "res_type",
+        "rsa",
+        "sasa",
+        "sec_struct",
+        "variant_res"
+      ],
+      "flattening_rule": "[N] -> [N,1]; [N,K] conserva K; dimensiones extra se aplanan desde eje 1.",
+      "stored_feature_width_before_runtime_is_mutation": 73,
+      "runtime_is_mutation_width": 1,
+      "expected_model_width_after_runtime_is_mutation": 74,
+      "dtype_after_loading": "float32",
+      "nan_inf_policy": "np.nan_to_num"
+    },
+    "model_edge_matrix": {
+      "matrix_name": "edge_attr",
+      "source_path": "/{variant_id}/edge_features",
+      "ordering_rule": "sorted(keys), excluyendo '_*'",
+      "feature_names_in_order": [
+        "covalent",
+        "distance",
+        "electrostatic",
+        "same_chain",
+        "seq_sep",
+        "vanderwaals"
+      ],
+      "flattened_width": 6,
+      "dtype_after_loading": "float32",
+      "nan_inf_policy": "np.nan_to_num"
+    },
+    "graph_feature_order": [
+      "anchor_position",
+      "custom_structure_energy",
+      "delta_chain_len",
+      "delta_nodes",
+      "graph_num_edges",
+      "graph_num_nodes",
+      "is_truncation",
+      "lost_fraction_seq",
+      "lost_residues_seq",
+      "mean_edge_distance",
+      "mut_length",
+      "stop_position",
+      "tail_lost_wt",
+      "wt_length"
+    ]
+  },
+  "variant_and_pair_metadata": {
+    "position": {
+      "primary_source": "Parseada de variant_id",
+      "redundant_graph_feature": "graph_features/anchor_position"
+    },
+    "wt_aa": {
+      "source": "Parseado de variant_id y convertido a una letra"
+    },
+    "mut_aa": {
+      "source": "Parseado de variant_id y convertido a una letra"
+    },
+    "wt_companion_id": {
+      "stored_in_mutant_graph": false,
+      "construction_rule": "Emparejar por posición P con 'residue-srv:A:P:{WT_full}->{WT_full}:PKP2_WT'",
+      "index_used_by_current_loader": "Dict[int position] -> (wt_hdf5_path, wt_graph_key)",
+      "pairing_is_one_wt_per_position": true,
+      "pairing_coverage_complete_for_proc_483p": true
+    }
+  },
+  "is_mutation": {
+    "stored_in_hdf5": false,
+    "runtime_feature_name": "is_mutation",
+    "runtime_location": "Última columna añadida a x",
+    "dtype_after_construction": "float32",
+    "shape": [
+      "N",
+      1
+    ],
+    "mutant_missense_rule": "Primer nodo con abs(diff_mass), abs(diff_charge), abs(diff_pI) o abs(diff_size) > 1e-12 recibe 1; resto 0.",
+    "wt_companion_rule": "Todos 0",
+    "native_wt_rule": "Todos 0",
+    "expected_sum": {
+      "missense": 1.0,
+      "wt_companion": 0.0,
+      "native_wt": 0.0
+    },
+    "important_note": "No buscar node_features/is_mutation; debe construirse explícitamente."
+  },
+  "masks": {
+    "availability": "stored",
+    "mask_datasets": [
+      "mask_diff",
+      "mask_diff_charge",
+      "mask_diff_hb_acceptors",
+      "mask_diff_hb_donors",
+      "mask_diff_hbond_count",
+      "mask_diff_hydrophobicity",
+      "mask_diff_mass",
+      "mask_diff_pI",
+      "mask_diff_polarity",
+      "mask_diff_size"
+    ],
+    "location": "/{variant_id}/node_features",
+    "semantics": "Distinguen diferencia válida de cero no aplicable; no confundir con ausencia real de cambio.",
+    "base_model_input_policy": "El loader actual las excluye de x; conservar como auxiliares."
+  },
+  "diff_features": {
+    "location": "/{variant_id}/node_features",
+    "feature_names": [
+      "diff_charge",
+      "diff_hb_acceptors",
+      "diff_hb_donors",
+      "diff_hbond_count",
+      "diff_hydrophobicity",
+      "diff_mass",
+      "diff_pI",
+      "diff_polarity",
+      "diff_size"
+    ],
+    "mutation_localization_probes_in_order": [
+      "diff_mass",
+      "diff_charge",
+      "diff_pI",
+      "diff_size"
+    ],
+    "mutant_semantics": "Mutante - WT, normalmente no nulo en el nodo variante.",
+    "wt_companion_semantics": "Valores cero y máscaras diff cero.",
+    "diff_polarity_shape_warning": "Observado [N] en mutantes y [N,4] en WT companions; armonizar antes del batching."
+  },
+  "targets": {
+    "present": false,
+    "target_group_or_dataset": null,
+    "note": "No existe target/targets/label. custom_structure_energy es graph_feature auxiliar, no target automático."
+  },
+  "quality_and_auxiliary_fields": {
+    "node_level": [
+      "res_depth_missing",
+      "is_truncation_node",
+      "mask_diff*"
+    ],
+    "graph_level": [
+      "anchor_position",
+      "custom_structure_energy",
+      "delta_chain_len",
+      "delta_nodes",
+      "graph_num_edges",
+      "graph_num_nodes",
+      "is_truncation",
+      "lost_fraction_seq",
+      "lost_residues_seq",
+      "mean_edge_distance",
+      "mut_length",
+      "stop_position",
+      "tail_lost_wt",
+      "wt_length"
+    ],
+    "base_encoder_policy": "custom_structure_energy y calidad quedan fuera del encoder base salvo ablación."
+  },
+  "representative_examples": {
+    "mutant": {
+      "variant_id": "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D",
+      "parsed": {
+        "chain_id": "A",
+        "position": 100,
+        "wt_aa_full": "Glycine",
+        "mut_aa_full": "Aspartate",
+        "wt_aa": "G",
+        "mut_aa": "D",
+        "suffix": "pos_100_G_D"
+      },
+      "N": 22,
+      "E": 69,
+      "stored_edge_index_shape": [
+        69,
+        2
+      ],
+      "model_x_shape_before_is_mutation": [
+        22,
+        73
+      ],
+      "model_x_shape_after_is_mutation": [
+        22,
+        74
+      ],
+      "edge_attr_shape": [
+        69,
+        6
+      ]
+    },
+    "wt_companion": {
+      "variant_id": "residue-srv:A:100:Glycine->Glycine:PKP2_WT",
+      "parsed": {
+        "chain_id": "A",
+        "position": 100,
+        "wt_aa_full": "Glycine",
+        "mut_aa_full": "Glycine",
+        "wt_aa": "G",
+        "mut_aa": "G",
+        "suffix": "PKP2_WT"
+      },
+      "N": 27,
+      "E": 95,
+      "stored_edge_index_shape": [
+        95,
+        2
+      ],
+      "model_x_shape_before_is_mutation": [
+        27,
+        73
+      ],
+      "model_x_shape_after_is_mutation": [
+        27,
+        74
+      ],
+      "edge_attr_shape": [
+        95,
+        6
+      ]
+    }
+  },
+  "validation_requirements_for_dataset": [
+    "Exigir node_features, edge_features y graph_features.",
+    "Todas las node features comparten N.",
+    "Todas las edge features comparten E.",
+    "Convertir _index [E,2] a [2,E] para PyG.",
+    "Validar índices en [0,N-1].",
+    "Parsear variant_id, position, wt_aa y mut_aa desde clave raíz.",
+    "Emparejar WT por posición.",
+    "Construir is_mutation.",
+    "Mantener máscaras separadas.",
+    "Convertir x y edge_attr a float32 y edge_index a int64.",
+    "Armonizar diff_polarity antes de batching.",
+    "No usar custom_structure_energy como target/input base.",
+    "Informar NaN, Inf, ausencias y shapes incompatibles."
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Muestra mínima extraída de los HDF5 completos del proyecto PKP2.",
+  "source_files_not_included": [
+    "proc_483p.hdf5",
+    "wt_companion.hdf5"
+  ],
+  "examples": [
+    {
+      "file": "mutante_1.hdf5",
+      "graph_key": "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D",
+      "n_nodes": 22,
+      "n_edges": 69,
+      "node_dataset_count": 48,
+      "edge_dataset_count": 8,
+      "graph_feature_count": 14,
+      "zero_masks": [
+        "mask_diff_hbond_count",
+        "mask_diff_hydrophobicity"
+      ],
+      "partial_masks": [],
+      "size_bytes": 52423,
+      "role": "Ejemplo missense normal"
+    },
+    {
+      "file": "wt_companion_1.hdf5",
+      "graph_key": "residue-srv:A:100:Glycine->Glycine:PKP2_WT",
+      "n_nodes": 27,
+      "n_edges": 95,
+      "node_dataset_count": 48,
+      "edge_dataset_count": 8,
+      "graph_feature_count": 14,
+      "zero_masks": [
+        "mask_diff",
+        "mask_diff_charge",
+        "mask_diff_hb_acceptors",
+        "mask_diff_hb_donors",
+        "mask_diff_mass",
+        "mask_diff_pI",
+        "mask_diff_polarity",
+        "mask_diff_size"
+      ],
+      "partial_masks": [],
+      "size_bytes": 58797,
+      "role": "WT companion del mutante 1"
+    },
+    {
+      "file": "mutante_2.hdf5",
+      "graph_key": "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W",
+      "n_nodes": 62,
+      "n_edges": 340,
+      "node_dataset_count": 48,
+      "edge_dataset_count": 8,
+      "graph_feature_count": 14,
+      "zero_masks": [
+        "mask_diff_hbond_count",
+        "mask_diff_hydrophobicity"
+      ],
+      "partial_masks": [],
+      "size_bytes": 112820,
+      "role": "Segundo mutante con mayor número de nodos"
+    },
+    {
+      "file": "wt_companion_2.hdf5",
+      "graph_key": "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT",
+      "n_nodes": 52,
+      "n_edges": 264,
+      "node_dataset_count": 48,
+      "edge_dataset_count": 8,
+      "graph_feature_count": 14,
+      "zero_masks": [
+        "mask_diff",
+        "mask_diff_charge",
+        "mask_diff_hb_acceptors",
+        "mask_diff_hb_donors",
+        "mask_diff_mass",
+        "mask_diff_pI",
+        "mask_diff_polarity",
+        "mask_diff_size"
+      ],
+      "partial_masks": [],
+      "size_bytes": 96248,
+      "role": "WT companion del mutante 2"
+    },
+    {
+      "file": "caso_con_missing.hdf5",
+      "graph_key": "residue-srv:A:1:Methionine->Threonine:pos_1_M_T",
+      "n_nodes": 10,
+      "n_edges": 31,
+      "node_dataset_count": 48,
+      "edge_dataset_count": 8,
+      "graph_feature_count": 14,
+      "zero_masks": [
+        "mask_diff_hbond_count",
+        "mask_diff_hydrophobicity"
+      ],
+      "partial_masks": [],
+      "size_bytes": 38168,
+      "role": "Caso límite pequeño con máscaras de features no disponibles"
+    }
+  ],
+  "pairing": [
+    {
+      "mutant": "mutante_1.hdf5",
+      "wt_companion": "wt_companion_1.hdf5",
+      "position": 100
+    },
+    {
+      "mutant": "mutante_2.hdf5",
+      "wt_companion": "wt_companion_2.hdf5",
+      "position": 563
+    }
+  ],
+  "case_with_missing_semantics": {
+    "file": "caso_con_missing.hdf5",
+    "representation": "Máscaras de disponibilidad con valor 0; no se introducen NaN artificiales.",
+    "zero_masks": [
+      "mask_diff_hbond_count",
+      "mask_diff_hydrophobicity"
+    ]
+  }
+}
