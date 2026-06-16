@@ -30,6 +30,8 @@ sample_data/
 | `wt_companion_2.hdf5` | WT companion de C563W | 563 | 52 | 264 |
 | `caso_con_missing.hdf5` | Caso límite M1T con grafo pequeño y máscaras | 1 | 10 | 31 |
 
+`caso_con_missing.hdf5` no tiene WT companion emparejado dentro de la muestra mínima porque representa deliberadamente un caso límite con información incompleta y máscaras de disponibilidad.
+
 Los dos pares presentan números de nodos distintos entre sí y también entre
 Mutante y WT companion. El Dataset no debe asumir igualdad de `N` o `E`.
 
