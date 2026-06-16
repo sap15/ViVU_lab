@@ -1,0 +1,38 @@
+=== Verificación documental de sample_schema.json ===
+node_features: OK
+edge_features: OK
+graph_features: OK
+edge_index_or_index: OK
+orientation_or_pyg_conversion: OK
+variant_id_or_graph_key: OK
+position: OK
+wt_aa: OK
+mut_aa: OK
+wt_companion: OK
+is_mutation: OK
+diff_features: OK
+mask: OK
+targets_or_custom_features: OK
+OK: sample_schema.json cubre los elementos principales del apartado 8.2.
+
+=== proc_483p.hdf5 ===
+n_grafos: 484
+primer_grafo: residue-srv:A:100:Glycine->Aspartate:pos_100_G_D
+node_features: OK
+edge_features: OK
+graph_features: OK
+edge_features/_index shape: (69, 2)
+edge_features/_index dtype: int64
+edge_index_orientation: stored (E,2), PyG requires transpose to (2,E)
+
+=== wt_companion.hdf5 ===
+n_grafos: 356
+primer_grafo: residue-srv:A:100:Glycine->Glycine:PKP2_WT
+node_features: OK
+edge_features: OK
+graph_features: OK
+edge_features/_index shape: (95, 2)
+edge_features/_index dtype: int64
+edge_index_orientation: stored (E,2), PyG requires transpose to (2,E)
+
+RESULTADO: OK. El apartado 8.2 queda verificado a nivel documental y estructural.

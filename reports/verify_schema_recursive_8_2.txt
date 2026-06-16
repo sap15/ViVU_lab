@@ -1,0 +1,35 @@
+=== Verificación recursiva de sample_schema.json ===
+node_features: OK
+edge_features: OK
+graph_features: OK
+edge_index_or_index: OK
+orientation_or_pyg_conversion: OK
+variant_id_or_graph_key: OK
+position: OK
+wt_aa: OK
+mut_aa: OK
+wt_companion: OK
+is_mutation: OK
+diff_features: OK
+mask: OK
+targets_or_custom_features: OK
+
+=== Claves de primer nivel detectadas ===
+- $schema
+- schema_name
+- schema_version
+- purpose
+- source_files
+- root_layout
+- graph_layout
+- feature_order_and_matrix_construction
+- variant_and_pair_metadata
+- is_mutation
+- masks
+- diff_features
+- targets
+- quality_and_auxiliary_fields
+- representative_examples
+- validation_requirements_for_dataset
+
+OK: sample_schema.json cubre los elementos principales del apartado 8.2.

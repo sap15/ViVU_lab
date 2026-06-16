@@ -1,0 +1,30 @@
+
+=== /home/sartesero/modelo_optimized_gnn/local_data/hdf5/proc_483p.hdf5 ===
+n_grafos: 484
+primer_grafo: residue-srv:A:100:Glycine->Aspartate:pos_100_G_D
+node_features: OK
+edge_features: OK
+graph_features: OK
+edge_features/_index shape: (69, 2)
+edge_index_orientation: stored (E,2), PyG requires transpose to (2,E)
+n_node_features: 48
+first_node_features: _chain_id, _name, _position, bsa, diff_charge, diff_hb_acceptors, diff_hb_donors, diff_hbond_count, diff_hydrophobicity, diff_mass, diff_pI, diff_polarity, diff_size, hb_acceptors, hb_donors, hse, hydrophobicity, is_truncation_node, mask_diff, mask_diff_charge, mask_diff_hb_acceptors, mask_diff_hb_donors, mask_diff_hbond_count, mask_diff_hydrophobicity, mask_diff_mass, mask_diff_pI, mask_diff_polarity, mask_diff_size, polarity, res_charge, res_depth, res_depth_missing, res_id, res_id_norm, res_mass, res_pI, res_size, res_type, rsa, sasa, sec_struct, var_HSE, var_SASA, var_SSnum, var_contact_count_rings_canon, var_contact_count_rings_coarse, var_contact_count_rings_fine, variant_res
+n_edge_features: 8
+first_edge_features: _index, _name, covalent, distance, electrostatic, same_chain, seq_sep, vanderwaals
+n_graph_features: 14
+first_graph_features: anchor_position, custom_structure_energy, delta_chain_len, delta_nodes, graph_num_edges, graph_num_nodes, is_truncation, lost_fraction_seq, lost_residues_seq, mean_edge_distance, mut_length, stop_position, tail_lost_wt, wt_length
+
+=== /home/sartesero/modelo_optimized_gnn/local_data/hdf5/wt_companion.hdf5 ===
+n_grafos: 356
+primer_grafo: residue-srv:A:100:Glycine->Glycine:PKP2_WT
+node_features: OK
+edge_features: OK
+graph_features: OK
+edge_features/_index shape: (95, 2)
+edge_index_orientation: stored (E,2), PyG requires transpose to (2,E)
+n_node_features: 48
+first_node_features: _chain_id, _name, _position, bsa, diff_charge, diff_hb_acceptors, diff_hb_donors, diff_hbond_count, diff_hydrophobicity, diff_mass, diff_pI, diff_polarity, diff_size, hb_acceptors, hb_donors, hse, hydrophobicity, is_truncation_node, mask_diff, mask_diff_charge, mask_diff_hb_acceptors, mask_diff_hb_donors, mask_diff_hbond_count, mask_diff_hydrophobicity, mask_diff_mass, mask_diff_pI, mask_diff_polarity, mask_diff_size, polarity, res_charge, res_depth, res_depth_missing, res_id, res_id_norm, res_mass, res_pI, res_size, res_type, rsa, sasa, sec_struct, var_HSE, var_SASA, var_SSnum, var_contact_count_rings_canon, var_contact_count_rings_coarse, var_contact_count_rings_fine, variant_res
+n_edge_features: 8
+first_edge_features: _index, _name, covalent, distance, electrostatic, same_chain, seq_sep, vanderwaals
+n_graph_features: 14
+first_graph_features: anchor_position, custom_structure_energy, delta_chain_len, delta_nodes, graph_num_edges, graph_num_nodes, is_truncation, lost_fraction_seq, lost_residues_seq, mean_edge_distance, mut_length, stop_position, tail_lost_wt, wt_length
