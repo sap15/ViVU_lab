@@ -2158,5 +2158,17 @@
     "Armonizar diff_polarity antes de batching.",
     "No usar custom_structure_energy como target/input base.",
     "Informar NaN, Inf, ausencias y shapes incompatibles."
-  ]
+  ],
+  "temporary_feature_exclusions": {
+    "diff_polarity": {
+      "status": "excluded_from_encoder",
+      "reason": "Auditoría 8.2 detectó inconsistencia de dimensionalidad entre mutantes y WT companion. Se conserva documentado en HDF5, pero no debe entrar en el encoder hasta definir una codificación biológica consistente.",
+      "policy": [
+        "Do not include diff_polarity in node feature matrix x.",
+        "Do not use diff_polarity to locate the mutated node.",
+        "Keep diff_polarity and masks documented in the schema.",
+        "Revisit in a dedicated polarity-coding correction branch."
+      ]
+    }
+  }
 }

@@ -34,5 +34,6 @@ graph_features: OK
 edge_features/_index shape: (95, 2)
 edge_features/_index dtype: int64
 edge_index_orientation: stored (E,2), PyG requires transpose to (2,E)
+OK: diff_polarity está documentada, excluida del encoder y excluida de la inferencia del nodo mutado.
 
 RESULTADO: OK. El apartado 8.2 queda verificado a nivel documental y estructural.

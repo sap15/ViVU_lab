@@ -1,0 +1,22 @@
+# Exclusiones temporales de features para el encoder.
+#
+# Estas features pueden existir en los HDF5 y estar documentadas en sample_schema.json,
+# pero no deben entrar en la matriz x del encoder hasta que se corrija o valide su semántica.
+
+node_features_exclude_from_encoder:
+  - diff_polarity
+
+do_not_use_for_mutation_node_detection:
+  - diff_polarity
+
+rationale:
+  diff_polarity: >
+    Excluida temporalmente porque la auditoría del apartado 8.2 detectó una
+    inconsistencia de dimensionalidad entre mutantes y WT companion. En mutantes
+    aparece como diferencial escalar por nodo, mientras que en WT companion puede
+    aparecer como codificación multicolumna. Se conserva en el HDF5 y en la
+    documentación, pero no debe entrar en el encoder hasta definir una codificación
+    biológica consistente.
+
+status:
+  diff_polarity: temporary_exclusion_pending_semantic_fix

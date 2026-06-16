@@ -6,22 +6,7 @@ import json
 from pathlib import Path
 
 import h5py
-
-
-def describe_hdf5(path: Path) -> dict:
-    description = {}
-    with h5py.File(path, "r") as handle:
-        def visitor(name, obj):
-            if isinstance(obj, h5py.Dataset):
-                description[name] = {
-                    "type": "dataset",
-                    "shape": list(obj.shape),
-                    "dtype": str(obj.dtype),
-                }
-            elif isinstance(obj, h5py.Group):
-                description[name] = {"type": "group"}
-        handle.visititems(visitor)
-    return description
+import yaml
 
 
 def verify_schema_documentation(schema_path: Path) -> None:
@@ -100,6 +85,95 @@ def verify_hdf5_blocks(mut_h5: Path, wt_h5: Path) -> None:
                 raise SystemExit(f"ERROR: {path.name} no contiene edge_features/_index")
 
 
+def find_key_recursive(obj, wanted_key: str):
+    """Busca la primera clave wanted_key en un dict/list anidado."""
+    if isinstance(obj, dict):
+        if wanted_key in obj:
+            return obj[wanted_key]
+        for value in obj.values():
+            found = find_key_recursive(value, wanted_key)
+            if found is not None:
+                return found
+    elif isinstance(obj, list):
+        for value in obj:
+            found = find_key_recursive(value, wanted_key)
+            if found is not None:
+                return found
+    return None
+
+
+def verify_temporary_feature_exclusions(repo_root: Path) -> None:
+    """Verifica que diff_polarity esté documentada y excluida del uso activo."""
+    schema_path = repo_root / "sample_data" / "sample_schema.json"
+    exclusions_path = repo_root / "configs" / "feature_exclusions.yaml"
+    base_config_path = repo_root / "configs" / "base.yaml"
+
+    schema_text = schema_path.read_text(encoding="utf-8").lower()
+
+    if "temporary_feature_exclusions" not in schema_text:
+        raise SystemExit("ERROR: sample_schema.json no documenta temporary_feature_exclusions")
+
+    if "diff_polarity" not in schema_text:
+        raise SystemExit("ERROR: sample_schema.json no documenta diff_polarity")
+
+    if not exclusions_path.exists():
+        raise SystemExit("ERROR: no existe configs/feature_exclusions.yaml")
+
+    exclusions_text = exclusions_path.read_text(encoding="utf-8").lower()
+    required_terms = [
+        "diff_polarity",
+        "node_features_exclude_from_encoder",
+        "do_not_use_for_mutation_node_detection",
+    ]
+
+    missing = [term for term in required_terms if term not in exclusions_text]
+    if missing:
+        raise SystemExit(
+            "ERROR: configs/feature_exclusions.yaml no contiene términos requeridos: "
+            + ", ".join(missing)
+        )
+
+    if not base_config_path.exists():
+        raise SystemExit("ERROR: no existe configs/base.yaml")
+
+    config = yaml.safe_load(base_config_path.read_text(encoding="utf-8"))
+
+    features = config.get("features", {})
+    excluded = features.get("excluded_from_encoder_base", [])
+
+    diff_bioq = find_key_recursive(features, "diff_bioq")
+    diff_bioq_names = []
+    if isinstance(diff_bioq, dict):
+        diff_bioq_names = diff_bioq.get("names", []) or []
+
+    mutation_node_detection = find_key_recursive(config, "mutation_node_detection")
+    mutation_probes = []
+    if isinstance(mutation_node_detection, dict):
+        mutation_probes = mutation_node_detection.get("diff_probes", []) or []
+
+    errors = []
+
+    if "diff_polarity" not in excluded:
+        errors.append("diff_polarity debe figurar en features.excluded_from_encoder_base")
+
+    if "diff_polarity" in diff_bioq_names:
+        errors.append("diff_polarity no debe figurar activa en diff_bioq.names")
+
+    if "diff_polarity" in mutation_probes:
+        errors.append("diff_polarity no debe figurar activa en mutation_node_detection.diff_probes")
+
+    if errors:
+        raise SystemExit(
+            "ERROR: política temporal de diff_polarity incumplida en configs/base.yaml:\n"
+            + "\n".join(f"- {error}" for error in errors)
+        )
+
+    print(
+        "OK: diff_polarity está documentada, excluida del encoder "
+        "y excluida de la inferencia del nodo mutado."
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -119,12 +193,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    schema_path = Path(args.schema)
-    mut_h5 = Path(args.mut_h5)
-    wt_h5 = Path(args.wt_h5)
-
-    verify_schema_documentation(schema_path)
-    verify_hdf5_blocks(mut_h5, wt_h5)
+    verify_schema_documentation(Path(args.schema))
+    verify_hdf5_blocks(Path(args.mut_h5), Path(args.wt_h5))
+    verify_temporary_feature_exclusions(Path("."))
 
     print("\nRESULTADO: OK. El apartado 8.2 queda verificado a nivel documental y estructural.")
 

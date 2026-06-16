@@ -128,3 +128,17 @@ suposición derivada del informe o de código legacy.
 
 Estas notas son documentales y operativas. No autorizan a regenerar, corregir o
 reescribir los HDF5 originales del proyecto.
+
+## Nota temporal sobre `diff_polarity`
+
+`diff_polarity` existe en los HDF5 reales y queda documentado en `sample_schema.json`, pero se excluye temporalmente de las features usadas por el encoder.
+
+Motivo: en la auditoría del apartado 8.2 se detectó una inconsistencia de dimensionalidad entre mutantes y WT companion. En mutantes aparece como feature diferencial escalar por nodo, mientras que en WT companion puede aparecer como codificación multicolumna. Para evitar que el loader, el padding o el encoder interpreten esta variable de forma ambigua, `diff_polarity` no debe entrar en `x` hasta definir y aplicar una codificación biológica consistente.
+
+Política vigente:
+- conservar `diff_polarity` en el HDF5 como dato documentado;
+- no usar `diff_polarity` como input del encoder;
+- no usar `diff_polarity` para localizar el nodo mutado;
+- mantener las máscaras asociadas documentadas;
+- revisar esta decisión en una rama posterior dedicada a la corrección semántica de polaridad.
+

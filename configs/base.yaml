@@ -195,7 +195,7 @@ features:
       - diff_size
       - diff_hb_donors
       - diff_hb_acceptors
-      - diff_polarity
+      # - diff_polarity  # EXCLUIDA TEMPORALMENTE: ver configs/feature_exclusions.yaml
     require_masks: true
     mask_prefix: mask_
 
@@ -290,7 +290,7 @@ audit:
       - diff_charge
       - diff_pI
       - diff_size
-      - diff_polarity
+      # - diff_polarity  # NO USAR PARA INFERIR EL NODO MUTADO
       - diff_hb_donors
       - diff_hb_acceptors
     expected_missense_mutation_nodes: 1
