@@ -1,2162 +1,2996 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_name": "GNN_siamese_PKP2_HDF5_sample_schema",
-  "schema_version": "1.0.0",
-  "purpose": "Descripción verificable del esquema real de proc_483p.hdf5 y wt_companion.hdf5; no contiene los datos completos.",
-  "source_files": {
-    "mutants": {
-      "file_name": "proc_483p.hdf5",
-      "role": "483 grafos mutantes missense y 1 grafo WT nativo",
-      "root_graph_count": 484,
-      "missense_graph_count": 483,
-      "native_wt_graph_count": 1,
-      "native_wt_keys": [
-        "residue-srv:A:419:Leucine->Leucine:PKP2_WT"
-      ],
-      "node_count_range": [
-        10,
-        62
-      ],
-      "edge_count_range": [
-        20,
-        340
-      ],
-      "representative_graph_key": "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D"
-    },
-    "wt_companions": {
-      "file_name": "wt_companion.hdf5",
-      "role": "Un grafo WT companion por posición mutada",
-      "root_graph_count": 356,
-      "unique_positions": 356,
-      "node_count_range": [
-        10,
-        58
-      ],
-      "edge_count_range": [
-        21,
-        310
-      ],
-      "representative_graph_key": "residue-srv:A:100:Glycine->Glycine:PKP2_WT"
-    },
-    "pairing_coverage": {
-      "unique_mutated_positions": 356,
-      "unique_wt_companion_positions": 356,
-      "mutated_positions_without_wt_companion": [],
-      "coverage_complete": true
-    }
+  "description": "Schema inferred from minimal HDF5 examples extracted from the full project HDF5 files. The full files are not included in Git.",
+  "source_full_hdf5": {
+    "mutants": "local_data/hdf5/proc_483p.hdf5",
+    "wt_companions": "local_data/hdf5/wt_companion.hdf5",
+    "note": "These full HDF5 files are ignored by .gitignore and must not be committed."
   },
-  "root_layout": {
-    "type": "group_collection",
-    "description": "Cada clave de la raíz representa un grafo.",
-    "graph_key_pattern": "residue-srv:{chain_id}:{position}:{wt_aa_full}->{mut_aa_full}:{suffix}",
-    "graph_key_regex": "^residue-srv:([^:]+):(\\d+):([A-Za-z]+)->([A-Za-z]+):(.+)$",
-    "mutant_suffix_pattern": "pos_{position}_{wt_aa}_{mut_aa}",
-    "wt_companion_suffix": "PKP2_WT",
-    "variant_id": {
-      "stored_as": "root group key",
-      "example_mutant": "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D",
-      "example_wt_companion": "residue-srv:A:100:Glycine->Glycine:PKP2_WT",
-      "note": "No existe un dataset interno separado llamado variant_id."
-    },
-    "fields_parsed_from_graph_key": {
-      "chain_id": "Cadena A",
-      "position": "Posición entera",
-      "wt_aa_full": "Aminoácido WT en nombre completo",
-      "mut_aa_full": "Aminoácido mutante en nombre completo",
-      "wt_aa": "Derivado a código de una letra",
-      "mut_aa": "Derivado a código de una letra"
-    }
-  },
-  "graph_layout": {
-    "type": "group",
-    "required_children": [
-      "node_features",
-      "edge_features",
-      "graph_features"
-    ],
-    "node_features": {
-      "type": "group",
-      "path": "/{variant_id}/node_features",
-      "node_axis": 0,
-      "node_count_symbol": "N",
-      "feature_datasets": {
-        "_chain_id": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "|S1",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "|S1": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "|S1": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+  "examples_dir": "sample_data/examples",
+  "examples": {
+    "pos_327_GLYCINE_GLUTAMATE_caso_con_missing_o_stop.hdf5": {
+      "role": "Caso con máscara/missing o caso límite",
+      "root_key": "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E",
+      "n_nodes": 10,
+      "n_edges": 24,
+      "hierarchy": {
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E": {
+          "type": "group"
         },
-        "_name": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "|S17",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "|S17": 439,
-            "|S16": 17,
-            "|S14": 1,
-            "|S15": 26,
-            "|S13": 1
-          },
-          "observed_dtypes_wt_companions": {
-            "|S13": 343,
-            "|S12": 13
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features": {
+          "type": "group"
         },
-        "_position": {
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features/_index": {
           "type": "dataset",
-          "representative_shape": [
-            22,
-            3
-          ],
-          "symbolic_shape": [
-            "N",
-            3
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 3,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(3,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(3,)": 356
-          }
-        },
-        "bsa": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "diff_charge": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "int64": 343,
-            "float64": 13
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "diff_hb_acceptors": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "int64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "diff_hb_donors": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "int64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "diff_hbond_count": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "diff_hydrophobicity": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "diff_mass": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "diff_pI": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "diff_polarity": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(4,)": 356
-          }
-        },
-        "diff_size": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "int64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "hb_acceptors": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "int64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "int64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "int64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "hb_donors": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "int64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "int64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "int64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "hse": {
-          "type": "dataset",
-          "representative_shape": [
-            22,
-            3
-          ],
-          "symbolic_shape": [
-            "N",
-            3
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 3,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(3,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(3,)": 356
-          }
-        },
-        "hydrophobicity": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "is_truncation_node": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_charge": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_hb_acceptors": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_hb_donors": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_hbond_count": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_hydrophobicity": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_mass": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_pI": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_polarity": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "mask_diff_size": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "polarity": {
-          "type": "dataset",
-          "representative_shape": [
-            22,
-            4
-          ],
-          "symbolic_shape": [
-            "N",
-            4
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 4,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(4,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(4,)": 356
-          }
-        },
-        "res_charge": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 323,
-            "int64": 161
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 242,
-            "int64": 114
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "res_depth": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "res_depth_missing": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "res_id": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "res_id_norm": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "res_mass": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "res_pI": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "res_size": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "int64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "int64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "int64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "res_type": {
-          "type": "dataset",
-          "representative_shape": [
-            22,
-            20
-          ],
-          "symbolic_shape": [
-            "N",
-            20
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 20,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(20,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(20,)": 356
-          }
-        },
-        "rsa": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "sasa": {
-          "type": "dataset",
-          "representative_shape": [
-            22
-          ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
-        },
-        "sec_struct": {
-          "type": "dataset",
-          "representative_shape": [
-            22,
-            3
-          ],
-          "symbolic_shape": [
-            "N",
-            3
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 3,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(3,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(3,)": 356
-          }
-        },
-        "var_HSE": {
-          "type": "dataset",
-          "representative_shape": [
-            22,
+          "shape": [
+            24,
             2
           ],
-          "symbolic_shape": [
-            "N",
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features/_name": {
+          "type": "dataset",
+          "shape": [
+            24
+          ],
+          "dtype": "|S35"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features/covalent": {
+          "type": "dataset",
+          "shape": [
+            24
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features/distance": {
+          "type": "dataset",
+          "shape": [
+            24
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features/electrostatic": {
+          "type": "dataset",
+          "shape": [
+            24
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features/same_chain": {
+          "type": "dataset",
+          "shape": [
+            24
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features/seq_sep": {
+          "type": "dataset",
+          "shape": [
+            24
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/edge_features/vanderwaals": {
+          "type": "dataset",
+          "shape": [
+            24
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features": {
+          "type": "group"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/anchor_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/custom_structure_energy": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/delta_chain_len": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/delta_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/graph_num_edges": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/graph_num_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/is_truncation": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/lost_fraction_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/lost_residues_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/mean_edge_distance": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/mut_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/stop_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/tail_lost_wt": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/graph_features/wt_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features": {
+          "type": "group"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/_chain_id": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "|S1"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/_name": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "|S17"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/_position": {
+          "type": "dataset",
+          "shape": [
+            10,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/bsa": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_charge": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_mass": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_pI": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/diff_size": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/hb_donors": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/hse": {
+          "type": "dataset",
+          "shape": [
+            10,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/is_truncation_node": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_charge": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_mass": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_pI": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/mask_diff_size": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/polarity": {
+          "type": "dataset",
+          "shape": [
+            10,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_charge": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_depth": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_depth_missing": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_id": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_id_norm": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_mass": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_pI": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_size": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/res_type": {
+          "type": "dataset",
+          "shape": [
+            10,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/rsa": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/sasa": {
+          "type": "dataset",
+          "shape": [
+            10
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/sec_struct": {
+          "type": "dataset",
+          "shape": [
+            10,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/var_HSE": {
+          "type": "dataset",
+          "shape": [
+            10,
             2
           ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 2,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(2,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(2,)": 356
-          }
+          "dtype": "float64"
         },
-        "var_SASA": {
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/var_SASA": {
           "type": "dataset",
-          "representative_shape": [
-            22
+          "shape": [
+            10
           ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "dtype": "float64"
         },
-        "var_SSnum": {
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/var_SSnum": {
           "type": "dataset",
-          "representative_shape": [
-            22
+          "shape": [
+            10
           ],
-          "symbolic_shape": [
-            "N"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "dtype": "float64"
         },
-        "var_contact_count_rings_canon": {
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/var_contact_count_rings_canon": {
           "type": "dataset",
-          "representative_shape": [
-            22,
+          "shape": [
+            10,
             4
           ],
-          "symbolic_shape": [
-            "N",
-            4
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 4,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(4,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(4,)": 356
-          }
+          "dtype": "float64"
         },
-        "var_contact_count_rings_coarse": {
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/var_contact_count_rings_coarse": {
           "type": "dataset",
-          "representative_shape": [
-            22,
+          "shape": [
+            10,
             3
           ],
-          "symbolic_shape": [
-            "N",
-            3
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 3,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(3,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(3,)": 356
-          }
+          "dtype": "float64"
         },
-        "var_contact_count_rings_fine": {
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/var_contact_count_rings_fine": {
           "type": "dataset",
-          "representative_shape": [
-            22,
+          "shape": [
+            10,
             5
           ],
-          "symbolic_shape": [
-            "N",
-            5
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 5,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(5,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(5,)": 356
-          }
+          "dtype": "float64"
         },
-        "variant_res": {
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/node_features/variant_res": {
           "type": "dataset",
-          "representative_shape": [
-            22,
+          "shape": [
+            10,
             20
           ],
-          "symbolic_shape": [
-            "N",
-            20
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 20,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(20,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(20,)": 356
-          }
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E/target_values": {
+          "type": "group"
         }
       }
     },
-    "edge_features": {
-      "type": "group",
-      "path": "/{variant_id}/edge_features",
-      "edge_axis": 0,
-      "edge_count_symbol": "E",
-      "feature_datasets": {
-        "_index": {
+    "pos_327_GLYCINE_GLUTAMATE_wt_companion.hdf5": {
+      "role": "WT companion",
+      "root_key": "residue-srv:A:327:Glycine->Glycine:PKP2_WT",
+      "n_nodes": 11,
+      "n_edges": 25,
+      "hierarchy": {
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT": {
+          "type": "group"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features": {
+          "type": "group"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features/_index": {
           "type": "dataset",
-          "representative_shape": [
-            69,
+          "shape": [
+            25,
             2
           ],
-          "symbolic_shape": [
-            "E",
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features/_name": {
+          "type": "dataset",
+          "shape": [
+            25
+          ],
+          "dtype": "|S27"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features/covalent": {
+          "type": "dataset",
+          "shape": [
+            25
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features/distance": {
+          "type": "dataset",
+          "shape": [
+            25
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features/electrostatic": {
+          "type": "dataset",
+          "shape": [
+            25
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features/same_chain": {
+          "type": "dataset",
+          "shape": [
+            25
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features/seq_sep": {
+          "type": "dataset",
+          "shape": [
+            25
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/edge_features/vanderwaals": {
+          "type": "dataset",
+          "shape": [
+            25
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features": {
+          "type": "group"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/anchor_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/custom_structure_energy": {
+          "type": "dataset",
+          "shape": [
+            1
+          ],
+          "dtype": "float32"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/delta_chain_len": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/delta_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/graph_num_edges": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/graph_num_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/is_truncation": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/lost_fraction_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/lost_residues_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/mean_edge_distance": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/mut_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/stop_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/tail_lost_wt": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/graph_features/wt_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features": {
+          "type": "group"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/_chain_id": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "|S1"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/_name": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "|S13"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/_position": {
+          "type": "dataset",
+          "shape": [
+            11,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/bsa": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_charge": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_mass": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_pI": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            11,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/diff_size": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/hb_donors": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/hse": {
+          "type": "dataset",
+          "shape": [
+            11,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/is_truncation_node": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_charge": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_mass": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_pI": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/mask_diff_size": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/polarity": {
+          "type": "dataset",
+          "shape": [
+            11,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_charge": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_depth": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_depth_missing": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_id": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_id_norm": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_mass": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_pI": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_size": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/res_type": {
+          "type": "dataset",
+          "shape": [
+            11,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/rsa": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/sasa": {
+          "type": "dataset",
+          "shape": [
+            11
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/sec_struct": {
+          "type": "dataset",
+          "shape": [
+            11,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/var_HSE": {
+          "type": "dataset",
+          "shape": [
+            11,
             2
           ],
-          "representative_dtype": "int64",
-          "width_after_flattening": 2,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "int64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "int64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "(2,)": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(2,)": 356
-          }
+          "dtype": "float64"
         },
-        "_name": {
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/var_SASA": {
           "type": "dataset",
-          "representative_shape": [
-            69
+          "shape": [
+            11
           ],
-          "symbolic_shape": [
-            "E"
-          ],
-          "representative_dtype": "|S35",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "|S35": 439,
-            "|S33": 14,
-            "|S29": 2,
-            "|S31": 25,
-            "|S27": 1,
-            "|S32": 3
-          },
-          "observed_dtypes_wt_companions": {
-            "|S27": 342,
-            "|S25": 13,
-            "|S26": 1
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "dtype": "float64"
         },
-        "covalent": {
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/var_SSnum": {
           "type": "dataset",
-          "representative_shape": [
-            69
+          "shape": [
+            11
           ],
-          "symbolic_shape": [
-            "E"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "dtype": "float64"
         },
-        "distance": {
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/var_contact_count_rings_canon": {
           "type": "dataset",
-          "representative_shape": [
-            69
+          "shape": [
+            11,
+            4
           ],
-          "symbolic_shape": [
-            "E"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "dtype": "float64"
         },
-        "electrostatic": {
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/var_contact_count_rings_coarse": {
           "type": "dataset",
-          "representative_shape": [
-            69
+          "shape": [
+            11,
+            3
           ],
-          "symbolic_shape": [
-            "E"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "dtype": "float64"
         },
-        "same_chain": {
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/var_contact_count_rings_fine": {
           "type": "dataset",
-          "representative_shape": [
-            69
+          "shape": [
+            11,
+            5
           ],
-          "symbolic_shape": [
-            "E"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "dtype": "float64"
         },
-        "seq_sep": {
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/node_features/variant_res": {
           "type": "dataset",
-          "representative_shape": [
-            69
+          "shape": [
+            11,
+            20
           ],
-          "symbolic_shape": [
-            "E"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "dtype": "float64"
         },
-        "vanderwaals": {
-          "type": "dataset",
-          "representative_shape": [
-            69
-          ],
-          "symbolic_shape": [
-            "E"
-          ],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+        "residue-srv:A:327:Glycine->Glycine:PKP2_WT/target_values": {
+          "type": "group"
         }
       }
     },
-    "edge_index": {
-      "stored_path": "/{variant_id}/edge_features/_index",
-      "type": "dataset",
-      "stored_symbolic_shape": [
-        "E",
-        2
-      ],
-      "stored_dtype": "int64",
-      "stored_orientation": "Una arista por fila: [source_node, target_node].",
-      "pyg_orientation_after_loading": [
-        2,
-        "E"
-      ],
-      "pyg_conversion": "transpose(_index)",
-      "index_base": 0,
-      "validation_rule": "Índices dentro de [0,N-1].",
-      "top_level_edge_index_dataset_present": false
-    },
-    "graph_features": {
-      "type": "group",
-      "path": "/{variant_id}/graph_features",
-      "feature_datasets": {
-        "anchor_position": {
-          "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+    "pos_458_ISOLEUCINE_LYSINE_mutante_2.hdf5": {
+      "role": "Mutante completo 2",
+      "root_key": "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K",
+      "n_nodes": 57,
+      "n_edges": 309,
+      "hierarchy": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K": {
+          "type": "group"
         },
-        "custom_structure_energy": {
-          "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float32": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "(1,)": 356
-          }
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features": {
+          "type": "group"
         },
-        "delta_chain_len": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features/_index": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [
+            309,
+            2
+          ],
+          "dtype": "int64"
         },
-        "delta_nodes": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features/_name": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [
+            309
+          ],
+          "dtype": "|S35"
         },
-        "graph_num_edges": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features/covalent": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [
+            309
+          ],
+          "dtype": "float64"
         },
-        "graph_num_nodes": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features/distance": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [
+            309
+          ],
+          "dtype": "float64"
         },
-        "is_truncation": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features/electrostatic": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [
+            309
+          ],
+          "dtype": "float64"
         },
-        "lost_fraction_seq": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features/same_chain": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [
+            309
+          ],
+          "dtype": "float64"
         },
-        "lost_residues_seq": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features/seq_sep": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [
+            309
+          ],
+          "dtype": "float64"
         },
-        "mean_edge_distance": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/edge_features/vanderwaals": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [
+            309
+          ],
+          "dtype": "float64"
         },
-        "mut_length": {
-          "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features": {
+          "type": "group"
         },
-        "stop_position": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/anchor_position": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [],
+          "dtype": "float64"
         },
-        "tail_lost_wt": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/custom_structure_energy": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [],
+          "dtype": "float64"
         },
-        "wt_length": {
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/delta_chain_len": {
           "type": "dataset",
-          "representative_shape": [],
-          "symbolic_shape": [],
-          "representative_dtype": "float64",
-          "width_after_flattening": 1,
-          "present_in_all_mutant_graphs": true,
-          "present_in_all_wt_companion_graphs": true,
-          "observed_dtypes_mutants": {
-            "float64": 484
-          },
-          "observed_dtypes_wt_companions": {
-            "float64": 356
-          },
-          "observed_tail_shapes_mutants": {
-            "()": 484
-          },
-          "observed_tail_shapes_wt_companions": {
-            "()": 356
-          }
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/delta_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/graph_num_edges": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/graph_num_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/is_truncation": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/lost_fraction_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/lost_residues_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/mean_edge_distance": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/mut_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/stop_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/tail_lost_wt": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/graph_features/wt_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features": {
+          "type": "group"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/_chain_id": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "|S1"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/_name": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "|S17"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/_position": {
+          "type": "dataset",
+          "shape": [
+            57,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/bsa": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_charge": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_mass": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_pI": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/diff_size": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/hb_donors": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/hse": {
+          "type": "dataset",
+          "shape": [
+            57,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/is_truncation_node": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_charge": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_mass": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_pI": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/mask_diff_size": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/polarity": {
+          "type": "dataset",
+          "shape": [
+            57,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_charge": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_depth": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_depth_missing": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_id": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_id_norm": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_mass": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_pI": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_size": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/res_type": {
+          "type": "dataset",
+          "shape": [
+            57,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/rsa": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/sasa": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/sec_struct": {
+          "type": "dataset",
+          "shape": [
+            57,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/var_HSE": {
+          "type": "dataset",
+          "shape": [
+            57,
+            2
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/var_SASA": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/var_SSnum": {
+          "type": "dataset",
+          "shape": [
+            57
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/var_contact_count_rings_canon": {
+          "type": "dataset",
+          "shape": [
+            57,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/var_contact_count_rings_coarse": {
+          "type": "dataset",
+          "shape": [
+            57,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/var_contact_count_rings_fine": {
+          "type": "dataset",
+          "shape": [
+            57,
+            5
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/node_features/variant_res": {
+          "type": "dataset",
+          "shape": [
+            57,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K/target_values": {
+          "type": "group"
         }
-      },
-      "note": "Los escalares suelen tener shape []; custom_structure_energy usa shape [1] y float32 en WT companions."
+      }
+    },
+    "pos_458_ISOLEUCINE_LYSINE_wt_companion.hdf5": {
+      "role": "WT companion",
+      "root_key": "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT",
+      "n_nodes": 51,
+      "n_edges": 264,
+      "hierarchy": {
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT": {
+          "type": "group"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features": {
+          "type": "group"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features/_index": {
+          "type": "dataset",
+          "shape": [
+            264,
+            2
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features/_name": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "|S27"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features/covalent": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features/distance": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features/electrostatic": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features/same_chain": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features/seq_sep": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/edge_features/vanderwaals": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features": {
+          "type": "group"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/anchor_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/custom_structure_energy": {
+          "type": "dataset",
+          "shape": [
+            1
+          ],
+          "dtype": "float32"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/delta_chain_len": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/delta_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/graph_num_edges": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/graph_num_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/is_truncation": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/lost_fraction_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/lost_residues_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/mean_edge_distance": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/mut_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/stop_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/tail_lost_wt": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/graph_features/wt_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features": {
+          "type": "group"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/_chain_id": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "|S1"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/_name": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "|S13"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/_position": {
+          "type": "dataset",
+          "shape": [
+            51,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/bsa": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_charge": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_mass": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_pI": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            51,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/diff_size": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/hb_donors": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/hse": {
+          "type": "dataset",
+          "shape": [
+            51,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/is_truncation_node": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_charge": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_mass": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_pI": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/mask_diff_size": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/polarity": {
+          "type": "dataset",
+          "shape": [
+            51,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_charge": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_depth": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_depth_missing": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_id": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_id_norm": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_mass": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_pI": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_size": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/res_type": {
+          "type": "dataset",
+          "shape": [
+            51,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/rsa": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/sasa": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/sec_struct": {
+          "type": "dataset",
+          "shape": [
+            51,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/var_HSE": {
+          "type": "dataset",
+          "shape": [
+            51,
+            2
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/var_SASA": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/var_SSnum": {
+          "type": "dataset",
+          "shape": [
+            51
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/var_contact_count_rings_canon": {
+          "type": "dataset",
+          "shape": [
+            51,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/var_contact_count_rings_coarse": {
+          "type": "dataset",
+          "shape": [
+            51,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/var_contact_count_rings_fine": {
+          "type": "dataset",
+          "shape": [
+            51,
+            5
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/node_features/variant_res": {
+          "type": "dataset",
+          "shape": [
+            51,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT/target_values": {
+          "type": "group"
+        }
+      }
+    },
+    "pos_563_CYSTEINE_TRYPTOPHAN_mutante_1.hdf5": {
+      "role": "Mutante completo 1",
+      "root_key": "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W",
+      "n_nodes": 62,
+      "n_edges": 340,
+      "hierarchy": {
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W": {
+          "type": "group"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features": {
+          "type": "group"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features/_index": {
+          "type": "dataset",
+          "shape": [
+            340,
+            2
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features/_name": {
+          "type": "dataset",
+          "shape": [
+            340
+          ],
+          "dtype": "|S35"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features/covalent": {
+          "type": "dataset",
+          "shape": [
+            340
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features/distance": {
+          "type": "dataset",
+          "shape": [
+            340
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features/electrostatic": {
+          "type": "dataset",
+          "shape": [
+            340
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features/same_chain": {
+          "type": "dataset",
+          "shape": [
+            340
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features/seq_sep": {
+          "type": "dataset",
+          "shape": [
+            340
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/edge_features/vanderwaals": {
+          "type": "dataset",
+          "shape": [
+            340
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features": {
+          "type": "group"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/anchor_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/custom_structure_energy": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/delta_chain_len": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/delta_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/graph_num_edges": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/graph_num_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/is_truncation": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/lost_fraction_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/lost_residues_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/mean_edge_distance": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/mut_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/stop_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/tail_lost_wt": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/graph_features/wt_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features": {
+          "type": "group"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/_chain_id": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "|S1"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/_name": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "|S17"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/_position": {
+          "type": "dataset",
+          "shape": [
+            62,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/bsa": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_charge": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_mass": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_pI": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/diff_size": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/hb_donors": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/hse": {
+          "type": "dataset",
+          "shape": [
+            62,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/is_truncation_node": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_charge": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_mass": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_pI": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/mask_diff_size": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/polarity": {
+          "type": "dataset",
+          "shape": [
+            62,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_charge": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_depth": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_depth_missing": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_id": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_id_norm": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_mass": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_pI": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_size": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/res_type": {
+          "type": "dataset",
+          "shape": [
+            62,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/rsa": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/sasa": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/sec_struct": {
+          "type": "dataset",
+          "shape": [
+            62,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/var_HSE": {
+          "type": "dataset",
+          "shape": [
+            62,
+            2
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/var_SASA": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/var_SSnum": {
+          "type": "dataset",
+          "shape": [
+            62
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/var_contact_count_rings_canon": {
+          "type": "dataset",
+          "shape": [
+            62,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/var_contact_count_rings_coarse": {
+          "type": "dataset",
+          "shape": [
+            62,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/var_contact_count_rings_fine": {
+          "type": "dataset",
+          "shape": [
+            62,
+            5
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/node_features/variant_res": {
+          "type": "dataset",
+          "shape": [
+            62,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W/target_values": {
+          "type": "group"
+        }
+      }
+    },
+    "pos_563_CYSTEINE_TRYPTOPHAN_wt_companion.hdf5": {
+      "role": "WT companion",
+      "root_key": "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT",
+      "n_nodes": 52,
+      "n_edges": 264,
+      "hierarchy": {
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT": {
+          "type": "group"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features": {
+          "type": "group"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features/_index": {
+          "type": "dataset",
+          "shape": [
+            264,
+            2
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features/_name": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "|S27"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features/covalent": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features/distance": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features/electrostatic": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features/same_chain": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features/seq_sep": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/edge_features/vanderwaals": {
+          "type": "dataset",
+          "shape": [
+            264
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features": {
+          "type": "group"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/anchor_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/custom_structure_energy": {
+          "type": "dataset",
+          "shape": [
+            1
+          ],
+          "dtype": "float32"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/delta_chain_len": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/delta_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/graph_num_edges": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/graph_num_nodes": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/is_truncation": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/lost_fraction_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/lost_residues_seq": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/mean_edge_distance": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/mut_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/stop_position": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/tail_lost_wt": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/graph_features/wt_length": {
+          "type": "dataset",
+          "shape": [],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features": {
+          "type": "group"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/_chain_id": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "|S1"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/_name": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "|S13"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/_position": {
+          "type": "dataset",
+          "shape": [
+            52,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/bsa": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_charge": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_mass": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_pI": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            52,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/diff_size": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/hb_donors": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/hse": {
+          "type": "dataset",
+          "shape": [
+            52,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/is_truncation_node": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_charge": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_hb_acceptors": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_hb_donors": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_hbond_count": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_hydrophobicity": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_mass": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_pI": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_polarity": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/mask_diff_size": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/polarity": {
+          "type": "dataset",
+          "shape": [
+            52,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_charge": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_depth": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_depth_missing": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_id": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_id_norm": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_mass": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_pI": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_size": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "int64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/res_type": {
+          "type": "dataset",
+          "shape": [
+            52,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/rsa": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/sasa": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/sec_struct": {
+          "type": "dataset",
+          "shape": [
+            52,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/var_HSE": {
+          "type": "dataset",
+          "shape": [
+            52,
+            2
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/var_SASA": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/var_SSnum": {
+          "type": "dataset",
+          "shape": [
+            52
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/var_contact_count_rings_canon": {
+          "type": "dataset",
+          "shape": [
+            52,
+            4
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/var_contact_count_rings_coarse": {
+          "type": "dataset",
+          "shape": [
+            52,
+            3
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/var_contact_count_rings_fine": {
+          "type": "dataset",
+          "shape": [
+            52,
+            5
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/node_features/variant_res": {
+          "type": "dataset",
+          "shape": [
+            52,
+            20
+          ],
+          "dtype": "float64"
+        },
+        "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT/target_values": {
+          "type": "group"
+        }
+      }
     }
-  },
-  "feature_order_and_matrix_construction": {
-    "raw_hdf5_node_feature_order": {
-      "ordering_rule": "Orden alfabético de claves no metadata",
-      "feature_names": [
-        "bsa",
-        "diff_charge",
-        "diff_hb_acceptors",
-        "diff_hb_donors",
-        "diff_hbond_count",
-        "diff_hydrophobicity",
-        "diff_mass",
-        "diff_pI",
-        "diff_polarity",
-        "diff_size",
-        "hb_acceptors",
-        "hb_donors",
-        "hse",
-        "hydrophobicity",
-        "is_truncation_node",
-        "mask_diff",
-        "mask_diff_charge",
-        "mask_diff_hb_acceptors",
-        "mask_diff_hb_donors",
-        "mask_diff_hbond_count",
-        "mask_diff_hydrophobicity",
-        "mask_diff_mass",
-        "mask_diff_pI",
-        "mask_diff_polarity",
-        "mask_diff_size",
-        "polarity",
-        "res_charge",
-        "res_depth",
-        "res_depth_missing",
-        "res_id",
-        "res_id_norm",
-        "res_mass",
-        "res_pI",
-        "res_size",
-        "res_type",
-        "rsa",
-        "sasa",
-        "sec_struct",
-        "var_HSE",
-        "var_SASA",
-        "var_SSnum",
-        "var_contact_count_rings_canon",
-        "var_contact_count_rings_coarse",
-        "var_contact_count_rings_fine",
-        "variant_res"
-      ],
-      "flattened_width": 100,
-      "note": "Incluye var_*, máscaras e is_truncation_node."
-    },
-    "model_base_node_matrix": {
-      "matrix_name": "x",
-      "source_path": "/{variant_id}/node_features",
-      "ordering_rule": "sorted(keys), excluyendo '_*', 'var_*', 'mask_*' e 'is_truncation_node'",
-      "feature_names_in_order": [
-        "bsa",
-        "diff_charge",
-        "diff_hb_acceptors",
-        "diff_hb_donors",
-        "diff_hbond_count",
-        "diff_hydrophobicity",
-        "diff_mass",
-        "diff_pI",
-        "diff_polarity",
-        "diff_size",
-        "hb_acceptors",
-        "hb_donors",
-        "hse",
-        "hydrophobicity",
-        "polarity",
-        "res_charge",
-        "res_depth",
-        "res_depth_missing",
-        "res_id",
-        "res_id_norm",
-        "res_mass",
-        "res_pI",
-        "res_size",
-        "res_type",
-        "rsa",
-        "sasa",
-        "sec_struct",
-        "variant_res"
-      ],
-      "flattening_rule": "[N] -> [N,1]; [N,K] conserva K; dimensiones extra se aplanan desde eje 1.",
-      "stored_feature_width_before_runtime_is_mutation": 73,
-      "runtime_is_mutation_width": 1,
-      "expected_model_width_after_runtime_is_mutation": 74,
-      "dtype_after_loading": "float32",
-      "nan_inf_policy": "np.nan_to_num"
-    },
-    "model_edge_matrix": {
-      "matrix_name": "edge_attr",
-      "source_path": "/{variant_id}/edge_features",
-      "ordering_rule": "sorted(keys), excluyendo '_*'",
-      "feature_names_in_order": [
-        "covalent",
-        "distance",
-        "electrostatic",
-        "same_chain",
-        "seq_sep",
-        "vanderwaals"
-      ],
-      "flattened_width": 6,
-      "dtype_after_loading": "float32",
-      "nan_inf_policy": "np.nan_to_num"
-    },
-    "graph_feature_order": [
-      "anchor_position",
-      "custom_structure_energy",
-      "delta_chain_len",
-      "delta_nodes",
-      "graph_num_edges",
-      "graph_num_nodes",
-      "is_truncation",
-      "lost_fraction_seq",
-      "lost_residues_seq",
-      "mean_edge_distance",
-      "mut_length",
-      "stop_position",
-      "tail_lost_wt",
-      "wt_length"
-    ]
-  },
-  "variant_and_pair_metadata": {
-    "position": {
-      "primary_source": "Parseada de variant_id",
-      "redundant_graph_feature": "graph_features/anchor_position"
-    },
-    "wt_aa": {
-      "source": "Parseado de variant_id y convertido a una letra"
-    },
-    "mut_aa": {
-      "source": "Parseado de variant_id y convertido a una letra"
-    },
-    "wt_companion_id": {
-      "stored_in_mutant_graph": false,
-      "construction_rule": "Emparejar por posición P con 'residue-srv:A:P:{WT_full}->{WT_full}:PKP2_WT'",
-      "index_used_by_current_loader": "Dict[int position] -> (wt_hdf5_path, wt_graph_key)",
-      "pairing_is_one_wt_per_position": true,
-      "pairing_coverage_complete_for_proc_483p": true
-    }
-  },
-  "is_mutation": {
-    "stored_in_hdf5": false,
-    "runtime_feature_name": "is_mutation",
-    "runtime_location": "Última columna añadida a x",
-    "dtype_after_construction": "float32",
-    "shape": [
-      "N",
-      1
-    ],
-    "mutant_missense_rule": "Primer nodo con abs(diff_mass), abs(diff_charge), abs(diff_pI) o abs(diff_size) > 1e-12 recibe 1; resto 0.",
-    "wt_companion_rule": "Todos 0",
-    "native_wt_rule": "Todos 0",
-    "expected_sum": {
-      "missense": 1.0,
-      "wt_companion": 0.0,
-      "native_wt": 0.0
-    },
-    "important_note": "No buscar node_features/is_mutation; debe construirse explícitamente."
-  },
-  "masks": {
-    "availability": "stored",
-    "mask_datasets": [
-      "mask_diff",
-      "mask_diff_charge",
-      "mask_diff_hb_acceptors",
-      "mask_diff_hb_donors",
-      "mask_diff_hbond_count",
-      "mask_diff_hydrophobicity",
-      "mask_diff_mass",
-      "mask_diff_pI",
-      "mask_diff_polarity",
-      "mask_diff_size"
-    ],
-    "location": "/{variant_id}/node_features",
-    "semantics": "Distinguen diferencia válida de cero no aplicable; no confundir con ausencia real de cambio.",
-    "base_model_input_policy": "El loader actual las excluye de x; conservar como auxiliares."
-  },
-  "diff_features": {
-    "location": "/{variant_id}/node_features",
-    "feature_names": [
-      "diff_charge",
-      "diff_hb_acceptors",
-      "diff_hb_donors",
-      "diff_hbond_count",
-      "diff_hydrophobicity",
-      "diff_mass",
-      "diff_pI",
-      "diff_polarity",
-      "diff_size"
-    ],
-    "mutation_localization_probes_in_order": [
-      "diff_mass",
-      "diff_charge",
-      "diff_pI",
-      "diff_size"
-    ],
-    "mutant_semantics": "Mutante - WT, normalmente no nulo en el nodo variante.",
-    "wt_companion_semantics": "Valores cero y máscaras diff cero.",
-    "diff_polarity_shape_warning": "Observado [N] en mutantes y [N,4] en WT companions; armonizar antes del batching."
-  },
-  "targets": {
-    "present": false,
-    "target_group_or_dataset": null,
-    "note": "No existe target/targets/label. custom_structure_energy es graph_feature auxiliar, no target automático."
-  },
-  "quality_and_auxiliary_fields": {
-    "node_level": [
-      "res_depth_missing",
-      "is_truncation_node",
-      "mask_diff*"
-    ],
-    "graph_level": [
-      "anchor_position",
-      "custom_structure_energy",
-      "delta_chain_len",
-      "delta_nodes",
-      "graph_num_edges",
-      "graph_num_nodes",
-      "is_truncation",
-      "lost_fraction_seq",
-      "lost_residues_seq",
-      "mean_edge_distance",
-      "mut_length",
-      "stop_position",
-      "tail_lost_wt",
-      "wt_length"
-    ],
-    "base_encoder_policy": "custom_structure_energy y calidad quedan fuera del encoder base salvo ablación."
-  },
-  "representative_examples": {
-    "mutant": {
-      "variant_id": "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D",
-      "parsed": {
-        "chain_id": "A",
-        "position": 100,
-        "wt_aa_full": "Glycine",
-        "mut_aa_full": "Aspartate",
-        "wt_aa": "G",
-        "mut_aa": "D",
-        "suffix": "pos_100_G_D"
-      },
-      "N": 22,
-      "E": 69,
-      "stored_edge_index_shape": [
-        69,
-        2
-      ],
-      "model_x_shape_before_is_mutation": [
-        22,
-        73
-      ],
-      "model_x_shape_after_is_mutation": [
-        22,
-        74
-      ],
-      "edge_attr_shape": [
-        69,
-        6
-      ]
-    },
-    "wt_companion": {
-      "variant_id": "residue-srv:A:100:Glycine->Glycine:PKP2_WT",
-      "parsed": {
-        "chain_id": "A",
-        "position": 100,
-        "wt_aa_full": "Glycine",
-        "mut_aa_full": "Glycine",
-        "wt_aa": "G",
-        "mut_aa": "G",
-        "suffix": "PKP2_WT"
-      },
-      "N": 27,
-      "E": 95,
-      "stored_edge_index_shape": [
-        95,
-        2
-      ],
-      "model_x_shape_before_is_mutation": [
-        27,
-        73
-      ],
-      "model_x_shape_after_is_mutation": [
-        27,
-        74
-      ],
-      "edge_attr_shape": [
-        95,
-        6
-      ]
-    }
-  },
-  "validation_requirements_for_dataset": [
-    "Exigir node_features, edge_features y graph_features.",
-    "Todas las node features comparten N.",
-    "Todas las edge features comparten E.",
-    "Convertir _index [E,2] a [2,E] para PyG.",
-    "Validar índices en [0,N-1].",
-    "Parsear variant_id, position, wt_aa y mut_aa desde clave raíz.",
-    "Emparejar WT por posición.",
-    "Construir is_mutation.",
-    "Mantener máscaras separadas.",
-    "Convertir x y edge_attr a float32 y edge_index a int64.",
-    "Armonizar diff_polarity antes de batching.",
-    "No usar custom_structure_energy como target/input base.",
-    "Informar NaN, Inf, ausencias y shapes incompatibles."
-  ]
+  }
 }

@@ -1,132 +1,54 @@
-# Muestra mínima de HDF5
+# sample_data
 
-Esta carpeta contiene una muestra pequeña y versionable del dataset del proyecto
-GNN siamés Mutante–WT para PKP2. Su finalidad es permitir que Codex, las pruebas
-unitarias y los scripts de auditoría conozcan el formato real de entrada sin
-subir a GitHub los HDF5 completos.
+Este directorio contiene una muestra mínima de archivos HDF5 del proyecto GNN siamés Mutante–WT.
 
-## Contenido
+La muestra está pensada para documentar el esquema real de los HDF5, permitir pruebas unitarias, smoke tests y facilitar la revisión del formato sin incluir los datos completos de entrenamiento.
 
-```text
-sample_data/
-├── README.md
-├── manifest.json
-├── sample_schema.json
-└── examples/
-    ├── mutante_1.hdf5
-    ├── wt_companion_1.hdf5
-    ├── mutante_2.hdf5
-    ├── wt_companion_2.hdf5
-    └── caso_con_missing.hdf5
-```
+## Origen de los ejemplos
 
-## Ejemplos incluidos
+Los ejemplos de `sample_data/examples/` se han extraído de los HDF5 completos locales:
 
-| Archivo | Papel | Posición | Nodos | Aristas |
-|---|---|---:|---:|---:|
-| `mutante_1.hdf5` | Mutante missense normal G100D | 100 | 22 | 69 |
-| `wt_companion_1.hdf5` | WT companion de G100D | 100 | 27 | 95 |
-| `mutante_2.hdf5` | Mutante C563W con grafo grande | 563 | 62 | 340 |
-| `wt_companion_2.hdf5` | WT companion de C563W | 563 | 52 | 264 |
-| `caso_con_missing.hdf5` | Caso límite M1T con grafo pequeño y máscaras | 1 | 10 | 31 |
+- `local_data/hdf5/proc_483p.hdf5`: HDF5 global con grafos mutantes.
+- `local_data/hdf5/wt_companion.hdf5`: HDF5 global con grafos WT companion.
 
-`caso_con_missing.hdf5` no tiene WT companion emparejado dentro de la muestra mínima porque representa deliberadamente un caso límite con información incompleta y máscaras de disponibilidad.
+Estos archivos completos están excluidos por `.gitignore` y no deben subirse al repositorio.
 
-Los dos pares presentan números de nodos distintos entre sí y también entre
-Mutante y WT companion. El Dataset no debe asumir igualdad de `N` o `E`.
+## Archivos incluidos
 
-## Caso con información no disponible
+| Archivo | Rol | Posición | WT | Mutante | Nodos | Aristas | Key HDF5 |
+|---|---|---:|---|---|---:|---:|---|
+| `pos_327_GLYCINE_GLUTAMATE_caso_con_missing_o_stop.hdf5` | Caso con máscara/missing o caso límite | 327 | GLYCINE | GLUTAMATE | 10 | 24 | `residue-srv:A:327:Glycine->Glutamate:pos_327_G_E` |
+| `pos_327_GLYCINE_GLUTAMATE_wt_companion.hdf5` | WT companion | 327 | GLYCINE | GLUTAMATE | 11 | 25 | `residue-srv:A:327:Glycine->Glycine:PKP2_WT` |
+| `pos_458_ISOLEUCINE_LYSINE_mutante_2.hdf5` | Mutante completo 2 | 458 | ISOLEUCINE | LYSINE | 57 | 309 | `residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K` |
+| `pos_458_ISOLEUCINE_LYSINE_wt_companion.hdf5` | WT companion | 458 | ISOLEUCINE | LYSINE | 51 | 264 | `residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT` |
+| `pos_563_CYSTEINE_TRYPTOPHAN_mutante_1.hdf5` | Mutante completo 1 | 563 | CYSTEINE | TRYPTOPHAN | 62 | 340 | `residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W` |
+| `pos_563_CYSTEINE_TRYPTOPHAN_wt_companion.hdf5` | WT companion | 563 | CYSTEINE | TRYPTOPHAN | 52 | 264 | `residue-srv:A:563:Cysteine->Cysteine:PKP2_WT` |
 
-Los HDF5 originales no contienen NaN. La información no calculable se representa
-mediante datasets `mask_*`. En `caso_con_missing.hdf5`,
-`mask_diff_hbond_count` y `mask_diff_hydrophobicity` valen cero en todos los
-nodos. Esto permite probar que el Dataset:
+## Interpretación de la muestra mínima
 
-1. conserva las máscaras;
-2. distingue un valor no disponible de un cambio real igual a cero;
-3. no introduce NaN artificiales;
-4. no usa las máscaras como features del encoder base salvo configuración
-   explícita.
+- `pos_563_CYSTEINE_TRYPTOPHAN_mutante_1.hdf5` representa un mutante missense completo con su WT companion correspondiente.
+- `pos_458_ISOLEUCINE_LYSINE_mutante_2.hdf5` representa un segundo mutante missense completo, útil para probar batching y emparejamiento Mutante–WT.
+- `pos_327_GLYCINE_GLUTAMATE_caso_con_missing_o_stop.hdf5` representa el caso con máscara, valor ausente o caso límite seleccionado automáticamente durante la extracción.
+- Cada posición incluida tiene su WT companion correspondiente.
 
-## Estructura de cada archivo
+## Estructura esperada de cada HDF5 individual
 
-Cada HDF5 de muestra contiene exactamente un grupo raíz, cuyo nombre es el
-`variant_id`. Dentro aparecen:
+Cada archivo HDF5 individual contiene un único grupo raíz correspondiente a una query `residue-srv`.
 
-- `node_features/`;
-- `edge_features/`;
-- `graph_features/`.
+Dentro de cada grupo raíz se esperan, como mínimo:
 
-La conectividad se almacena en `edge_features/_index` con shape `[E, 2]`.
-Para PyTorch Geometric debe transponerse a `[2, E]`.
+- `node_features/`: atributos de nodo a nivel de residuo.
+- `edge_features/`: atributos de arista y conectividad mediante `_index`.
+- `graph_features/`: atributos globales del grafo.
 
-`is_mutation` no está almacenado como dataset. El loader actual lo construye en
-tiempo de ejecución y lo añade como última columna de `x`.
+El archivo `sample_data/sample_schema.json` describe la jerarquía, shapes y tipos de datos observados en estos ejemplos.
 
-El emparejamiento con el WT se realiza por posición. Los nombres completos de
-aminoácidos y la posición se parsean desde la clave raíz.
+## Archivos auxiliares relacionados
 
-## Reglas de uso
+- `reports/sample_hdf5_candidates.tsv`: inventario de candidatos detectados en los HDF5 completos.
+- `reports/sample_hdf5_extraction_report.tsv`: trazabilidad de los ejemplos extraídos.
+- `scripts/extract_minimal_hdf5_examples.py`: script usado para extraer los grupos individuales.
 
-- Usar estos archivos únicamente para desarrollo, tests, smoke tests y auditoría.
-- No estimar métricas científicas ni entrenar el modelo final con esta muestra.
-- No sustituir `sample_schema.json` por deducciones realizadas desde el informe.
-- No subir `proc_483p.hdf5` ni `wt_companion.hdf5` completos al repositorio.
-- No tratar `custom_structure_energy` como target ni como input base automático.
-- Validar la dimensionalidad de las features antes de formar batches.
+## Nota importante
 
-## Comprobación rápida
-
-```python
-from pathlib import Path
-import h5py
-
-for path in sorted(Path("sample_data/examples").glob("*.hdf5")):
-    with h5py.File(path, "r") as handle:
-        keys = list(handle.keys())
-        assert len(keys) == 1
-        graph = handle[keys[0]]
-        assert "node_features" in graph
-        assert "edge_features" in graph
-        assert "graph_features" in graph
-        assert "_index" in graph["edge_features"]
-        print(path.name, keys[0])
-```
-
-Consulta `sample_schema.json` para ver la jerarquía, los nombres y el orden de
-features, dtypes, shapes, máscaras, reglas de `is_mutation` y emparejamiento
-Mutante–WT.
-
-## Notas sobre el esquema real del HDF5
-
-El esquema real observado en los HDF5 actuales debe prevalecer sobre cualquier
-suposición derivada del informe o de código legacy.
-
-- Los HDF5 actuales contienen `node_features`, `edge_features`,
-  `graph_features`, grupos `diff_*`, máscaras `mask_diff_*`, variables `var_*`
-  y `custom_structure_energy`.
-- Los HDF5 actuales no contienen `custom_complex_energy_phenotype`.
-- Los HDF5 actuales no contienen `is_mutation` como canal explícito
-  almacenado. Ese canal debe reconstruirse durante la carga a partir de los
-  canales `diff_*` disponibles.
-- Para mutantes missense debe detectarse exactamente un nodo mutado.
-- Para WT companion y para variantes truncadas/`STOP` debe detectarse cero
-  nodos mutados.
-- `custom_structure_energy` existe, pero no debe entrar en el encoder base. Se
-  conserva como variable de auditoría, confusor, estratificación, análisis
-  post hoc o ablación explícita.
-- Las variables `var_*`, por ejemplo `var_HSE`, `var_SASA`, `var_SSnum` o
-  `var_contact_count_rings_*`, pueden auditarse o utilizarse en la construcción
-  declarada de diferencias estructurales, pero no deben activarse como input
-  base si la configuración no lo declara de forma explícita.
-- `diff_polarity` puede aparecer codificado de forma no numérica. La auditoría
-  debe reportarlo como warning y recomendar su exclusión del encoder base.
-- `diff_polarity` no se usa como input base del encoder. Si se desea usarlo,
-  debe definirse una feature derivada como `diff_polarity_numeric` con mapping
-  explícito y máscara asociada.
-- `edge_features/_index` se observa con orientación `(E, 2)`. Para PyTorch
-  Geometric debe convertirse a `(2, E)` durante la carga, sin modificar el HDF5
-  original.
-
-Estas notas son documentales y operativas. No autorizan a regenerar, corregir o
-reescribir los HDF5 originales del proyecto.
+La muestra reducida no debe utilizarse como dataset final de entrenamiento. El entrenamiento real debe ejecutarse con los HDF5 completos del proyecto, almacenados fuera del repositorio o en rutas ignoradas por Git.
