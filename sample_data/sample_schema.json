@@ -5,6 +5,10 @@
     "wt_companions": "local_data/hdf5/wt_companion.hdf5",
     "note": "These full HDF5 files are ignored by .gitignore and must not be committed."
   },
+  "feature_notes": {
+    "custom_structure_energy": "Present in graph_features of the inspected HDF5 files and examples.",
+    "custom_complex_energy_phenotype": "Not present in graph_features of local_data/hdf5/proc_483p.hdf5 or local_data/hdf5/wt_companion.hdf5 at the time this schema was generated. It should not be treated as part of the current HDF5 schema unless future HDF5 files are regenerated with this feature."
+  },
   "examples_dir": "sample_data/examples",
   "examples": {
     "pos_327_GLYCINE_GLUTAMATE_caso_con_missing_o_stop.hdf5": {
