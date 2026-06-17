@@ -28,7 +28,7 @@ matplotlib
 h5py
 
 # Configuración YAML
-PyYAML
+pyyaml
 
 # Barras de progreso
 tqdm
