@@ -1,0 +1,7 @@
+role	source_h5	source_key	output_file	pos	wt	mut	n_nodes	n_edges	has_mask_or_missing	is_stop
+mutante_1	local_data/hdf5/proc_483p.hdf5	residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W	sample_data/examples/pos_563_CYSTEINE_TRYPTOPHAN_mutante_1.hdf5	563	CYSTEINE	TRYPTOPHAN	62	340	True	False
+wt_companion_for_mutante_1	local_data/hdf5/wt_companion.hdf5	residue-srv:A:563:Cysteine->Cysteine:PKP2_WT	sample_data/examples/pos_563_CYSTEINE_TRYPTOPHAN_wt_companion.hdf5	563	CYSTEINE	CYSTEINE	52	264	True	False
+mutante_2	local_data/hdf5/proc_483p.hdf5	residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K	sample_data/examples/pos_458_ISOLEUCINE_LYSINE_mutante_2.hdf5	458	ISOLEUCINE	LYSINE	57	309	True	False
+wt_companion_for_mutante_2	local_data/hdf5/wt_companion.hdf5	residue-srv:A:458:Isoleucine->Isoleucine:PKP2_WT	sample_data/examples/pos_458_ISOLEUCINE_LYSINE_wt_companion.hdf5	458	ISOLEUCINE	ISOLEUCINE	51	264	True	False
+caso_con_missing_o_stop	local_data/hdf5/proc_483p.hdf5	residue-srv:A:327:Glycine->Glutamate:pos_327_G_E	sample_data/examples/pos_327_GLYCINE_GLUTAMATE_caso_con_missing_o_stop.hdf5	327	GLYCINE	GLUTAMATE	10	24	True	False
+wt_companion_for_caso_con_missing_o_stop	local_data/hdf5/wt_companion.hdf5	residue-srv:A:327:Glycine->Glycine:PKP2_WT	sample_data/examples/pos_327_GLYCINE_GLUTAMATE_wt_companion.hdf5	327	GLYCINE	GLYCINE	11	25	True	False
