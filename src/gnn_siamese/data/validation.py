@@ -945,6 +945,36 @@ def write_audit_csv(path: Path, rows: list[dict[str, Any]], *, rejected_only: bo
             )
 
 
+def build_summary_by_reason(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    reason_counts: dict[str, int] = {}
+    for row in rows:
+        for field_name in ("errors", "warnings"):
+            for reason in row.get(field_name, []):
+                reason_text = str(reason).strip()
+                if not reason_text:
+                    continue
+                reason_counts[reason_text] = reason_counts.get(reason_text, 0) + 1
+
+    return [
+        {"reason": reason, "count": count}
+        for reason, count in sorted(reason_counts.items())
+    ]
+
+
+def write_summary_by_reason_csv(path: Path, summary_rows: Sequence[dict[str, Any]]) -> None:
+    fieldnames = ["reason", "count"]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in summary_rows:
+            writer.writerow(
+                {
+                    "reason": row["reason"],
+                    "count": row["count"],
+                }
+            )
+
+
 def build_feature_summary(rows: list[dict[str, Any]], *, diff_probes: list[str]) -> dict[str, Any]:
     node_features = sorted({name for row in rows for name in row["node_feature_names"]})
     edge_features = sorted({name for row in rows for name in row["edge_feature_names"]})

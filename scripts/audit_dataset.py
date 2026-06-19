@@ -25,9 +25,11 @@ from gnn_siamese.data.validation import (
     audit_mut_wt_pairing,
     audit_hdf5_file,
     build_feature_summary,
+    build_summary_by_reason,
     expand_hdf5_inputs,
     write_audit_csv,
     write_audit_json,
+    write_summary_by_reason_csv,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -129,18 +131,21 @@ def main() -> None:
     dataset_audit_json = output_dir / "dataset_audit.json"
     dataset_audit_csv = output_dir / "dataset_audit.csv"
     rejected_cases_csv = output_dir / "rejected_cases.csv"
+    summary_by_reason_csv = output_dir / "summary_by_reason.csv"
     feature_summary_json = output_dir / "feature_summary.json"
     pairing_summary_json = output_dir / "pairing_summary.json"
 
     write_audit_json(dataset_audit_json, rows)
     write_audit_csv(dataset_audit_csv, rows)
     write_audit_csv(rejected_cases_csv, rows, rejected_only=True)
+    write_summary_by_reason_csv(summary_by_reason_csv, build_summary_by_reason(rows))
     write_audit_json(feature_summary_json, feature_summary)
     write_audit_json(pairing_summary_json, pairing_summary)
 
     LOGGER.info("Wrote %s", dataset_audit_json)
     LOGGER.info("Wrote %s", dataset_audit_csv)
     LOGGER.info("Wrote %s", rejected_cases_csv)
+    LOGGER.info("Wrote %s", summary_by_reason_csv)
     LOGGER.info("Wrote %s", feature_summary_json)
     LOGGER.info("Wrote %s", pairing_summary_json)
 

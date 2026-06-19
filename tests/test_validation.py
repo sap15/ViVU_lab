@@ -17,12 +17,14 @@ from gnn_siamese.data.validation import (
     audit_hdf5_file,
     audit_mut_wt_pairing,
     build_feature_summary,
+    build_summary_by_reason,
     detect_available_targets,
     expand_hdf5_inputs,
     infer_is_mutation_from_diff,
     validate_encoder_feature_policy,
     write_audit_csv,
     write_audit_json,
+    write_summary_by_reason_csv,
 )
 
 
@@ -497,12 +499,14 @@ def test_audit_outputs_are_generated(tmp_path: Path) -> None:
     dataset_json = output_dir / "dataset_audit.json"
     dataset_csv = output_dir / "dataset_audit.csv"
     rejected_csv = output_dir / "rejected_cases.csv"
+    summary_by_reason_csv = output_dir / "summary_by_reason.csv"
     feature_summary_json = output_dir / "feature_summary.json"
     pairing_summary_json = output_dir / "pairing_summary.json"
 
     write_audit_json(dataset_json, rows)
     write_audit_csv(dataset_csv, rows)
     write_audit_csv(rejected_csv, rows, rejected_only=True)
+    write_summary_by_reason_csv(summary_by_reason_csv, build_summary_by_reason(rows))
     summary = build_feature_summary(rows, diff_probes=DIFF_PROBES_FOR_MUTATION)
     summary["pairing"] = pairing
     write_audit_json(feature_summary_json, summary)
@@ -511,6 +515,7 @@ def test_audit_outputs_are_generated(tmp_path: Path) -> None:
     assert dataset_json.exists()
     assert dataset_csv.exists()
     assert rejected_csv.exists()
+    assert summary_by_reason_csv.exists()
     assert feature_summary_json.exists()
     assert pairing_summary_json.exists()
 
@@ -532,6 +537,42 @@ def test_audit_outputs_are_generated(tmp_path: Path) -> None:
     with rejected_csv.open(encoding="utf-8", newline="") as handle:
         rejected_rows = list(csv.DictReader(handle))
     assert rejected_rows == []
+
+    with summary_by_reason_csv.open(encoding="utf-8", newline="") as handle:
+        summary_rows = list(csv.DictReader(handle))
+    assert summary_rows
+    assert set(summary_rows[0]) == {"reason", "count"}
+
+
+def test_write_summary_by_reason_csv_generates_header_without_rejections(tmp_path: Path) -> None:
+    output_path = tmp_path / "summary_by_reason.csv"
+
+    write_summary_by_reason_csv(output_path, build_summary_by_reason([]))
+
+    assert output_path.exists()
+    assert output_path.read_text(encoding="utf-8").splitlines() == ["reason,count"]
+
+
+def test_build_summary_by_reason_counts_synthetic_errors_and_warnings() -> None:
+    rows = [
+        {
+            "errors": ["missing wt", "bad edge"],
+            "warnings": ["soft issue"],
+        },
+        {
+            "errors": ["missing wt"],
+            "warnings": ["soft issue", "watch this"],
+        },
+    ]
+
+    summary_rows = build_summary_by_reason(rows)
+
+    assert summary_rows == [
+        {"reason": "bad edge", "count": 1},
+        {"reason": "missing wt", "count": 2},
+        {"reason": "soft issue", "count": 2},
+        {"reason": "watch this", "count": 1},
+    ]
 
 
 def test_expand_hdf5_inputs_supports_globs_without_duplicates(tmp_path: Path) -> None:
@@ -566,8 +607,12 @@ def test_cli_audits_individual_sample_hdf5_without_wt_pairing(tmp_path: Path) ->
     assert result.returncode == 0, result.stderr
     summary = json.loads((output_dir / "feature_summary.json").read_text(encoding="utf-8"))
     pairing = json.loads((output_dir / "pairing_summary.json").read_text(encoding="utf-8"))
+    with (output_dir / "summary_by_reason.csv").open(encoding="utf-8", newline="") as handle:
+        summary_rows = list(csv.DictReader(handle))
 
     assert summary["case_counts"]["total"] == 3
     assert pairing["mutant_cases_checked"] == 0
     assert pairing["wt_cases_checked"] == 0
     assert pairing["coverage_complete"] is True
+    assert summary_rows
+    assert set(summary_rows[0]) == {"reason", "count"}
