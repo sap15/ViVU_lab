@@ -14,9 +14,7 @@ sample_data/
 ├── sample_schema.json
 └── examples/
     ├── mutante_1.hdf5
-    ├── wt_companion_1.hdf5
     ├── mutante_2.hdf5
-    ├── wt_companion_2.hdf5
     └── caso_con_missing.hdf5
 ```
 
@@ -25,15 +23,17 @@ sample_data/
 | Archivo | Papel | Posición | Nodos | Aristas |
 |---|---|---:|---:|---:|
 | `mutante_1.hdf5` | Mutante missense normal G100D | 100 | 22 | 69 |
-| `wt_companion_1.hdf5` | WT companion de G100D | 100 | 27 | 95 |
 | `mutante_2.hdf5` | Mutante C563W con grafo grande | 563 | 62 | 340 |
-| `wt_companion_2.hdf5` | WT companion de C563W | 563 | 52 | 264 |
 | `caso_con_missing.hdf5` | Caso límite M1T con grafo pequeño y máscaras | 1 | 10 | 31 |
 
-`caso_con_missing.hdf5` no tiene WT companion emparejado dentro de la muestra mínima porque representa deliberadamente un caso límite con información incompleta y máscaras de disponibilidad.
+La muestra mínima versionada no incluye archivos WT companion. Su objetivo actual
+es auditar HDF5 individuales, no validar cobertura completa de pairing Mutante–WT.
 
-Los dos pares presentan números de nodos distintos entre sí y también entre
-Mutante y WT companion. El Dataset no debe asumir igualdad de `N` o `E`.
+`caso_con_missing.hdf5` representa deliberadamente un caso límite con
+información incompleta y máscaras de disponibilidad.
+
+Los tres archivos presentan tamaños de grafo diferentes. El Dataset no debe
+asumir igualdad de `N` o `E`.
 
 ## Caso con información no disponible
 
@@ -69,6 +69,14 @@ aminoácidos y la posición se parsean desde la clave raíz.
 ## Reglas de uso
 
 - Usar estos archivos únicamente para desarrollo, tests, smoke tests y auditoría.
+- Para el smoke test documental de auditoría usar:
+
+```bash
+python scripts/audit_dataset.py \
+  --hdf5 'sample_data/examples/*.hdf5' \
+  --output-dir reports/dataset_audit_sample
+```
+
 - No estimar métricas científicas ni entrenar el modelo final con esta muestra.
 - No sustituir `sample_schema.json` por deducciones realizadas desde el informe.
 - No subir `proc_483p.hdf5` ni `wt_companion.hdf5` completos al repositorio.

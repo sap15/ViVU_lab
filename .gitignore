@@ -132,6 +132,7 @@ coverage_report.csv
 # ---------------------------------------------------------------------------
 
 /data/
+local_data/
 datasets/
 raw_data/
 processed_data/
