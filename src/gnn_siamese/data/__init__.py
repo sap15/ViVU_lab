@@ -8,6 +8,12 @@ from gnn_siamese.data.feature_selection import (
     resolve_node_feature_names,
     split_encoder_inputs_and_auxiliary_features,
 )
+from gnn_siamese.data.collate import (
+    BatchedGraphComponents,
+    MutWtPairBatch,
+    MutWtPairCollateError,
+    collate_mut_wt_pairs,
+)
 from gnn_siamese.data.dataset import MutWtPairDataset, MutWtPairDatasetError, MutWtPairSample
 from gnn_siamese.data.hdf5_loader import (
     HDF5GraphComponents,
@@ -34,6 +40,7 @@ from gnn_siamese.data.pairing import (
 
 __all__ = [
     "AmbiguousWTCompanionError",
+    "BatchedGraphComponents",
     "FeatureSelectionError",
     "HDF5GraphComponents",
     "HDF5GraphLoadError",
@@ -41,6 +48,8 @@ __all__ = [
     "MissingFeatureGroupError",
     "MissingWTCompanionError",
     "MissingSchemaFeatureError",
+    "MutWtPairBatch",
+    "MutWtPairCollateError",
     "MutWtPairDataset",
     "MutWtPairDatasetError",
     "MutWtPairSample",
@@ -50,6 +59,7 @@ __all__ = [
     "VariantSignature",
     "build_wt_index",
     "build_is_mutation_channel",
+    "collate_mut_wt_pairs",
     "extract_variant_metadata",
     "load_hdf5_graph_components",
     "normalize_edge_index",
