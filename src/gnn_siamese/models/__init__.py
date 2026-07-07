@@ -2,10 +2,15 @@
 
 from gnn_siamese.models.encoder import EdgeAwareGraphEncoder, EncoderBranchOutput
 from gnn_siamese.models.model import SharedSiameseEncoderModel, SharedSiameseEncoderOutput
+from gnn_siamese.models.relational import MLPDelta, RDelta, RelationalOutput, RelationalRepresentation
 
 __all__ = [
     "EdgeAwareGraphEncoder",
     "EncoderBranchOutput",
+    "MLPDelta",
+    "RDelta",
+    "RelationalOutput",
+    "RelationalRepresentation",
     "SharedSiameseEncoderModel",
     "SharedSiameseEncoderOutput",
 ]
