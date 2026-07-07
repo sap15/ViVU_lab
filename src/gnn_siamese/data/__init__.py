@@ -8,6 +8,7 @@ from gnn_siamese.data.feature_selection import (
     resolve_node_feature_names,
     split_encoder_inputs_and_auxiliary_features,
 )
+from gnn_siamese.data.dataset import MutWtPairDataset, MutWtPairDatasetError, MutWtPairSample
 from gnn_siamese.data.hdf5_loader import (
     HDF5GraphComponents,
     HDF5GraphLoadError,
@@ -40,6 +41,9 @@ __all__ = [
     "MissingFeatureGroupError",
     "MissingWTCompanionError",
     "MissingSchemaFeatureError",
+    "MutWtPairDataset",
+    "MutWtPairDatasetError",
+    "MutWtPairSample",
     "PairingError",
     "PairingKey",
     "SignatureParseError",
