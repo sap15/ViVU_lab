@@ -1,0 +1,217 @@
+"""Minimal paired mutant-WT dataset built on top of the HDF5 loaders."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import h5py
+
+from gnn_siamese.data.feature_selection import split_encoder_inputs_and_auxiliary_features
+from gnn_siamese.data.hdf5_loader import HDF5GraphComponents, load_hdf5_graph_components
+from gnn_siamese.data.pairing import PairingKey, pair_mutants_with_wt
+
+
+class MutWtPairDatasetError(ValueError):
+    """Raised when the paired dataset cannot resolve or validate a sample."""
+
+
+@dataclass(frozen=True)
+class MutWtPairRecord:
+    """Stable record describing one resolved mutant-WT pair."""
+
+    pair_key: PairingKey
+    variant_id: str
+    mutant_key: str
+    wt_key: str
+    position: int
+    wt_aa: str
+    mut_aa: str
+    chain_id: str | None
+    mutant_source_h5: str
+    wt_source_h5: str
+
+
+@dataclass(frozen=True)
+class MutWtPairSample:
+    """One paired sample returned by :class:`MutWtPairDataset`."""
+
+    graph_mut: HDF5GraphComponents
+    graph_wt: HDF5GraphComponents
+    metadata: dict[str, Any]
+    pair_key: PairingKey
+    variant_id: str
+    mutant_key: str
+    wt_key: str
+
+
+def _list_graph_keys(h5_path: str | Path) -> list[str]:
+    with h5py.File(h5_path, "r") as handle:
+        return sorted(str(key) for key in handle.keys())
+
+
+def _normalize_graph_keys(
+    h5_path: str | Path,
+    graph_keys: Sequence[str] | None,
+    *,
+    role: str,
+) -> list[str]:
+    if graph_keys is None:
+        return _list_graph_keys(h5_path)
+    normalized = [str(key) for key in graph_keys]
+    if not normalized:
+        raise MutWtPairDatasetError(f"{role} graph keys cannot be empty.")
+    return normalized
+
+
+def _build_pair_records(
+    mutant_h5_path: str | Path,
+    wt_h5_path: str | Path,
+    mutant_graph_keys: Sequence[str] | None,
+    wt_graph_keys: Sequence[str] | None,
+) -> list[MutWtPairRecord]:
+    mutant_source = str(mutant_h5_path)
+    wt_source = str(wt_h5_path)
+    mutant_records = [
+        {"variant_id": key, "graph_id": key, "source_path": mutant_source}
+        for key in _normalize_graph_keys(mutant_h5_path, mutant_graph_keys, role="Mutant")
+    ]
+    wt_records = [
+        {"variant_id": key, "graph_id": key, "source_path": wt_source}
+        for key in _normalize_graph_keys(wt_h5_path, wt_graph_keys, role="WT")
+    ]
+
+    paired = pair_mutants_with_wt(mutant_records, wt_records)
+    ordered = sorted(
+        paired,
+        key=lambda item: (
+            "" if item["chain_id"] is None else str(item["chain_id"]),
+            int(item["position"]),
+            str(item["wt_aa"]),
+            str(item["mut_aa"]),
+            str(item["variant_id"]),
+            str(item["wt_companion_id"]),
+        ),
+    )
+    return [
+        MutWtPairRecord(
+            pair_key=item["pairing_signature"],
+            variant_id=str(item["variant_id"]),
+            mutant_key=str(item["graph_id"]),
+            wt_key=str(item["wt_companion_id"]),
+            position=int(item["position"]),
+            wt_aa=str(item["wt_aa"]),
+            mut_aa=str(item["mut_aa"]),
+            chain_id=None if item["chain_id"] is None else str(item["chain_id"]),
+            mutant_source_h5=mutant_source,
+            wt_source_h5=wt_source,
+        )
+        for item in ordered
+    ]
+
+
+def _validate_pair_compatibility(
+    pair: MutWtPairRecord,
+    graph_mut: HDF5GraphComponents,
+    graph_wt: HDF5GraphComponents,
+) -> None:
+    if graph_mut.x.shape[1] != graph_wt.x.shape[1]:
+        raise MutWtPairDatasetError(
+            f"Incompatible node feature dimensions for pair {pair.variant_id!r}: "
+            f"mutant has {graph_mut.x.shape[1]} columns, WT has {graph_wt.x.shape[1]}."
+        )
+    if graph_mut.edge_attr.shape[1] != graph_wt.edge_attr.shape[1]:
+        raise MutWtPairDatasetError(
+            f"Incompatible edge feature dimensions for pair {pair.variant_id!r}: "
+            f"mutant has {graph_mut.edge_attr.shape[1]} columns, WT has {graph_wt.edge_attr.shape[1]}."
+        )
+    if graph_mut.node_feature_names != graph_wt.node_feature_names:
+        raise MutWtPairDatasetError(
+            f"Incompatible node feature names for pair {pair.variant_id!r}: "
+            f"{graph_mut.node_feature_names!r} != {graph_wt.node_feature_names!r}."
+        )
+    if graph_mut.edge_feature_names != graph_wt.edge_feature_names:
+        raise MutWtPairDatasetError(
+            f"Incompatible edge feature names for pair {pair.variant_id!r}: "
+            f"{graph_mut.edge_feature_names!r} != {graph_wt.edge_feature_names!r}."
+        )
+
+
+class MutWtPairDataset:
+    """Minimal deterministic dataset of paired mutant and WT graph components."""
+
+    def __init__(
+        self,
+        *,
+        mutant_h5_path: str | Path,
+        wt_h5_path: str | Path,
+        config: Mapping[str, Any],
+        schema: Mapping[str, Any],
+        mutant_graph_keys: Sequence[str] | None = None,
+        wt_graph_keys: Sequence[str] | None = None,
+    ) -> None:
+        self.mutant_h5_path = str(mutant_h5_path)
+        self.wt_h5_path = str(wt_h5_path)
+        self.config = config
+        self.schema = schema
+
+        selection = split_encoder_inputs_and_auxiliary_features(config, schema)
+        self.node_feature_names = tuple(selection["encoder_node_features"])
+        self.edge_feature_names = tuple(selection["encoder_edge_features"])
+        self.node_availability_masks = dict(selection["node_availability_masks"])
+        self.pairs = _build_pair_records(
+            mutant_h5_path=mutant_h5_path,
+            wt_h5_path=wt_h5_path,
+            mutant_graph_keys=mutant_graph_keys,
+            wt_graph_keys=wt_graph_keys,
+        )
+
+    def __len__(self) -> int:
+        return len(self.pairs)
+
+    def __getitem__(self, index: int) -> MutWtPairSample:
+        pair = self.pairs[index]
+        graph_mut = load_hdf5_graph_components(
+            pair.mutant_source_h5,
+            pair.mutant_key,
+            node_feature_names=self.node_feature_names,
+            edge_feature_names=self.edge_feature_names,
+            node_availability_masks=self.node_availability_masks,
+            config=self.config,
+        )
+        graph_wt = load_hdf5_graph_components(
+            pair.wt_source_h5,
+            pair.wt_key,
+            node_feature_names=self.node_feature_names,
+            edge_feature_names=self.edge_feature_names,
+            node_availability_masks=self.node_availability_masks,
+            config=self.config,
+        )
+        _validate_pair_compatibility(pair, graph_mut, graph_wt)
+
+        metadata = {
+            "variant_id": pair.variant_id,
+            "position": pair.position,
+            "wt_aa": pair.wt_aa,
+            "mut_aa": pair.mut_aa,
+            "chain_id": pair.chain_id,
+            "mutant_key": pair.mutant_key,
+            "wt_key": pair.wt_key,
+            "mutant_source_h5": pair.mutant_source_h5,
+            "wt_source_h5": pair.wt_source_h5,
+            "source_h5": {
+                "mutant": pair.mutant_source_h5,
+                "wt": pair.wt_source_h5,
+            },
+        }
+        return MutWtPairSample(
+            graph_mut=graph_mut,
+            graph_wt=graph_wt,
+            metadata=metadata,
+            pair_key=pair.pair_key,
+            variant_id=pair.variant_id,
+            mutant_key=pair.mutant_key,
+            wt_key=pair.wt_key,
+        )
