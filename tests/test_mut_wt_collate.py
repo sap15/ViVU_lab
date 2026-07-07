@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+import torch
+from torch.utils.data import DataLoader
 
 from gnn_siamese.data.collate import MutWtPairCollateError, collate_mut_wt_pairs
 from gnn_siamese.data.dataset import MutWtPairSample
 from gnn_siamese.data.hdf5_loader import HDF5GraphComponents
 from gnn_siamese.data.pairing import PairingKey
+
+torch_geometric = pytest.importorskip("torch_geometric")
 
 
 def _make_graph(
@@ -100,20 +104,51 @@ def test_collate_mut_wt_pairs_batches_two_samples() -> None:
     batch = collate_mut_wt_pairs([sample_a, sample_b])
 
     assert batch.batch_size == 2
-    np.testing.assert_array_equal(
+    assert isinstance(batch.graph_mut, torch_geometric.data.Batch)
+    assert isinstance(batch.graph_wt, torch_geometric.data.Batch)
+    torch.testing.assert_close(
         batch.graph_mut.x,
-        np.asarray([[0.1, 0.0, 0.0], [0.2, 1.0, 1.0], [0.5, 0.0, 1.0]], dtype=np.float32),
+        torch.tensor([[0.1, 0.0, 0.0], [0.2, 1.0, 1.0], [0.5, 0.0, 1.0]], dtype=torch.float32),
     )
-    np.testing.assert_array_equal(
+    torch.testing.assert_close(
         batch.graph_wt.x,
-        np.asarray(
+        torch.tensor(
             [[0.3, 0.0, 0.0], [0.4, 0.0, 0.0], [0.6, 0.0, 0.0], [0.7, 0.0, 0.0], [0.8, 0.0, 0.0]],
-            dtype=np.float32,
+            dtype=torch.float32,
         ),
     )
-    assert batch.graph_mut.edge_attr.dtype == np.float32
-    assert batch.graph_mut.edge_attr.shape == (1, 2)
+    torch.testing.assert_close(
+        batch.graph_mut.edge_attr,
+        torch.tensor([[3.0, 1.0]], dtype=torch.float32),
+    )
+    torch.testing.assert_close(
+        batch.graph_wt.edge_attr,
+        torch.tensor([[4.0, 0.0], [4.0, 0.0], [4.0, 0.0]], dtype=torch.float32),
+    )
+    torch.testing.assert_close(
+        batch.graph_mut.edge_index,
+        torch.tensor([[0], [1]], dtype=torch.int64),
+    )
+    torch.testing.assert_close(
+        batch.graph_wt.edge_index,
+        torch.tensor([[0, 2, 3], [1, 3, 4]], dtype=torch.int64),
+    )
+    assert batch.graph_mut.x.shape == (3, 3)
+    assert batch.graph_wt.x.shape == (5, 3)
     assert batch.graph_mut.edge_index.shape == (2, 1)
+    assert batch.graph_wt.edge_index.shape == (2, 3)
+    assert batch.graph_mut.edge_attr.shape == (1, 2)
+    assert batch.graph_wt.edge_attr.shape == (3, 2)
+    assert batch.graph_mut.batch is not None
+    assert batch.graph_mut.ptr is not None
+    assert batch.graph_wt.batch is not None
+    assert batch.graph_wt.ptr is not None
+    assert batch.graph_mut.x.dtype == torch.float32
+    assert batch.graph_mut.edge_index.dtype == torch.int64
+    assert batch.graph_mut.edge_attr.dtype == torch.float32
+    assert batch.graph_wt.x.dtype == torch.float32
+    assert batch.graph_wt.edge_index.dtype == torch.int64
+    assert batch.graph_wt.edge_attr.dtype == torch.float32
 
 
 def test_collate_offsets_edge_index_correctly() -> None:
@@ -144,12 +179,12 @@ def test_collate_offsets_edge_index_correctly() -> None:
 
     batch = collate_mut_wt_pairs([sample_a, sample_b])
 
-    np.testing.assert_array_equal(
+    torch.testing.assert_close(
         batch.graph_mut.edge_index,
-        np.asarray([[0, 1, 2, 4], [1, 0, 4, 3]], dtype=np.int64),
+        torch.tensor([[0, 1, 2, 4], [1, 0, 4, 3]], dtype=torch.int64),
     )
-    np.testing.assert_array_equal(batch.graph_mut.ptr, np.asarray([0, 2, 5], dtype=np.int64))
-    np.testing.assert_array_equal(batch.graph_mut.batch, np.asarray([0, 0, 1, 1, 1], dtype=np.int64))
+    torch.testing.assert_close(batch.graph_mut.ptr, torch.tensor([0, 2, 5], dtype=torch.int64))
+    torch.testing.assert_close(batch.graph_mut.batch, torch.tensor([0, 0, 1, 1, 1], dtype=torch.int64))
 
 
 def test_collate_preserves_metadata_order() -> None:
@@ -225,11 +260,11 @@ def test_collate_preserves_is_mutation_channels() -> None:
     batch = collate_mut_wt_pairs([sample_a, sample_b])
 
     mut_counts = [
-        int(batch.graph_mut.is_mutation[start:end].sum())
+        int(batch.graph_mut.is_mutation[start:end].sum().item())
         for start, end in zip(batch.graph_mut.ptr[:-1], batch.graph_mut.ptr[1:])
     ]
     wt_counts = [
-        int(batch.graph_wt.is_mutation[start:end].sum())
+        int(batch.graph_wt.is_mutation[start:end].sum().item())
         for start, end in zip(batch.graph_wt.ptr[:-1], batch.graph_wt.ptr[1:])
     ]
 
@@ -266,11 +301,46 @@ def test_collate_preserves_availability_masks() -> None:
     batch = collate_mut_wt_pairs([sample_a, sample_b])
 
     assert "mask_diff_mass" not in batch.graph_mut.node_feature_names
-    np.testing.assert_array_equal(
+    torch.testing.assert_close(
         batch.graph_mut.node_availability_masks["diff_mass"],
-        np.asarray([0.0, 1.0, 1.0], dtype=np.float32),
+        torch.tensor([0.0, 1.0, 1.0], dtype=torch.float32),
     )
     assert batch.graph_mut.x.shape[1] == 3
+
+
+def test_collate_works_with_torch_dataloader() -> None:
+    sample_a = _make_sample(
+        suffix="100",
+        pair_key=PairingKey(chain_id="A", position=100, wt_aa="G"),
+        mut_x=[[0.1, 0.0, 1.0]],
+        wt_x=[[0.2, 0.0, 0.0]],
+        mut_edge_index=[[], []],
+        wt_edge_index=[[], []],
+        mut_is_mutation=[1.0],
+        wt_is_mutation=[0.0],
+        mut_mask=[1.0],
+        wt_mask=[1.0],
+    )
+    sample_b = _make_sample(
+        suffix="101",
+        pair_key=PairingKey(chain_id="A", position=101, wt_aa="G"),
+        mut_x=[[0.3, 0.0, 1.0], [0.4, 0.0, 0.0]],
+        wt_x=[[0.5, 0.0, 0.0]],
+        mut_edge_index=[[0], [1]],
+        wt_edge_index=[[], []],
+        mut_is_mutation=[1.0, 0.0],
+        wt_is_mutation=[0.0],
+        mut_mask=[1.0, 1.0],
+        wt_mask=[1.0],
+    )
+
+    loader = DataLoader([sample_a, sample_b], batch_size=2, collate_fn=collate_mut_wt_pairs, shuffle=False)
+    batch = next(iter(loader))
+
+    assert isinstance(batch.graph_mut, torch_geometric.data.Batch)
+    assert isinstance(batch.graph_wt, torch_geometric.data.Batch)
+    assert batch.variant_ids == [sample_a.variant_id, sample_b.variant_id]
+    assert batch.metadata == [sample_a.metadata, sample_b.metadata]
 
 
 def test_collate_rejects_empty_or_incompatible_samples() -> None:

@@ -5,10 +5,14 @@ from pathlib import Path
 import h5py
 import numpy as np
 import pytest
+import torch
+from torch.utils.data import DataLoader
 
 from gnn_siamese.data.collate import collate_mut_wt_pairs
 from gnn_siamese.data.dataset import MutWtPairDataset
 from gnn_siamese.data.pairing import MissingWTCompanionError
+
+torch_geometric = pytest.importorskip("torch_geometric")
 
 
 def _build_config() -> dict:
@@ -216,16 +220,22 @@ def test_integrated_dataset_pipeline_builds_valid_mut_wt_batch(tmp_path: Path) -
     batch = collate_mut_wt_pairs([sample0, sample1])
 
     assert batch.batch_size == 2
-    assert batch.graph_mut.x.dtype == np.float32
-    assert batch.graph_wt.x.dtype == np.float32
-    assert batch.graph_mut.edge_attr.dtype == np.float32
-    assert batch.graph_wt.edge_attr.dtype == np.float32
+    assert isinstance(batch.graph_mut, torch_geometric.data.Batch)
+    assert isinstance(batch.graph_wt, torch_geometric.data.Batch)
+    assert batch.graph_mut.x.dtype == torch.float32
+    assert batch.graph_wt.x.dtype == torch.float32
+    assert batch.graph_mut.edge_attr.dtype == torch.float32
+    assert batch.graph_wt.edge_attr.dtype == torch.float32
     assert batch.graph_mut.edge_index.shape[0] == 2
     assert batch.graph_wt.edge_index.shape[0] == 2
     assert len(batch.graph_mut.ptr) == 3
     assert len(batch.graph_wt.ptr) == 3
     assert len(batch.graph_mut.batch) == batch.graph_mut.x.shape[0]
     assert len(batch.graph_wt.batch) == batch.graph_wt.x.shape[0]
+    assert batch.graph_mut.batch is not None
+    assert batch.graph_mut.ptr is not None
+    assert batch.graph_wt.batch is not None
+    assert batch.graph_wt.ptr is not None
 
     assert "custom_structure_energy" not in batch.graph_mut.node_feature_names
     assert "custom_structure_energy" not in batch.graph_mut.edge_feature_names
@@ -234,17 +244,17 @@ def test_integrated_dataset_pipeline_builds_valid_mut_wt_batch(tmp_path: Path) -
     assert "diff_mass" in batch.graph_mut.node_feature_names
     assert "is_mutation" in batch.graph_mut.node_feature_names
     assert "diff_mass" in batch.graph_mut.node_availability_masks
-    np.testing.assert_array_equal(
+    torch.testing.assert_close(
         batch.graph_mut.node_availability_masks["diff_mass"],
-        np.asarray([1.0, 1.0, 0.0, 1.0, 0.0, 1.0], dtype=np.float32),
+        torch.tensor([1.0, 1.0, 0.0, 1.0, 0.0, 1.0], dtype=torch.float32),
     )
 
     mut_counts = [
-        int(batch.graph_mut.is_mutation[start:end].sum())
+        int(batch.graph_mut.is_mutation[start:end].sum().item())
         for start, end in zip(batch.graph_mut.ptr[:-1], batch.graph_mut.ptr[1:])
     ]
     wt_counts = [
-        int(batch.graph_wt.is_mutation[start:end].sum())
+        int(batch.graph_wt.is_mutation[start:end].sum().item())
         for start, end in zip(batch.graph_wt.ptr[:-1], batch.graph_wt.ptr[1:])
     ]
     assert mut_counts == [1, 1]
@@ -259,6 +269,14 @@ def test_integrated_dataset_pipeline_builds_valid_mut_wt_batch(tmp_path: Path) -
         "residue-srv:A:100:Glycine->Glycine:PKP2_WT",
         "residue-srv:A:563:Cysteine->Cysteine:PKP2_WT",
     ]
+
+    loader = DataLoader(dataset, batch_size=2, collate_fn=collate_mut_wt_pairs, shuffle=False)
+    loader_batch = next(iter(loader))
+
+    assert isinstance(loader_batch.graph_mut, torch_geometric.data.Batch)
+    assert isinstance(loader_batch.graph_wt, torch_geometric.data.Batch)
+    assert loader_batch.variant_ids == batch.variant_ids
+    assert loader_batch.metadata == batch.metadata
     assert batch.metadata[0]["position"] == 100
     assert batch.metadata[1]["position"] == 563
     assert batch.metadata[0]["wt_aa"] == "G"

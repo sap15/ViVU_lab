@@ -1,4 +1,4 @@
-"""Minimal collate helpers for paired mutant-WT graph samples."""
+"""Collate helpers for paired mutant-WT graph samples using real PyG batches."""
 
 from __future__ import annotations
 
@@ -7,6 +7,13 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+import torch
+
+try:
+    from torch_geometric.data import Batch, Data
+except ImportError:  # pragma: no cover - exercised only when PyG is unavailable.
+    Batch = None
+    Data = None
 
 from gnn_siamese.data.dataset import MutWtPairSample
 from gnn_siamese.data.hdf5_loader import HDF5GraphComponents
@@ -17,20 +24,7 @@ class MutWtPairCollateError(ValueError):
     """Raised when paired samples cannot be collated into a consistent batch."""
 
 
-@dataclass(frozen=True)
-class BatchedGraphComponents:
-    """Minimal batched graph structure with PyG-style bookkeeping arrays."""
-
-    x: np.ndarray
-    edge_index: np.ndarray
-    edge_attr: np.ndarray
-    node_feature_names: tuple[str, ...]
-    edge_feature_names: tuple[str, ...]
-    node_availability_masks: dict[str, np.ndarray]
-    is_mutation: np.ndarray
-    batch: np.ndarray
-    ptr: np.ndarray
-    graph_metadata: list[dict[str, Any]]
+BatchedGraphComponents = Batch
 
 
 @dataclass(frozen=True)
@@ -50,6 +44,15 @@ class MutWtPairBatch:
 def _validate_non_empty_samples(samples: Sequence[MutWtPairSample]) -> None:
     if not samples:
         raise MutWtPairCollateError("collate_mut_wt_pairs requires a non-empty sequence of samples.")
+
+
+def _require_pyg() -> tuple[type[Batch], type[Data]]:
+    if Batch is None or Data is None:
+        raise ImportError(
+            "collate_mut_wt_pairs requires torch_geometric. Install PyTorch Geometric "
+            "or run the tests in an environment such as deeprank2_env where PyG is available."
+        )
+    return Batch, Data
 
 
 def _validate_graph_names(
@@ -150,21 +153,32 @@ def _collate_graphs(
     graphs: Sequence[HDF5GraphComponents],
     *,
     mask_keys: Sequence[str],
-) -> BatchedGraphComponents:
-    x_parts: list[np.ndarray] = []
-    edge_attr_parts: list[np.ndarray] = []
-    edge_index_parts: list[np.ndarray] = []
-    is_mutation_parts: list[np.ndarray] = []
-    batch_parts: list[np.ndarray] = []
+) -> Batch:
+    batch_cls, data_cls = _require_pyg()
+    data_list: list[Data] = []
     graph_metadata: list[dict[str, Any]] = []
     mask_parts: dict[str, list[np.ndarray]] = {key: [] for key in mask_keys}
-    ptr = [0]
-    node_offset = 0
     expected_edge_features = len(graphs[0].edge_feature_names)
 
     for graph_index, graph in enumerate(graphs):
-        num_nodes = int(graph.x.shape[0])
-        x_parts.append(np.asarray(graph.x, dtype=np.float32))
+        x = np.asarray(graph.x, dtype=np.float32)
+        if x.ndim != 2:
+            raise MutWtPairCollateError(
+                f"Graph at batch index {graph_index} has invalid x shape {x.shape!r}; "
+                "expected a 2D array."
+            )
+
+        edge_index = np.asarray(graph.edge_index, dtype=np.int64)
+        if edge_index.shape == (0, 2):
+            edge_index = edge_index.T
+        elif edge_index.size == 0 and edge_index.ndim == 1:
+            edge_index = np.empty((2, 0), dtype=np.int64)
+        if edge_index.ndim != 2 or edge_index.shape[0] != 2:
+            raise MutWtPairCollateError(
+                f"Graph at batch index {graph_index} has invalid edge_index shape "
+                f"{edge_index.shape!r}; expected (2, E)."
+            )
+
         edge_attr = np.asarray(graph.edge_attr, dtype=np.float32)
         if edge_attr.ndim == 1:
             if edge_attr.shape[0] == 0:
@@ -186,54 +200,35 @@ def _collate_graphs(
                 f"Graph at batch index {graph_index} has edge_attr width {edge_attr.shape[1]}, "
                 f"expected {expected_edge_features} from edge_feature_names."
             )
-        edge_attr_parts.append(edge_attr.astype(np.float32, copy=False))
-
-        edge_index = np.asarray(graph.edge_index, dtype=np.int64)
-        if edge_index.shape == (0, 2):
-            edge_index = edge_index.T
-        elif edge_index.size == 0 and edge_index.ndim == 1:
-            edge_index = np.empty((2, 0), dtype=np.int64)
-        if edge_index.shape != (2, edge_attr.shape[0]):
+        if edge_attr.shape[0] != edge_index.shape[1]:
             raise MutWtPairCollateError(
                 f"Graph at batch index {graph_index} has incompatible edge_index shape "
                 f"{edge_index.shape!r} for {edge_attr.shape[0]} edges."
             )
-        edge_index_parts.append(edge_index + node_offset)
-        is_mutation_parts.append(np.asarray(graph.is_mutation, dtype=np.float32))
-        batch_parts.append(np.full(num_nodes, graph_index, dtype=np.int64))
+
+        data_list.append(
+            data_cls(
+                x=torch.as_tensor(x, dtype=torch.float32),
+                edge_index=torch.as_tensor(edge_index, dtype=torch.long),
+                edge_attr=torch.as_tensor(edge_attr.astype(np.float32, copy=False)),
+                is_mutation=torch.as_tensor(np.asarray(graph.is_mutation, dtype=np.float32)),
+            )
+        )
         graph_metadata.append(dict(graph.metadata))
         for mask_key in mask_keys:
             mask_parts[mask_key].append(
                 np.asarray(graph.node_availability_masks[mask_key], dtype=np.float32)
             )
-        node_offset += num_nodes
-        ptr.append(node_offset)
 
-    x = np.concatenate(x_parts, axis=0).astype(np.float32, copy=False)
-    edge_attr = np.concatenate(edge_attr_parts, axis=0).astype(np.float32, copy=False)
-    if edge_index_parts:
-        edge_index = np.concatenate(edge_index_parts, axis=1).astype(np.int64, copy=False)
-    else:
-        edge_index = np.empty((2, 0), dtype=np.int64)
-    is_mutation = np.concatenate(is_mutation_parts, axis=0).astype(np.float32, copy=False)
-    batch = np.concatenate(batch_parts, axis=0).astype(np.int64, copy=False)
-    masks = {
-        mask_key: np.concatenate(parts, axis=0).astype(np.float32, copy=False)
+    batch = batch_cls.from_data_list(data_list)
+    batch.node_feature_names = graphs[0].node_feature_names
+    batch.edge_feature_names = graphs[0].edge_feature_names
+    batch.node_availability_masks = {
+        mask_key: torch.as_tensor(np.concatenate(parts, axis=0).astype(np.float32, copy=False))
         for mask_key, parts in mask_parts.items()
     }
-
-    return BatchedGraphComponents(
-        x=x,
-        edge_index=edge_index,
-        edge_attr=edge_attr,
-        node_feature_names=graphs[0].node_feature_names,
-        edge_feature_names=graphs[0].edge_feature_names,
-        node_availability_masks=masks,
-        is_mutation=is_mutation,
-        batch=batch,
-        ptr=np.asarray(ptr, dtype=np.int64),
-        graph_metadata=graph_metadata,
-    )
+    batch.graph_metadata = graph_metadata
+    return batch
 
 
 def collate_mut_wt_pairs(samples: Sequence[MutWtPairSample]) -> MutWtPairBatch:
