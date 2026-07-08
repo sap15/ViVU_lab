@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from pathlib import Path
+from typing import Any, Mapping
 
 import torch
 from torch import Tensor, nn
@@ -87,7 +90,8 @@ class RelationalRepresentation(nn.Module):
         mlp_delta_output_dim: int | None = None,
         mlp_delta_num_layers: int = 2,
         mlp_delta_dropout: float = 0.0,
-        z_delta_validated: bool = False,
+        run_manifest_path: str | Path | None = None,
+        validation_audit: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__()
         if embedding_dim <= 0:
@@ -98,7 +102,8 @@ class RelationalRepresentation(nn.Module):
         self.embedding_dim = int(embedding_dim)
         self.severity_eps = float(severity_eps)
         self.r_delta = RDelta()
-        self.z_delta_validated = bool(z_delta_validated)
+        self.run_manifest_path = None if run_manifest_path is None else Path(run_manifest_path)
+        self.validation_audit = validation_audit
 
         if mlp_delta_enabled:
             hidden_dim = mlp_delta_hidden_dim or 2 * self.embedding_dim
@@ -116,6 +121,61 @@ class RelationalRepresentation(nn.Module):
     @property
     def mlp_delta_enabled(self) -> bool:
         return self.mlp_delta is not None
+
+    def _load_validation_evidence(self) -> Mapping[str, Any] | None:
+        if self.validation_audit is not None:
+            return self.validation_audit
+        if self.run_manifest_path is None or not self.run_manifest_path.is_file():
+            return None
+        with self.run_manifest_path.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        if not isinstance(payload, Mapping):
+            return None
+        return payload
+
+    @staticmethod
+    def _extract_mlp_delta_audit(payload: Mapping[str, Any]) -> Mapping[str, Any] | None:
+        for key in ("modules", "module_audits", "trainable_modules"):
+            container = payload.get(key)
+            if isinstance(container, Mapping):
+                module_record = container.get("mlp_delta")
+                if isinstance(module_record, Mapping):
+                    return module_record
+        direct = payload.get("mlp_delta")
+        if isinstance(direct, Mapping):
+            return direct
+        return None
+
+    def _z_delta_status_from_evidence(self) -> str:
+        evidence = self._load_validation_evidence()
+        if evidence is None:
+            return "unvalidated"
+
+        module_record = self._extract_mlp_delta_audit(evidence)
+        if module_record is None:
+            return "unvalidated"
+
+        optimizer_group = module_record.get("optimizer_group")
+        connected_losses = module_record.get("connected_losses")
+        mean_gradient_norm = module_record.get("mean_gradient_norm")
+        max_gradient_norm = module_record.get("max_gradient_norm")
+        relative_weight_change = module_record.get("relative_weight_change")
+        has_nan_or_inf = bool(module_record.get("has_nan_or_inf", False))
+        status = module_record.get("status")
+
+        if not optimizer_group:
+            return "unvalidated"
+        if not isinstance(connected_losses, list) or not connected_losses:
+            return "unvalidated"
+        if has_nan_or_inf:
+            return "unvalidated"
+        if status not in {"trained", "validated"}:
+            return "unvalidated"
+        if float(mean_gradient_norm or 0.0) <= 0.0 and float(max_gradient_norm or 0.0) <= 0.0:
+            return "unvalidated"
+        if float(relative_weight_change or 0.0) <= 0.0:
+            return "unvalidated"
+        return "validated"
 
     def forward(self, h_mut: Tensor, h_wt: Tensor) -> RelationalOutput:
         if h_mut.ndim != 2 or h_wt.ndim != 2:
@@ -136,10 +196,8 @@ class RelationalRepresentation(nn.Module):
         z_delta = self.mlp_delta(r_delta) if self.mlp_delta is not None else None
         if z_delta is None:
             z_delta_status = "inactive"
-        elif self.z_delta_validated:
-            z_delta_status = "validated"
         else:
-            z_delta_status = "unvalidated"
+            z_delta_status = self._z_delta_status_from_evidence()
 
         return RelationalOutput(
             r_delta=r_delta,

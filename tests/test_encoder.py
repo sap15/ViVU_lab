@@ -85,8 +85,9 @@ def test_shared_encoder_outputs_shapes_and_aliases_on_cpu() -> None:
 
     output = model(graph_mut=graph_mut.cpu(), graph_wt=graph_wt.cpu())
 
-    assert encoder.fusion_input_dim == 5 * encoder.hidden_dim
-    assert encoder.mlp_fusion[0].in_features == 5 * encoder.hidden_dim
+    assert encoder.fusion_input_dim == 5 * encoder.hidden_dim + 1
+    assert encoder.pre_fusion_norm.normalized_shape == (5 * encoder.hidden_dim + 1,)
+    assert encoder.mlp_fusion[0].in_features == 5 * encoder.hidden_dim + 1
     assert output.H_mut.device.type == "cpu"
     assert output.H_WT.device.type == "cpu"
     assert output.h_encoder_mut.device.type == "cpu"
@@ -177,4 +178,52 @@ def test_edge_attr_changes_shared_encoder_output() -> None:
         )
 
     assert not torch.allclose(output_a.H_mut, output_b.H_mut)
+    assert not torch.allclose(output_a.h_encoder_mut, output_b.h_encoder_mut)
+
+
+def test_availability_mask_changes_shared_encoder_output() -> None:
+    graph_mut_a = _make_graph(
+        x=[[1.0, 0.0, 0.0], [0.2, 1.0, 1.0], [0.4, 0.5, 0.0]],
+        edge_index=[[0, 1, 1, 2], [1, 0, 2, 1]],
+        edge_attr=[[1.0, 0.1], [1.0, 0.1], [0.5, 0.2], [0.5, 0.2]],
+        is_mutation=[0.0, 1.0, 0.0],
+        availability_mask=[1.0, 1.0, 1.0],
+    )
+    graph_mut_b = _make_graph(
+        x=[[1.0, 0.0, 0.0], [0.2, 1.0, 1.0], [0.4, 0.5, 0.0]],
+        edge_index=[[0, 1, 1, 2], [1, 0, 2, 1]],
+        edge_attr=[[1.0, 0.1], [1.0, 0.1], [0.5, 0.2], [0.5, 0.2]],
+        is_mutation=[0.0, 1.0, 0.0],
+        availability_mask=[1.0, 0.0, 0.0],
+    )
+    graph_wt = _make_graph(
+        x=[[0.8, 0.0, 0.0], [0.3, 0.0, 0.0], [0.1, 0.4, 0.0]],
+        edge_index=[[0, 1, 1, 2], [1, 0, 2, 1]],
+        edge_attr=[[1.0, 0.1], [1.0, 0.1], [0.5, 0.2], [0.5, 0.2]],
+        is_mutation=[0.0, 0.0, 0.0],
+        availability_mask=[1.0, 1.0, 1.0],
+    )
+
+    model = SharedSiameseEncoderModel(
+        EdgeAwareGraphEncoder(
+            node_input_dim=3,
+            edge_input_dim=2,
+            hidden_dim=8,
+            graph_output_dim=10,
+            fusion_hidden_dim=12,
+            dropout=0.0,
+        )
+    ).eval()
+
+    with torch.no_grad():
+        output_a = model(
+            graph_mut=_make_branch_batch([graph_mut_a]),
+            graph_wt=_make_branch_batch([graph_wt]),
+        )
+        output_b = model(
+            graph_mut=_make_branch_batch([graph_mut_b]),
+            graph_wt=_make_branch_batch([graph_wt]),
+        )
+
+    assert torch.allclose(output_a.H_mut, output_b.H_mut)
     assert not torch.allclose(output_a.h_encoder_mut, output_b.h_encoder_mut)
