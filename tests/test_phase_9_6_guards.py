@@ -14,12 +14,14 @@ BASE_CONFIG_PATH = REPO_ROOT / "configs" / "base.yaml"
 TRAINING_PACKAGE_PATH = REPO_ROOT / "src" / "gnn_siamese" / "training"
 
 
-def test_false_negative_masking_is_not_operational_yet_in_base_config() -> None:
+def test_false_negative_masking_is_declared_but_disabled_by_default_in_base_config() -> None:
     config_text = BASE_CONFIG_PATH.read_text(encoding="utf-8")
 
     assert "false_negative_mask:" in config_text
     assert "enabled: false" in config_text
     assert "mode: none" in config_text
+    assert "mask_scope: within_batch_only" in config_text
+    assert "does_not_replace_split: leave_neighborhood_out" in config_text
 
 
 def test_relative_wt_is_not_operational_yet_in_base_config() -> None:
@@ -46,17 +48,24 @@ def test_no_real_l_total_or_training_package_exists_yet() -> None:
     assert importlib.util.find_spec("gnn_siamese.training") is None
 
 
-def test_losses_public_api_exposes_only_nt_xent_baseline() -> None:
-    assert losses_public_api == ["NTXentLoss", "NTXentLossOutput"]
+def test_losses_public_api_exposes_nt_xent_and_false_negative_masking_utilities() -> None:
+    assert losses_public_api == [
+        "FalseNegativeAnchorStats",
+        "FalseNegativeBatchStats",
+        "FalseNegativeMaskDegenerateError",
+        "FalseNegativeMaskOutput",
+        "NTXentLoss",
+        "NTXentLossOutput",
+        "build_false_negative_mask",
+    ]
 
 
-def test_nt_xent_docstring_explicitly_excludes_phase_9_6_extensions() -> None:
+def test_nt_xent_docstring_keeps_relative_and_relational_extensions_out_of_scope() -> None:
     doc = NTXentLoss.__doc__
     assert doc is not None
-    assert "false-negative masking" in doc
     assert "L_relative_WT" in doc
     assert "relational losses" in doc
-    assert "intentionally excluded from this baseline" in doc
+    assert "False-negative masking is optional" in doc
 
 
 def test_masked_reconstruction_remains_declared_but_disabled() -> None:
