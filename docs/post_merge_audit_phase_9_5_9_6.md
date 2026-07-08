@@ -119,9 +119,14 @@ fases que el código todavía no demuestra.
 
 ### A. False-negative masking
 
-- implementar hard y soft masking dentro del batch;
-- registrar `W_ij`, negativos válidos por ancla y causas de enmascaramiento;
-- comparar baseline sin máscara frente a misma posición y vecindad estructural.
+Estado tras la subfase 9.6.A:
+
+- implementado en `src/gnn_siamese/losses/false_negative_mask.py`;
+- integrado opcionalmente en `NTXentLoss`;
+- soporta `none`, `same_position`, `structural_hard` y `structural_soft`;
+- registra `W_ij` y estadísticas por ancla y por batch;
+- mantiene `none` como reproducción del baseline;
+- opera únicamente dentro del batch y no sustituye a `leave-neighborhood-out`.
 
 ### B. `L_relative_WT`
 
@@ -134,6 +139,14 @@ fases que el código todavía no demuestra.
 - conectar `MLP_delta` a una pérdida explícita;
 - verificar inclusión en optimizador, gradientes, cambio de pesos y auditoría;
 - impedir interpretar `z_delta` como espacio biológico sin esa evidencia.
+
+Tras 9.6.A siguen pendientes y no implementados en la loss compuesta:
+
+- `L_relative_WT`;
+- `L_delta`;
+- ensamblado real de `L_total`;
+- training loop completo gobernado por YAML;
+- reconstrucción enmascarada.
 
 ### D. `L_total` y training loop
 
