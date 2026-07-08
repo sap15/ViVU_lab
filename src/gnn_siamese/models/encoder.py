@@ -51,7 +51,7 @@ class EdgeAwareGraphEncoder(nn.Module):
         self.num_layers = int(num_layers)
         self.fusion_hidden_dim = int(fusion_hidden_dim)
         self.graph_output_dim = int(graph_output_dim)
-        self.fusion_input_dim = 5 * self.hidden_dim
+        self.fusion_input_dim = 5 * self.hidden_dim + 1
 
         self.input_projection = nn.Linear(self.node_input_dim, self.hidden_dim)
         self.convs = nn.ModuleList()

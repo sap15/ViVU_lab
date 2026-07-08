@@ -27,12 +27,13 @@ class PoolingBlocks:
                 self.immediate_neighbors,
                 self.local_pool,
                 self.regional_pool,
+                self.availability_mask,
             ],
             dim=-1,
         )
 
     def concatenate(self) -> Tensor:
-        return torch.cat([self.fusion_input(), self.availability_mask], dim=-1)
+        return self.fusion_input()
 
 
 def _num_graphs_from_batch(batch: Tensor) -> int:
@@ -67,13 +68,14 @@ def availability_mask_summary(node_availability_masks: dict[str, Tensor] | None,
 
     num_graphs = _num_graphs_from_batch(batch)
     if not node_availability_masks:
-        return torch.zeros((num_graphs, 0), dtype=torch.float32, device=batch.device)
+        return torch.zeros((num_graphs, 1), dtype=torch.float32, device=batch.device)
 
     summaries: list[Tensor] = []
     for mask in node_availability_masks.values():
         mask_tensor = mask.to(device=batch.device, dtype=torch.float32).reshape(-1)
         summaries.append(mean_pool_with_mask(mask_tensor.unsqueeze(1), batch, torch.ones_like(mask_tensor, dtype=torch.bool), num_graphs))
-    return torch.cat(summaries, dim=-1)
+    stacked = torch.cat(summaries, dim=-1)
+    return stacked.mean(dim=-1, keepdim=True)
 
 
 def neighbor_mask(edge_index: Tensor, seed_mask: Tensor) -> Tensor:

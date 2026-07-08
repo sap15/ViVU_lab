@@ -70,13 +70,15 @@ def test_z_delta_is_present_with_expected_shape_when_mlp_delta_is_enabled() -> N
     assert output.to_dict()["z_delta_status"] == "unvalidated"
 
 
-def test_severity_is_near_zero_when_h_mut_equals_h_wt() -> None:
-    h_mut = torch.tensor([[1.0, 2.0, 3.0], [-1.0, 0.5, 0.25]], dtype=torch.float32)
+def test_severity_matches_expected_nontrivial_l2_distance() -> None:
+    h_mut = torch.tensor([[4.0, 6.0, 3.0], [2.0, -1.0, 5.0]], dtype=torch.float32)
+    h_wt = torch.tensor([[1.0, 2.0, 3.0], [2.0, -1.0, 1.0]], dtype=torch.float32)
     module = RelationalRepresentation(embedding_dim=3, severity_eps=1.0e-8)
 
-    output = module(h_mut, h_mut.clone())
+    output = module(h_mut, h_wt)
 
-    assert torch.allclose(output.severity, torch.zeros(2), atol=1.0e-8, rtol=0.0)
+    expected = torch.tensor([5.0, 4.0], dtype=torch.float32)
+    assert torch.allclose(output.severity, expected, atol=1.0e-6, rtol=0.0)
 
 
 def test_mechanism_direction_has_no_nan_or_inf_when_severity_is_zero_or_tiny() -> None:
@@ -99,6 +101,17 @@ def test_mechanism_direction_matches_manual_normalization_when_delta_is_nonzero(
     manual = delta / torch.linalg.vector_norm(delta, ord=2, dim=-1, keepdim=True)
 
     assert torch.allclose(output.mechanism_direction, manual, atol=1.0e-6, rtol=1.0e-6)
+
+
+def test_mechanism_direction_has_unit_norm_when_severity_exceeds_epsilon() -> None:
+    h_mut = torch.tensor([[3.0, 4.0], [2.0, 3.0]], dtype=torch.float32)
+    h_wt = torch.tensor([[0.0, 0.0], [1.0, 1.0]], dtype=torch.float32)
+    module = RelationalRepresentation(embedding_dim=2, severity_eps=1.0e-8)
+
+    output = module(h_mut, h_wt)
+    norms = torch.linalg.vector_norm(output.mechanism_direction, ord=2, dim=-1)
+
+    assert torch.allclose(norms, torch.ones_like(norms), atol=1.0e-6, rtol=1.0e-6)
 
 
 def test_backward_propagates_gradients_to_h_mut_and_h_wt() -> None:
@@ -128,19 +141,65 @@ def test_backward_propagates_gradients_to_h_mut_and_h_wt() -> None:
     assert h_wt.grad.abs().sum().item() > 0.0
 
 
-def test_z_delta_is_not_marked_validated_without_explicit_flag() -> None:
+def test_z_delta_is_not_marked_validated_without_run_manifest() -> None:
     module = RelationalRepresentation(
         embedding_dim=4,
         mlp_delta_enabled=True,
         mlp_delta_hidden_dim=6,
         mlp_delta_output_dim=4,
-        z_delta_validated=False,
     )
     output = module(torch.randn(2, 4), torch.randn(2, 4))
 
     assert output.z_delta is not None
     assert output.z_delta_status == "unvalidated"
     assert not output.z_delta_is_validated
+
+
+def test_z_delta_is_not_marked_validated_with_incomplete_manifest(tmp_path) -> None:
+    manifest_path = tmp_path / "run_manifest.json"
+    manifest_path.write_text(
+        '{"modules": {"mlp_delta": {"status": "trained", "optimizer_group": "g1"}}}',
+        encoding="utf-8",
+    )
+    module = RelationalRepresentation(
+        embedding_dim=4,
+        mlp_delta_enabled=True,
+        mlp_delta_hidden_dim=6,
+        mlp_delta_output_dim=4,
+        run_manifest_path=manifest_path,
+    )
+
+    output = module(torch.randn(2, 4), torch.randn(2, 4))
+
+    assert output.z_delta is not None
+    assert output.z_delta_status == "unvalidated"
+    assert not output.z_delta_is_validated
+
+
+def test_z_delta_is_validated_with_manifest_evidence(tmp_path) -> None:
+    manifest_path = tmp_path / "run_manifest.json"
+    manifest_path.write_text(
+        (
+            '{"modules": {"mlp_delta": {"status": "trained", "optimizer_group": "g1", '
+            '"connected_losses": ["L_delta"], "mean_gradient_norm": 0.25, '
+            '"max_gradient_norm": 0.5, "relative_weight_change": 0.01, '
+            '"has_nan_or_inf": false}}}'
+        ),
+        encoding="utf-8",
+    )
+    module = RelationalRepresentation(
+        embedding_dim=4,
+        mlp_delta_enabled=True,
+        mlp_delta_hidden_dim=6,
+        mlp_delta_output_dim=4,
+        run_manifest_path=manifest_path,
+    )
+
+    output = module(torch.randn(2, 4), torch.randn(2, 4))
+
+    assert output.z_delta is not None
+    assert output.z_delta_status == "validated"
+    assert output.z_delta_is_validated
 
 
 def test_shared_model_exposes_relational_outputs_only_when_module_is_attached() -> None:
