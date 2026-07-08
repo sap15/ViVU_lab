@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from torch import Tensor, nn
 
 from gnn_siamese.models.encoder import EdgeAwareGraphEncoder, EncoderBranchOutput
+from gnn_siamese.models.projection import InstanceProjectionHead, PairProjectionHead
 
 if TYPE_CHECKING:
     from gnn_siamese.models.relational import RelationalOutput, RelationalRepresentation
@@ -23,6 +24,8 @@ class SharedSiameseEncoderOutput:
     h_encoder_wt: Tensor
     r_delta: Tensor | None = None
     z_delta: Tensor | None = None
+    z_instance: Tensor | None = None
+    z_instance_pair: Tensor | None = None
     severity: Tensor | None = None
     mechanism_direction: Tensor | None = None
     z_delta_status: str = "not_applicable"
@@ -57,6 +60,10 @@ class SharedSiameseEncoderOutput:
         if self.z_delta is not None:
             output["z_delta"] = self.z_delta
             output["z_delta_status"] = self.z_delta_status
+        if self.z_instance is not None:
+            output["z_instance"] = self.z_instance
+        if self.z_instance_pair is not None:
+            output["z_instance_pair"] = self.z_instance_pair
         return output
 
 
@@ -67,10 +74,18 @@ class SharedSiameseEncoderModel(nn.Module):
         self,
         shared_encoder: EdgeAwareGraphEncoder,
         relational_module: "RelationalRepresentation | None" = None,
+        projection_instance: InstanceProjectionHead | None = None,
+        projection_pair: PairProjectionHead | None = None,
+        pair_projection_source: str = "r_delta",
     ) -> None:
         super().__init__()
+        if pair_projection_source not in {"r_delta", "z_delta"}:
+            raise ValueError("pair_projection_source must be either 'r_delta' or 'z_delta'.")
         self.shared_encoder = shared_encoder
         self.relational_module = relational_module
+        self.projection_instance = projection_instance
+        self.projection_pair = projection_pair
+        self.pair_projection_source = pair_projection_source
 
     def encode_graph(self, graph: object) -> EncoderBranchOutput:
         return self.shared_encoder(graph)
@@ -81,6 +96,21 @@ class SharedSiameseEncoderModel(nn.Module):
         relational_output: RelationalOutput | None = None
         if self.relational_module is not None:
             relational_output = self.relational_module(mut_branch.h_encoder, wt_branch.h_encoder)
+        z_instance = None
+        if self.projection_instance is not None:
+            z_instance = self.projection_instance(mut_branch.h_encoder, input_name="h_encoder_mut")
+        z_instance_pair = None
+        if self.projection_pair is not None:
+            if relational_output is None:
+                raise ValueError("projection_pair requires relational outputs, but relational_module is None.")
+            if self.pair_projection_source == "r_delta":
+                z_instance_pair = self.projection_pair(relational_output.r_delta, input_name="r_delta")
+            else:
+                if not relational_output.z_delta_is_validated or relational_output.z_delta is None:
+                    raise ValueError(
+                        "projection_pair configured with source 'z_delta', but z_delta is not validated."
+                    )
+                z_instance_pair = self.projection_pair(relational_output.z_delta, input_name="z_delta")
 
         return SharedSiameseEncoderOutput(
             H_mut=mut_branch.H,
@@ -89,6 +119,8 @@ class SharedSiameseEncoderModel(nn.Module):
             h_encoder_wt=wt_branch.h_encoder,
             r_delta=None if relational_output is None else relational_output.r_delta,
             z_delta=None if relational_output is None else relational_output.z_delta,
+            z_instance=z_instance,
+            z_instance_pair=z_instance_pair,
             severity=None if relational_output is None else relational_output.severity,
             mechanism_direction=None if relational_output is None else relational_output.mechanism_direction,
             z_delta_status="not_applicable" if relational_output is None else relational_output.z_delta_status,
