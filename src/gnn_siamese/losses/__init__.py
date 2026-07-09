@@ -8,6 +8,7 @@ from gnn_siamese.losses.false_negative_mask import (
     FalseNegativeMaskOutput,
     build_false_negative_mask,
 )
+from gnn_siamese.losses.relative_wt import RelativeWTLoss, RelativeWTLossOutput
 
 __all__ = [
     "FalseNegativeAnchorStats",
@@ -16,5 +17,7 @@ __all__ = [
     "FalseNegativeMaskOutput",
     "NTXentLoss",
     "NTXentLossOutput",
+    "RelativeWTLoss",
+    "RelativeWTLossOutput",
     "build_false_negative_mask",
 ]

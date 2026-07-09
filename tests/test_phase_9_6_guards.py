@@ -7,6 +7,7 @@ import pytest
 
 from gnn_siamese.losses import __all__ as losses_public_api
 from gnn_siamese.losses.contrastive import NTXentLoss
+from gnn_siamese.losses.relative_wt import RelativeWTLoss
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -24,13 +25,15 @@ def test_false_negative_masking_is_declared_but_disabled_by_default_in_base_conf
     assert "does_not_replace_split: leave_neighborhood_out" in config_text
 
 
-def test_relative_wt_is_not_operational_yet_in_base_config() -> None:
+def test_relative_wt_is_declared_conservatively_in_base_config() -> None:
     config_text = BASE_CONFIG_PATH.read_text(encoding="utf-8")
 
     assert "relative_wt:" in config_text
     assert "mode: none" in config_text
     assert "lambda_wt: 0.0" in config_text
     assert "use_wt_as_strong_positive: false" in config_text
+    assert "distance: euclidean" in config_text
+    assert "stop_gradient: false" in config_text
 
 
 def test_l_delta_is_not_operational_yet_in_base_config() -> None:
@@ -56,6 +59,8 @@ def test_losses_public_api_exposes_nt_xent_and_false_negative_masking_utilities(
         "FalseNegativeMaskOutput",
         "NTXentLoss",
         "NTXentLossOutput",
+        "RelativeWTLoss",
+        "RelativeWTLossOutput",
         "build_false_negative_mask",
     ]
 
@@ -66,6 +71,13 @@ def test_nt_xent_docstring_keeps_relative_and_relational_extensions_out_of_scope
     assert "L_relative_WT" in doc
     assert "relational losses" in doc
     assert "False-negative masking is optional" in doc
+
+
+def test_relative_wt_loss_exists_without_making_wt_a_strong_positive() -> None:
+    criterion = RelativeWTLoss(mode="none")
+
+    assert criterion.mode == "none"
+    assert criterion.stop_gradient_wt is False
 
 
 def test_masked_reconstruction_remains_declared_but_disabled() -> None:
