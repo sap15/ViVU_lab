@@ -9,7 +9,7 @@ from gnn_siamese.losses import __all__ as losses_public_api
 from gnn_siamese.losses.contrastive import NTXentLoss
 from gnn_siamese.losses.delta import DeltaLoss
 from gnn_siamese.losses.relative_wt import RelativeWTLoss
-from gnn_siamese.training import TotalLossAssembler, training_step
+from gnn_siamese.training import TotalLossAssembler, TrainingLoopConfig, fit, training_step
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -53,6 +53,8 @@ def test_minimal_l_total_and_training_package_now_exist() -> None:
     assert importlib.util.find_spec("gnn_siamese.training") is not None
     assert TotalLossAssembler is not None
     assert training_step is not None
+    assert TrainingLoopConfig is not None
+    assert fit is not None
 
 
 def test_losses_public_api_exposes_nt_xent_and_false_negative_masking_utilities() -> None:
@@ -99,6 +101,15 @@ def test_reconstruction_and_full_production_training_remain_pending() -> None:
     assert "reconstruction:" in config_text
     assert "enabled: false" in config_text
     assert "scheduler: cosine" in config_text
+
+
+def test_minimal_production_training_loop_is_in_scope_but_advanced_training_stays_out() -> None:
+    training_init = (TRAINING_PACKAGE_PATH / "__init__.py").read_text(encoding="utf-8")
+
+    assert "TrainingLoopConfig" in training_init
+    assert "TrainingLoopOutput" in training_init
+    assert "build_run_manifest" in training_init
+    assert "fit" in training_init
 
 
 def test_masked_reconstruction_remains_declared_but_disabled() -> None:
