@@ -1,6 +1,7 @@
 """Loss functions for the PKP2 siamese GNN project."""
 
 from gnn_siamese.losses.contrastive import NTXentLoss, NTXentLossOutput
+from gnn_siamese.losses.delta import DeltaLoss, DeltaLossOutput
 from gnn_siamese.losses.false_negative_mask import (
     FalseNegativeAnchorStats,
     FalseNegativeBatchStats,
@@ -11,6 +12,8 @@ from gnn_siamese.losses.false_negative_mask import (
 from gnn_siamese.losses.relative_wt import RelativeWTLoss, RelativeWTLossOutput
 
 __all__ = [
+    "DeltaLoss",
+    "DeltaLossOutput",
     "FalseNegativeAnchorStats",
     "FalseNegativeBatchStats",
     "FalseNegativeMaskDegenerateError",

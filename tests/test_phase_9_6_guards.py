@@ -7,6 +7,7 @@ import pytest
 
 from gnn_siamese.losses import __all__ as losses_public_api
 from gnn_siamese.losses.contrastive import NTXentLoss
+from gnn_siamese.losses.delta import DeltaLoss
 from gnn_siamese.losses.relative_wt import RelativeWTLoss
 
 
@@ -36,7 +37,7 @@ def test_relative_wt_is_declared_conservatively_in_base_config() -> None:
     assert "stop_gradient: false" in config_text
 
 
-def test_l_delta_is_not_operational_yet_in_base_config() -> None:
+def test_l_delta_is_declared_conservatively_in_base_config() -> None:
     config_text = BASE_CONFIG_PATH.read_text(encoding="utf-8")
 
     assert "delta:" in config_text
@@ -53,6 +54,8 @@ def test_no_real_l_total_or_training_package_exists_yet() -> None:
 
 def test_losses_public_api_exposes_nt_xent_and_false_negative_masking_utilities() -> None:
     assert losses_public_api == [
+        "DeltaLoss",
+        "DeltaLossOutput",
         "FalseNegativeAnchorStats",
         "FalseNegativeBatchStats",
         "FalseNegativeMaskDegenerateError",
@@ -78,6 +81,13 @@ def test_relative_wt_loss_exists_without_making_wt_a_strong_positive() -> None:
 
     assert criterion.mode == "none"
     assert criterion.stop_gradient_wt is False
+
+
+def test_delta_loss_exists_but_l_total_and_training_still_do_not() -> None:
+    criterion = DeltaLoss(mode="none")
+
+    assert criterion.mode == "none"
+    assert TRAINING_PACKAGE_PATH.exists() is False
 
 
 def test_masked_reconstruction_remains_declared_but_disabled() -> None:
