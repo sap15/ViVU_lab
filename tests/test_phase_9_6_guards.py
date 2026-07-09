@@ -9,6 +9,7 @@ from gnn_siamese.losses import __all__ as losses_public_api
 from gnn_siamese.losses.contrastive import NTXentLoss
 from gnn_siamese.losses.delta import DeltaLoss
 from gnn_siamese.losses.relative_wt import RelativeWTLoss
+from gnn_siamese.training import TotalLossAssembler, training_step
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -47,9 +48,11 @@ def test_l_delta_is_declared_conservatively_in_base_config() -> None:
     assert "require_explicit_loss: true" in config_text
 
 
-def test_no_real_l_total_or_training_package_exists_yet() -> None:
-    assert TRAINING_PACKAGE_PATH.exists() is False
-    assert importlib.util.find_spec("gnn_siamese.training") is None
+def test_minimal_l_total_and_training_package_now_exist() -> None:
+    assert TRAINING_PACKAGE_PATH.exists() is True
+    assert importlib.util.find_spec("gnn_siamese.training") is not None
+    assert TotalLossAssembler is not None
+    assert training_step is not None
 
 
 def test_losses_public_api_exposes_nt_xent_and_false_negative_masking_utilities() -> None:
@@ -83,11 +86,19 @@ def test_relative_wt_loss_exists_without_making_wt_a_strong_positive() -> None:
     assert criterion.stop_gradient_wt is False
 
 
-def test_delta_loss_exists_but_l_total_and_training_still_do_not() -> None:
+def test_delta_loss_and_minimal_l_total_training_package_exist() -> None:
     criterion = DeltaLoss(mode="none")
 
     assert criterion.mode == "none"
-    assert TRAINING_PACKAGE_PATH.exists() is False
+    assert TRAINING_PACKAGE_PATH.exists() is True
+
+
+def test_reconstruction_and_full_production_training_remain_pending() -> None:
+    config_text = BASE_CONFIG_PATH.read_text(encoding="utf-8")
+
+    assert "reconstruction:" in config_text
+    assert "enabled: false" in config_text
+    assert "scheduler: cosine" in config_text
 
 
 def test_masked_reconstruction_remains_declared_but_disabled() -> None:
