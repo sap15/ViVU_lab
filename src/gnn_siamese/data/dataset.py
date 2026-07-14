@@ -47,6 +47,17 @@ class MutWtPairSample:
     wt_key: str
 
 
+@dataclass(frozen=True)
+class GraphInputSpec:
+    """Final encoder input metadata inferred from loaded paired graphs."""
+
+    configured_node_feature_names: tuple[str, ...]
+    final_node_feature_names: tuple[str, ...]
+    edge_feature_names: tuple[str, ...]
+    node_input_dim: int
+    edge_input_dim: int
+
+
 def _list_graph_keys(h5_path: str | Path) -> list[str]:
     with h5py.File(h5_path, "r") as handle:
         return sorted(str(key) for key in handle.keys())
@@ -116,11 +127,18 @@ def _validate_pair_compatibility(
     pair: MutWtPairRecord,
     graph_mut: HDF5GraphComponents,
     graph_wt: HDF5GraphComponents,
+    *,
+    configured_node_feature_names: tuple[str, ...] | None = None,
 ) -> None:
     if graph_mut.x.shape[1] != graph_wt.x.shape[1]:
+        configured_names = tuple(configured_node_feature_names or ())
         raise MutWtPairDatasetError(
             f"Incompatible node feature dimensions for pair {pair.variant_id!r}: "
-            f"mutant has {graph_mut.x.shape[1]} columns, WT has {graph_wt.x.shape[1]}."
+            f"mutant has {graph_mut.x.shape[1]} columns, WT has {graph_wt.x.shape[1]} columns, "
+            f"configured encoder selection has {len(configured_names)} columns. "
+            f"Configured node features: {configured_names!r}. "
+            f"Mutant final node features: {graph_mut.node_feature_names!r}. "
+            f"WT final node features: {graph_wt.node_feature_names!r}."
         )
     if graph_mut.edge_attr.shape[1] != graph_wt.edge_attr.shape[1]:
         raise MutWtPairDatasetError(
@@ -158,7 +176,8 @@ class MutWtPairDataset:
         self.schema = schema
 
         selection = split_encoder_inputs_and_auxiliary_features(config, schema)
-        self.node_feature_names = tuple(selection["encoder_node_features"])
+        self.configured_node_feature_names = tuple(selection["encoder_node_features"])
+        self.node_feature_names = self.configured_node_feature_names
         self.edge_feature_names = tuple(selection["encoder_edge_features"])
         self.node_availability_masks = dict(selection["node_availability_masks"])
         self.pairs = _build_pair_records(
@@ -167,16 +186,20 @@ class MutWtPairDataset:
             mutant_graph_keys=mutant_graph_keys,
             wt_graph_keys=wt_graph_keys,
         )
+        self.input_spec = self._infer_input_spec()
+        self.node_feature_names = self.input_spec.final_node_feature_names
+        self.edge_feature_names = self.input_spec.edge_feature_names
+        self.node_input_dim = self.input_spec.node_input_dim
+        self.edge_input_dim = self.input_spec.edge_input_dim
 
     def __len__(self) -> int:
         return len(self.pairs)
 
-    def __getitem__(self, index: int) -> MutWtPairSample:
-        pair = self.pairs[index]
+    def _load_pair_graphs(self, pair: MutWtPairRecord) -> tuple[HDF5GraphComponents, HDF5GraphComponents]:
         graph_mut = load_hdf5_graph_components(
             pair.mutant_source_h5,
             pair.mutant_key,
-            node_feature_names=self.node_feature_names,
+            node_feature_names=self.configured_node_feature_names,
             edge_feature_names=self.edge_feature_names,
             node_availability_masks=self.node_availability_masks,
             config=self.config,
@@ -184,12 +207,35 @@ class MutWtPairDataset:
         graph_wt = load_hdf5_graph_components(
             pair.wt_source_h5,
             pair.wt_key,
-            node_feature_names=self.node_feature_names,
+            node_feature_names=self.configured_node_feature_names,
             edge_feature_names=self.edge_feature_names,
             node_availability_masks=self.node_availability_masks,
             config=self.config,
         )
-        _validate_pair_compatibility(pair, graph_mut, graph_wt)
+        _validate_pair_compatibility(
+            pair,
+            graph_mut,
+            graph_wt,
+            configured_node_feature_names=self.configured_node_feature_names,
+        )
+        return graph_mut, graph_wt
+
+    def _infer_input_spec(self) -> GraphInputSpec:
+        if not self.pairs:
+            raise MutWtPairDatasetError("MutWtPairDataset resolved zero mutant-WT pairs.")
+
+        graph_mut, graph_wt = self._load_pair_graphs(self.pairs[0])
+        return GraphInputSpec(
+            configured_node_feature_names=self.configured_node_feature_names,
+            final_node_feature_names=graph_mut.node_feature_names,
+            edge_feature_names=graph_mut.edge_feature_names,
+            node_input_dim=int(graph_mut.x.shape[1]),
+            edge_input_dim=int(graph_mut.edge_attr.shape[1]),
+        )
+
+    def __getitem__(self, index: int) -> MutWtPairSample:
+        pair = self.pairs[index]
+        graph_mut, graph_wt = self._load_pair_graphs(pair)
 
         metadata = {
             "variant_id": pair.variant_id,

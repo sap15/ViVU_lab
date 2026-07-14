@@ -67,6 +67,26 @@ class SharedSiameseEncoderOutput:
         return output
 
 
+@dataclass(frozen=True)
+class ModelBContrastiveOutput:
+    """Operational two-view output for the end-to-end Model B baseline."""
+
+    z1: Tensor
+    z2: Tensor
+    view1: SharedSiameseEncoderOutput
+    view2: SharedSiameseEncoderOutput
+
+    def to_dict(self) -> dict[str, Tensor]:
+        return {
+            "z1": self.z1,
+            "z2": self.z2,
+            "h_encoder_mut_view1": self.view1.h_encoder_mut,
+            "h_encoder_mut_view2": self.view2.h_encoder_mut,
+            "h_encoder_wt_view1": self.view1.h_encoder_wt,
+            "h_encoder_wt_view2": self.view2.h_encoder_wt,
+        }
+
+
 class SharedSiameseEncoderModel(nn.Module):
     """Process mutant and WT graphs with one shared edge-aware encoder."""
 
@@ -124,4 +144,34 @@ class SharedSiameseEncoderModel(nn.Module):
             severity=None if relational_output is None else relational_output.severity,
             mechanism_direction=None if relational_output is None else relational_output.mechanism_direction,
             z_delta_status="not_applicable" if relational_output is None else relational_output.z_delta_status,
+        )
+
+
+class ModelBContrastiveBaseline(nn.Module):
+    """Run the shared Mutant-WT encoder twice and expose `z1`/`z2` for NT-Xent."""
+
+    def __init__(self, siamese_model: SharedSiameseEncoderModel) -> None:
+        super().__init__()
+        if siamese_model.projection_instance is None:
+            raise ValueError("Model B baseline requires projection_instance to produce z1 and z2.")
+        self.siamese_model = siamese_model
+        self.architecture_name = "model_b"
+
+    def forward(
+        self,
+        *,
+        view1_graph_mut: object,
+        view1_graph_wt: object,
+        view2_graph_mut: object,
+        view2_graph_wt: object,
+    ) -> ModelBContrastiveOutput:
+        view1 = self.siamese_model(graph_mut=view1_graph_mut, graph_wt=view1_graph_wt)
+        view2 = self.siamese_model(graph_mut=view2_graph_mut, graph_wt=view2_graph_wt)
+        if view1.z_instance is None or view2.z_instance is None:
+            raise ValueError("Model B baseline requires z_instance in both augmented views.")
+        return ModelBContrastiveOutput(
+            z1=view1.z_instance,
+            z2=view2.z_instance,
+            view1=view1,
+            view2=view2,
         )

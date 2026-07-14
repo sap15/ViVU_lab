@@ -1,5 +1,12 @@
 """Data loading and validation helpers."""
 
+from gnn_siamese.data.augmentations import (
+    AugmentationConfigError,
+    GraphAugmentationConfig,
+    GraphViewAugmenter,
+    clone_graph_batch,
+    resolve_graph_augmentation_config,
+)
 from gnn_siamese.data.feature_selection import (
     FeatureSelectionError,
     MissingFeatureGroupError,
@@ -15,6 +22,13 @@ from gnn_siamese.data.collate import (
     collate_mut_wt_pairs,
 )
 from gnn_siamese.data.dataset import MutWtPairDataset, MutWtPairDatasetError, MutWtPairSample
+from gnn_siamese.data.smoke_data import (
+    SmokeDataArtifacts,
+    build_smoke_schema_payload,
+    create_synthetic_mut_wt_hdf5,
+    prepare_smoke_data,
+    write_smoke_schema_json,
+)
 from gnn_siamese.data.hdf5_loader import (
     HDF5GraphComponents,
     HDF5GraphLoadError,
@@ -52,8 +66,11 @@ from gnn_siamese.data.splits import (
 
 __all__ = [
     "AmbiguousWTCompanionError",
+    "AugmentationConfigError",
     "BatchedGraphComponents",
     "FeatureSelectionError",
+    "GraphAugmentationConfig",
+    "GraphViewAugmenter",
     "HDF5GraphComponents",
     "HDF5GraphLoadError",
     "IncompleteSignatureError",
@@ -75,10 +92,14 @@ __all__ = [
     "SplitSerializationError",
     "UnsupportedSplitTypeError",
     "VariantSignature",
+    "SmokeDataArtifacts",
     "build_wt_index",
     "build_is_mutation_channel",
     "build_leave_position_out_split",
+    "build_smoke_schema_payload",
+    "clone_graph_batch",
     "collate_mut_wt_pairs",
+    "create_synthetic_mut_wt_hdf5",
     "extract_variant_metadata",
     "fingerprint_split_records",
     "load_hdf5_graph_components",
@@ -86,10 +107,13 @@ __all__ = [
     "normalize_edge_index",
     "pair_mutants_with_wt",
     "parse_variant_signature",
+    "prepare_smoke_data",
     "resolve_edge_feature_names",
+    "resolve_graph_augmentation_config",
     "resolve_leave_position_out_config",
     "resolve_node_feature_names",
     "resolve_wt_companion",
     "split_encoder_inputs_and_auxiliary_features",
     "validate_graph_components",
+    "write_smoke_schema_json",
 ]
