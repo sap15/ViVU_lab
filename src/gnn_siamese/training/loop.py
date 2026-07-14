@@ -58,6 +58,30 @@ class _PreparedBatch:
     loss_inputs: Mapping[str, Any] | None = None
 
 
+@dataclass(frozen=True)
+class BaselineEpochOutput:
+    """One train or validation epoch summary for the integrated Model B baseline."""
+
+    phase: str
+    mean_loss: float
+    num_batches: int
+    num_examples: int
+    used_eval_mode: bool
+    gradients_enabled: bool
+
+
+@dataclass(frozen=True)
+class ModelBTrainingOutput:
+    """Structured output for the baseline end-to-end Model B training loop."""
+
+    train_history: list[BaselineEpochOutput]
+    validation_history: list[BaselineEpochOutput]
+    final_train_loss: float
+    final_validation_loss: float
+    device: str
+    epochs_completed: int
+
+
 def _resolve_device(requested: str | torch.device | None) -> torch.device:
     if requested is None:
         return torch.device("cpu")
@@ -78,6 +102,12 @@ def _move_to_device(value: Any, device: torch.device) -> Any:
     if isinstance(value, tuple):
         return tuple(_move_to_device(item, device) for item in value)
     return value
+
+
+def _move_graph_batch_to_device(graph_batch: Any, device: torch.device) -> Any:
+    if hasattr(graph_batch, "to"):
+        return graph_batch.to(device)
+    return _move_to_device(graph_batch, device)
 
 
 def _set_seed(seed: int | None) -> None:
@@ -155,6 +185,144 @@ def _mean(values: Sequence[float]) -> float:
     if not values:
         return 0.0
     return float(sum(values) / len(values))
+
+
+def _count_batch_examples(batch: Any) -> int:
+    if hasattr(batch, "batch_size"):
+        return int(batch.batch_size)
+    raise ValueError("Expected a MutWtPairBatch-like object with batch_size.")
+
+
+def _prepare_model_b_views(
+    batch: Any,
+    *,
+    augmenter: Any | None,
+    device: torch.device,
+) -> dict[str, Any]:
+    graph_mut = _move_graph_batch_to_device(batch.graph_mut, device)
+    graph_wt = _move_graph_batch_to_device(batch.graph_wt, device)
+    if augmenter is None:
+        view1_graph_mut = graph_mut
+        view2_graph_mut = graph_mut
+    else:
+        view1_graph_mut, view2_graph_mut = augmenter.create_two_views(graph_mut)
+    return {
+        "view1_graph_mut": view1_graph_mut,
+        "view1_graph_wt": graph_wt,
+        "view2_graph_mut": view2_graph_mut,
+        "view2_graph_wt": graph_wt,
+    }
+
+
+def run_model_b_epoch(
+    model: nn.Module,
+    dataloader: Any,
+    loss_fn: nn.Module,
+    *,
+    optimizer: torch.optim.Optimizer | None,
+    device: str | torch.device,
+    augmenter: Any | None = None,
+) -> BaselineEpochOutput:
+    """Run one train or validation epoch for the integrated Model B baseline."""
+
+    runtime_device = _resolve_device(device)
+    is_training = optimizer is not None
+    if is_training:
+        model.train()
+    else:
+        model.eval()
+        for parameter in model.parameters():
+            parameter.grad = None
+
+    phase = "train" if is_training else "validation"
+    total_loss = 0.0
+    total_examples = 0
+    total_batches = 0
+
+    grad_context = torch.enable_grad() if is_training else torch.no_grad()
+    with grad_context:
+        for batch in dataloader:
+            batch_size = _count_batch_examples(batch)
+            if batch_size < 2:
+                raise ValueError(
+                    f"{phase} batch is contrastively degenerate: batch_size={batch_size}, expected >= 2."
+                )
+
+            model_inputs = _prepare_model_b_views(batch, augmenter=augmenter, device=runtime_device)
+            if is_training:
+                optimizer.zero_grad(set_to_none=True)
+            output = model(**model_inputs)
+            loss_output = loss_fn(output.z1, output.z2)
+            loss = loss_output.loss
+            if not torch.isfinite(loss):
+                raise RuntimeError(f"{phase} loss became non-finite.")
+            if is_training:
+                loss.backward()
+                optimizer.step()
+
+            total_loss += float(loss.detach().cpu().item()) * batch_size
+            total_examples += batch_size
+            total_batches += 1
+
+    mean_loss = total_loss / max(total_examples, 1)
+    return BaselineEpochOutput(
+        phase=phase,
+        mean_loss=mean_loss,
+        num_batches=total_batches,
+        num_examples=total_examples,
+        used_eval_mode=not is_training and not model.training,
+        gradients_enabled=is_training,
+    )
+
+
+def fit_model_b_baseline(
+    model: nn.Module,
+    *,
+    train_dataloader: Any,
+    validation_dataloader: Any,
+    optimizer: torch.optim.Optimizer,
+    loss_fn: nn.Module,
+    epochs: int,
+    device: str | torch.device,
+    augmenter: Any | None = None,
+) -> ModelBTrainingOutput:
+    """Run the minimal train/validation baseline required for B2."""
+
+    runtime_device = _resolve_device(device)
+    model.to(runtime_device)
+    train_history: list[BaselineEpochOutput] = []
+    validation_history: list[BaselineEpochOutput] = []
+
+    for _ in range(int(epochs)):
+        train_history.append(
+            run_model_b_epoch(
+                model,
+                train_dataloader,
+                loss_fn,
+                optimizer=optimizer,
+                device=runtime_device,
+                augmenter=augmenter,
+            )
+        )
+        validation_history.append(
+            run_model_b_epoch(
+                model,
+                validation_dataloader,
+                loss_fn,
+                optimizer=None,
+                device=runtime_device,
+                augmenter=augmenter,
+            )
+        )
+
+    return ModelBTrainingOutput(
+        train_history=train_history,
+        validation_history=validation_history,
+        final_train_loss=train_history[-1].mean_loss,
+        final_validation_loss=validation_history[-1].mean_loss,
+        device=str(runtime_device),
+        epochs_completed=int(epochs),
+    )
 
 
 def build_run_manifest(

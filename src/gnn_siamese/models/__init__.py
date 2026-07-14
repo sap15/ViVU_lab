@@ -1,7 +1,12 @@
 """Model components for the PKP2 siamese GNN project."""
 
 from gnn_siamese.models.encoder import EdgeAwareGraphEncoder, EncoderBranchOutput
-from gnn_siamese.models.model import SharedSiameseEncoderModel, SharedSiameseEncoderOutput
+from gnn_siamese.models.model import (
+    ModelBContrastiveBaseline,
+    ModelBContrastiveOutput,
+    SharedSiameseEncoderModel,
+    SharedSiameseEncoderOutput,
+)
 from gnn_siamese.models.projection import (
     InstanceProjectionHead,
     PairProjectionHead,
@@ -14,6 +19,8 @@ __all__ = [
     "EncoderBranchOutput",
     "InstanceProjectionHead",
     "MLPDelta",
+    "ModelBContrastiveBaseline",
+    "ModelBContrastiveOutput",
     "PairProjectionHead",
     "ProjectionHeadConfig",
     "RDelta",

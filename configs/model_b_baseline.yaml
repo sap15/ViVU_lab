@@ -1,0 +1,61 @@
+extends: base.yaml
+
+project:
+  seed: 123
+
+paths:
+  mutants_hdf5: null
+  wt_companion_hdf5: null
+
+model:
+  architecture: model_b
+  projection_pair:
+    enabled: false
+  mlp_delta:
+    enabled: false
+
+augmentation:
+  enabled: true
+  feature_dropout:
+    enabled: true
+    probability: 0.02
+    allowed_feature_names:
+      - bsa
+      - res_mass
+  feature_jitter:
+    enabled: true
+    std: 0.005
+    allowed_feature_names:
+      - bsa
+      - res_mass
+  edge_dropout:
+    enabled: true
+    probability: 0.01
+
+training:
+  device: cpu
+  epochs: 3
+  batch_size: 4
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  num_workers: 0
+  smoke_test:
+    enabled: false
+    max_pairs: 8
+    epochs: 2
+    batch_size: 2
+
+loss:
+  main: nt_xent
+  positive_pair: same_mutant_augmentations
+  use_wt_as_strong_positive: false
+  lambda_wt: 0.0
+  lambda_delta: 0.0
+
+split:
+  type: leave_position_out
+  validation_fraction: 0.25
+  test_fraction: 0.25
+  persist_path: runs/model_b_baseline/split_leave_position_out.json
+  allow_create: true
