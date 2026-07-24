@@ -94,18 +94,29 @@ def test_relative_wt_ranking_requires_target() -> None:
         criterion(h_mut, h_wt)
 
 
+def test_relative_wt_ranking_requires_explicit_target_name() -> None:
+    criterion = RelativeWTLoss(mode="ranking", margin=0.1)
+    h_mut = torch.tensor([[0.2, 0.0], [2.0, 0.0], [0.0, 1.0]], requires_grad=True)
+    h_wt = torch.zeros_like(h_mut)
+    ranking_target = torch.tensor([0.0, 1.0, 2.0], dtype=torch.float32)
+
+    with pytest.raises(ValueError, match="requires an explicit target_name"):
+        criterion(h_mut, h_wt, ranking_target=ranking_target)
+
+
 def test_relative_wt_ranking_returns_finite_loss_for_ordered_targets() -> None:
     criterion = RelativeWTLoss(mode="ranking", margin=0.1)
     h_mut = torch.tensor([[0.2, 0.0], [2.0, 0.0], [0.0, 1.0]], requires_grad=True)
     h_wt = torch.zeros_like(h_mut)
-    severity_target = torch.tensor([0.0, 1.0, 2.0], dtype=torch.float32)
+    ranking_target = torch.tensor([0.0, 1.0, 2.0], dtype=torch.float32)
 
-    output = criterion(h_mut, h_wt, severity_target=severity_target)
+    output = criterion(h_mut, h_wt, ranking_target=ranking_target, target_name="external_rank")
     output.loss.backward()
 
     assert torch.isfinite(output.loss)
     assert output.is_active is True
     assert output.num_pairs == 3
+    assert output.target_name == "external_rank"
     assert h_mut.grad is not None
     assert h_mut.grad.abs().sum().item() > 0.0
 
@@ -130,6 +141,16 @@ def test_relative_wt_predictive_requires_target() -> None:
 
     with pytest.raises(ValueError, match="requires an explicit target"):
         criterion(h_mut, h_wt, target_name="delta_descriptor")
+
+
+def test_relative_wt_predictive_requires_explicit_target_name() -> None:
+    criterion = RelativeWTLoss(mode="predictive")
+    h_mut = torch.tensor([[1.0, 0.0], [0.0, 2.0]])
+    h_wt = torch.zeros_like(h_mut)
+    auxiliary_target = torch.tensor([1.5, 1.0], dtype=torch.float32)
+
+    with pytest.raises(ValueError, match="requires an explicit target_name"):
+        criterion(h_mut, h_wt, auxiliary_target=auxiliary_target)
 
 
 def test_relative_wt_predictive_returns_prediction_and_finite_loss() -> None:

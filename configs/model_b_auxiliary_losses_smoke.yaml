@@ -1,0 +1,43 @@
+extends: model_b_baseline.yaml
+
+project:
+  seed: 123
+
+model:
+  mlp_delta:
+    enabled: true
+    hidden_dim: 128
+    output_dim: 128
+    num_layers: 2
+    dropout: 0.0
+  projection_pair:
+    enabled: false
+
+training:
+  device: cpu
+  epochs: 2
+  batch_size: 2
+  smoke_test:
+    enabled: false
+    max_pairs: 8
+    epochs: 2
+    batch_size: 2
+
+loss:
+  lambda_wt: 0.1
+  lambda_delta: 0.1
+  false_negative_mask:
+    enabled: true
+    mode: same_position
+    min_valid_negatives: 1
+    min_valid_negative_fraction: 0.25
+    strict: true
+  relative_wt:
+    mode: margin
+    distance: euclidean
+    margin: 0.0
+    direction: min
+    stop_gradient: false
+  delta:
+    mode: variance
+    gamma: 1.0

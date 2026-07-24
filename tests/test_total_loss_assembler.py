@@ -38,6 +38,13 @@ def test_total_loss_baseline_matches_nt_xent_and_tracks_inactive_components() ->
     assert output.active_components == ["nt_xent"]
     assert output.inactive_components == ["relative_wt", "delta"]
     assert output.skipped_components == []
+    assert output.metrics["loss_nt_xent"].item() == pytest.approx(baseline.item(), abs=1.0e-6)
+    assert output.metrics["loss_relative_wt"].item() == pytest.approx(0.0, abs=1.0e-8)
+    assert output.metrics["loss_delta"].item() == pytest.approx(0.0, abs=1.0e-8)
+    assert output.metrics["weighted_loss_nt_xent"].item() == pytest.approx(baseline.item(), abs=1.0e-6)
+    assert output.metrics["weighted_loss_relative_wt"].item() == pytest.approx(0.0, abs=1.0e-8)
+    assert output.metrics["weighted_loss_delta"].item() == pytest.approx(0.0, abs=1.0e-8)
+    assert output.metrics["loss_total"].item() == pytest.approx(output.metrics["weighted_loss_nt_xent"].item(), abs=1.0e-6)
     assert output.audit_flags["component_status"]["relative_wt"] == "inactive_mode_none"
     assert output.audit_flags["component_status"]["delta"] == "inactive_mode_none"
 
@@ -63,6 +70,10 @@ def test_total_loss_combines_weighted_components_exactly() -> None:
 
     assert output.loss.item() == pytest.approx(expected.item(), abs=1.0e-6)
     assert output.active_components == ["nt_xent", "relative_wt", "delta"]
+    assert output.metrics["weighted_loss_nt_xent"].item() == pytest.approx((w1 * output.components["nt_xent"]).item(), abs=1.0e-6)
+    assert output.metrics["weighted_loss_relative_wt"].item() == pytest.approx((w2 * output.components["relative_wt"]).item(), abs=1.0e-6)
+    assert output.metrics["weighted_loss_delta"].item() == pytest.approx((w3 * output.components["delta"]).item(), abs=1.0e-6)
+    assert output.metrics["loss_total"].item() == pytest.approx(expected.item(), abs=1.0e-6)
 
 
 def test_zero_weight_component_is_skipped_and_does_not_contribute() -> None:
@@ -81,6 +92,7 @@ def test_zero_weight_component_is_skipped_and_does_not_contribute() -> None:
     assert "relative_wt" in output.skipped_components
     assert output.audit_flags["component_status"]["relative_wt"] == "skipped_weight_zero"
     assert output.metrics["weighted_components"]["relative_wt"] == pytest.approx(0.0, abs=1.0e-8)
+    assert output.metrics["weighted_loss_relative_wt"].item() == pytest.approx(0.0, abs=1.0e-8)
 
 
 def test_mode_none_component_is_inactive_and_does_not_contribute() -> None:

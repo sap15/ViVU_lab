@@ -58,6 +58,15 @@ def create_multi_pair_hdf5(mutant_path: Path, wt_path: Path) -> None:
     create_synthetic_mut_wt_hdf5(mutant_path, wt_path, _base_data_config())
 
 
+def create_multi_pair_hdf5_with_variants(
+    mutant_path: Path,
+    wt_path: Path,
+    *,
+    variants: list[dict[str, Any]],
+) -> None:
+    create_synthetic_mut_wt_hdf5(mutant_path, wt_path, _base_data_config(), variants=variants)
+
+
 def build_model_b_config(
     mutant_path: Path,
     wt_path: Path,

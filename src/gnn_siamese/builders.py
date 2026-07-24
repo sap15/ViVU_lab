@@ -34,6 +34,7 @@ from gnn_siamese.models import (
     SharedSiameseEncoderModel,
 )
 from gnn_siamese.losses import NTXentLoss
+from gnn_siamese.training import TotalLossAssembler
 
 
 class BuilderError(ValueError):
@@ -76,6 +77,7 @@ class TrainingPipeline:
     dataloaders: DataLoadersBundle
     model: ModelBContrastiveBaseline
     loss_fn: NTXentLoss
+    total_loss_assembler: TotalLossAssembler
     optimizer: torch.optim.Optimizer
     augmenter: GraphViewAugmenter
     device: torch.device
@@ -318,6 +320,67 @@ def build_nt_xent_loss(config: Mapping[str, Any]) -> NTXentLoss:
     return NTXentLoss(temperature=float(loss_cfg.get("temperature", 0.2)))
 
 
+def build_total_loss_assembler(config: Mapping[str, Any]) -> TotalLossAssembler:
+    loss_cfg = _require_mapping(config.get("loss"), field_name="config.loss")
+    false_negative_mask_cfg = _require_mapping(
+        loss_cfg.get("false_negative_mask", {}),
+        field_name="config.loss.false_negative_mask",
+    )
+    relative_wt_cfg = _require_mapping(
+        loss_cfg.get("relative_wt", {}),
+        field_name="config.loss.relative_wt",
+    )
+    delta_cfg = _require_mapping(
+        loss_cfg.get("delta", {}),
+        field_name="config.loss.delta",
+    )
+
+    mask_mode = "none"
+    if bool(false_negative_mask_cfg.get("enabled", False)):
+        mask_mode = str(false_negative_mask_cfg.get("mode", "none"))
+
+    stop_gradient_wt = relative_wt_cfg.get("stop_gradient")
+    if stop_gradient_wt is None:
+        stop_gradient_wt = relative_wt_cfg.get("stop_gradient_wt", False)
+
+    return TotalLossAssembler.from_config(
+        {
+            "nt_xent_weight": 1.0,
+            "relative_wt_weight": float(loss_cfg.get("lambda_wt", 0.0)),
+            "delta_weight": float(loss_cfg.get("lambda_delta", 0.0)),
+            "nt_xent_kwargs": {
+                "temperature": float(loss_cfg.get("temperature", 0.2)),
+            },
+            "false_negative_mask_kwargs": {
+                "mode": mask_mode,
+                "alpha": false_negative_mask_cfg.get("structural_soft", {}).get("alpha"),
+                "min_valid_negatives": float(false_negative_mask_cfg.get("min_valid_negatives", 8.0)),
+                "min_valid_fraction": float(false_negative_mask_cfg.get("min_valid_negative_fraction", 0.25)),
+                "strict": bool(false_negative_mask_cfg.get("strict", False)),
+                "combine_same_position": bool(false_negative_mask_cfg.get("same_position", False)),
+            },
+            "relative_wt_kwargs": {
+                "mode": str(relative_wt_cfg.get("mode", "none")),
+                "distance": str(relative_wt_cfg.get("distance", "euclidean")),
+                "margin": float(relative_wt_cfg.get("margin", 0.0)),
+                "direction": str(relative_wt_cfg.get("direction", "min")),
+                "stop_gradient_wt": bool(stop_gradient_wt),
+                "predictive_loss": str(relative_wt_cfg.get("predictive_loss", "mse")),
+                "allow_energy_target": bool(relative_wt_cfg.get("allow_energy_target", False)),
+            },
+            "relative_wt_target_name": relative_wt_cfg.get("target_name"),
+            "delta_kwargs": {
+                "mode": str(delta_cfg.get("mode", "none")),
+                "consistency_loss": str(delta_cfg.get("consistency_loss", "mse")),
+                "gamma": float(delta_cfg.get("gamma", 1.0)),
+                "descriptor_loss": str(delta_cfg.get("descriptor_loss", "mse")),
+                "allow_energy_target": bool(delta_cfg.get("allow_energy_target", False)),
+            },
+            "delta_target_name": delta_cfg.get("target_name"),
+        }
+    )
+
+
 def build_optimizer(config: Mapping[str, Any], model: torch.nn.Module) -> torch.optim.Optimizer:
     training_cfg = _require_mapping(config.get("training"), field_name="config.training")
     optimizer_name = str(training_cfg.get("optimizer", "adamw")).lower()
@@ -358,6 +421,7 @@ def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
         model = build_model(config, dataset_bundle.dataset)
         _validate_model_input_dim(dataset_bundle.dataset, model)
         loss_fn = build_nt_xent_loss(config)
+        total_loss_assembler = build_total_loss_assembler(config)
         optimizer = build_optimizer(config, model)
         augmenter = build_augmenter(config, dataset_bundle.dataset)
         device = _resolve_device(str(_require_mapping(config.get("training"), field_name="config.training").get("device", "auto")))
@@ -369,6 +433,7 @@ def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
             dataloaders=dataloaders,
             model=model,
             loss_fn=loss_fn,
+            total_loss_assembler=total_loss_assembler,
             optimizer=optimizer,
             augmenter=augmenter,
             device=device,
