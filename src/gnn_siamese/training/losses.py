@@ -20,8 +20,11 @@ class TotalLossConfig:
     relative_wt_weight: float = 0.0
     delta_weight: float = 0.0
     nt_xent_kwargs: dict[str, Any] = field(default_factory=dict)
+    false_negative_mask_kwargs: dict[str, Any] = field(default_factory=lambda: {"mode": "none"})
     relative_wt_kwargs: dict[str, Any] = field(default_factory=lambda: {"mode": "none"})
+    relative_wt_target_name: str | None = None
     delta_kwargs: dict[str, Any] = field(default_factory=lambda: {"mode": "none"})
+    delta_target_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -52,11 +55,17 @@ class TotalLossAssembler(nn.Module):
         nt_xent_weight: float = 1.0,
         relative_wt_weight: float = 0.0,
         delta_weight: float = 0.0,
+        false_negative_mask_kwargs: Mapping[str, Any] | None = None,
+        relative_wt_target_name: str | None = None,
+        delta_target_name: str | None = None,
     ) -> None:
         super().__init__()
         self.nt_xent = nt_xent if nt_xent is not None else NTXentLoss()
         self.relative_wt = relative_wt if relative_wt is not None else RelativeWTLoss(mode="none")
         self.delta = delta if delta is not None else DeltaLoss(mode="none")
+        self.false_negative_mask_kwargs = dict(false_negative_mask_kwargs or {"mode": "none"})
+        self.relative_wt_target_name = relative_wt_target_name
+        self.delta_target_name = delta_target_name
         self.weights = {
             "nt_xent": self._validate_weight(nt_xent_weight, name="nt_xent_weight"),
             "relative_wt": self._validate_weight(relative_wt_weight, name="relative_wt_weight"),
@@ -73,8 +82,11 @@ class TotalLossAssembler(nn.Module):
                 relative_wt_weight=float(config.get("relative_wt_weight", 0.0)),
                 delta_weight=float(config.get("delta_weight", 0.0)),
                 nt_xent_kwargs=dict(config.get("nt_xent_kwargs", {})),
+                false_negative_mask_kwargs=dict(config.get("false_negative_mask_kwargs", {"mode": "none"})),
                 relative_wt_kwargs=dict(config.get("relative_wt_kwargs", {"mode": "none"})),
+                relative_wt_target_name=config.get("relative_wt_target_name"),
                 delta_kwargs=dict(config.get("delta_kwargs", {"mode": "none"})),
+                delta_target_name=config.get("delta_target_name"),
             )
 
         return cls(
@@ -84,6 +96,9 @@ class TotalLossAssembler(nn.Module):
             nt_xent_weight=config.nt_xent_weight,
             relative_wt_weight=config.relative_wt_weight,
             delta_weight=config.delta_weight,
+            false_negative_mask_kwargs=config.false_negative_mask_kwargs,
+            relative_wt_target_name=config.relative_wt_target_name,
+            delta_target_name=config.delta_target_name,
         )
 
     @staticmethod
@@ -153,6 +168,7 @@ class TotalLossAssembler(nn.Module):
         inactive_components: list[str] = []
         skipped_components: list[str] = []
         weighted_losses: list[Tensor] = []
+        weighted_components: dict[str, Tensor] = {name: zero for name in self.COMPONENT_NAMES}
 
         for name in self.COMPONENT_NAMES:
             weight = self.weights[name]
@@ -178,7 +194,9 @@ class TotalLossAssembler(nn.Module):
                     mask_output=mask_output,
                 )
                 components[name] = output.loss
-                weighted_losses.append(weight * output.loss)
+                weighted_component = weight * output.loss
+                weighted_components[name] = weighted_component
+                weighted_losses.append(weighted_component)
                 active_components.append(name)
                 audit_flags["component_status"][name] = "active"
                 metrics["nt_xent_mean_positive_similarity"] = output.mean_positive_similarity
@@ -186,6 +204,26 @@ class TotalLossAssembler(nn.Module):
                 metrics["nt_xent_temperature"] = output.temperature
                 metrics["nt_xent_batch_size"] = output.batch_size
                 metrics["nt_xent_is_active"] = True
+                if mask_output is not None:
+                    metrics["false_negative_mask_mode"] = mask_output.batch_stats.mode
+                    metrics["false_negative_mask_alpha"] = mask_output.batch_stats.alpha
+                    metrics["false_negative_mask_min_valid_negatives"] = mask_output.batch_stats.min_valid_negatives
+                    metrics["false_negative_mask_mean_valid_negatives"] = mask_output.batch_stats.mean_valid_negatives
+                    metrics["false_negative_mask_min_valid_fraction"] = (
+                        mask_output.batch_stats.min_valid_negative_fraction
+                    )
+                    metrics["false_negative_mask_number_degenerate_anchors"] = (
+                        mask_output.batch_stats.number_degenerate_anchors
+                    )
+                    metrics["false_negative_mask_has_degenerate_anchors"] = int(
+                        mask_output.batch_stats.has_degenerate_anchors
+                    )
+                    metrics["false_negative_mask_valid_negatives_per_anchor"] = [
+                        entry.valid_negatives for entry in mask_output.per_anchor_stats
+                    ]
+                    metrics["false_negative_mask_valid_fraction_per_anchor"] = [
+                        entry.valid_negative_fraction for entry in mask_output.per_anchor_stats
+                    ]
                 continue
 
             if name == "relative_wt":
@@ -197,10 +235,12 @@ class TotalLossAssembler(nn.Module):
                     severity_target=severity_target,
                     auxiliary_target=auxiliary_target,
                     ranking_target=ranking_target,
-                    target_name=relative_wt_target_name,
+                    target_name=relative_wt_target_name or self.relative_wt_target_name,
                 )
                 components[name] = output.loss
-                weighted_losses.append(weight * output.loss)
+                weighted_component = weight * output.loss
+                weighted_components[name] = weighted_component
+                weighted_losses.append(weighted_component)
                 active_components.append(name)
                 audit_flags["component_status"][name] = "active"
                 metrics["relative_wt_mode"] = output.mode
@@ -217,10 +257,12 @@ class TotalLossAssembler(nn.Module):
                 z_delta,
                 z_delta_2=z_delta_2,
                 target=delta_target,
-                target_name=delta_target_name,
+                target_name=delta_target_name or self.delta_target_name,
             )
             components[name] = output.loss
-            weighted_losses.append(weight * output.loss)
+            weighted_component = weight * output.loss
+            weighted_components[name] = weighted_component
+            weighted_losses.append(weighted_component)
             active_components.append(name)
             audit_flags["component_status"][name] = "active"
             metrics["delta_mode"] = output.mode
@@ -241,12 +283,15 @@ class TotalLossAssembler(nn.Module):
         if "delta" not in active_components:
             audit_flags["z_delta_not_trained"] = True
 
+        for name in self.COMPONENT_NAMES:
+            metrics[f"loss_{name}"] = components[name]
+            metrics[f"weighted_loss_{name}"] = weighted_components[name]
         metrics["loss_total"] = total_loss
         metrics["active_component_count"] = len(active_components)
         metrics["inactive_component_count"] = len(inactive_components)
         metrics["skipped_component_count"] = len(skipped_components)
         metrics["weighted_components"] = {
-            name: self.weights[name] * self._as_float(components[name])
+            name: self._as_float(weighted_components[name])
             for name in self.COMPONENT_NAMES
         }
 

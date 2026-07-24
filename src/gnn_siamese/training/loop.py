@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 import logging
@@ -16,6 +16,8 @@ from typing import Any
 import torch
 from torch import Tensor, nn
 
+from gnn_siamese.losses import NTXentLoss
+from gnn_siamese.losses.false_negative_mask import build_false_negative_mask
 from gnn_siamese.training.losses import TotalLossAssembler
 from gnn_siamese.training.step import training_step
 
@@ -68,6 +70,11 @@ class BaselineEpochOutput:
     num_examples: int
     used_eval_mode: bool
     gradients_enabled: bool
+    component_means: dict[str, float]
+    metrics: dict[str, Any]
+    active_components: list[str]
+    inactive_components: list[str]
+    skipped_components: list[str]
 
 
 @dataclass(frozen=True)
@@ -78,6 +85,8 @@ class ModelBTrainingOutput:
     validation_history: list[BaselineEpochOutput]
     final_train_loss: float
     final_validation_loss: float
+    final_train_metrics: dict[str, Any]
+    final_validation_metrics: dict[str, Any]
     device: str
     epochs_completed: int
 
@@ -214,6 +223,156 @@ def _prepare_model_b_views(
     }
 
 
+def _require_batch_positions(batch: Any) -> list[int]:
+    positions: list[int] = []
+    for item in getattr(batch, "metadata", []):
+        position = item.get("position")
+        if position is None:
+            raise ValueError("False-negative masking requires batch metadata with real positions.")
+        positions.append(int(position))
+    if len(positions) != int(getattr(batch, "batch_size", 0)):
+        raise ValueError("False-negative masking requires one position per batch element.")
+    return positions
+
+
+def _build_model_b_mask_output(batch: Any, loss_assembler: TotalLossAssembler) -> Any | None:
+    mask_cfg = dict(loss_assembler.false_negative_mask_kwargs)
+    mode = str(mask_cfg.get("mode", "none"))
+    if mode == "none":
+        return None
+
+    batch_size = _count_batch_examples(batch)
+    build_kwargs: dict[str, Any] = {
+        "batch_size": batch_size,
+        "mode": mode,
+        "min_valid_negatives": float(mask_cfg.get("min_valid_negatives", 8.0)),
+        "min_valid_fraction": float(
+            mask_cfg.get("min_valid_negative_fraction", mask_cfg.get("min_valid_fraction", 0.25))
+        ),
+        "strict": bool(mask_cfg.get("strict", False)),
+        "combine_same_position": bool(mask_cfg.get("combine_same_position", False)),
+    }
+    positions = _require_batch_positions(batch)
+    if mode == "same_position" or build_kwargs["combine_same_position"]:
+        build_kwargs["positions"] = positions
+    if mode in {"structural_hard", "structural_soft"}:
+        structural_neighbors = getattr(batch, "structural_neighbors", None)
+        if structural_neighbors is None:
+            raise ValueError(
+                "False-negative masking mode "
+                f"{mode!r} requires structural_neighbors in the batch; this metadata is not available yet."
+            )
+        build_kwargs["positions"] = positions
+        build_kwargs["structural_neighbors"] = structural_neighbors
+        build_kwargs["alpha"] = mask_cfg.get("alpha")
+    return build_false_negative_mask(**build_kwargs)
+
+
+def _select_batch_target(batch: Any, *, target_name: str, device: torch.device) -> Tensor:
+    values: list[float] = []
+    for item in getattr(batch, "metadata", []):
+        if target_name not in item:
+            raise ValueError(f"Configured auxiliary target {target_name!r} is missing from batch metadata.")
+        raw_value = item[target_name]
+        if raw_value is None:
+            raise ValueError(f"Configured auxiliary target {target_name!r} contains missing values in batch metadata.")
+        values.append(float(raw_value))
+    return torch.tensor(values, dtype=torch.float32, device=device)
+
+
+def _available_batch_metadata_keys(batch: Any) -> list[str]:
+    keys: set[str] = set()
+    for item in getattr(batch, "metadata", []):
+        keys.update(str(key) for key in item.keys())
+    return sorted(keys)
+
+
+def _relative_wt_target_error(batch: Any, *, mode: str, target_name: str | None, reason: str) -> ValueError:
+    available_metadata = _available_batch_metadata_keys(batch)
+    return ValueError(
+        "RelativeWTLoss target resolution failed: "
+        f"mode={mode!r}; requested_target_name={target_name!r}; "
+        f"available_metadata={available_metadata}; reason={reason}."
+    )
+
+
+def _build_model_b_loss_inputs(
+    batch: Any,
+    model_output: Any,
+    *,
+    loss_assembler: TotalLossAssembler,
+    device: torch.device,
+) -> dict[str, Any]:
+    output_payload = model_output.to_dict() if hasattr(model_output, "to_dict") else dict(model_output)
+    loss_inputs: dict[str, Any] = {
+        "z1": output_payload["z1"],
+        "z2": output_payload["z2"],
+        "h_mut": output_payload["h_mut"],
+        "h_wt": output_payload["h_wt"],
+        "z_delta": output_payload.get("z_delta"),
+        "z_delta_2": output_payload.get("z_delta_2"),
+    }
+    if loss_assembler.weights["nt_xent"] > 0.0:
+        loss_inputs["mask_output"] = _build_model_b_mask_output(batch, loss_assembler)
+
+    relative_mode = loss_assembler.relative_wt.mode
+    relative_target_name = loss_assembler.relative_wt_target_name
+    if loss_assembler.weights["relative_wt"] > 0.0 and relative_mode == "ranking":
+        if relative_target_name is None:
+            raise _relative_wt_target_error(
+                batch,
+                mode=relative_mode,
+                target_name=relative_target_name,
+                reason="ranking mode requires explicit loss.relative_wt.target_name in YAML and never falls back to model severity.",
+            )
+        try:
+            loss_inputs["ranking_target"] = _select_batch_target(batch, target_name=relative_target_name, device=device)
+        except ValueError as exc:
+            raise _relative_wt_target_error(
+                batch,
+                mode=relative_mode,
+                target_name=relative_target_name,
+                reason=str(exc),
+            ) from exc
+        loss_inputs["relative_wt_target_name"] = relative_target_name
+    elif loss_assembler.weights["relative_wt"] > 0.0 and relative_mode == "predictive":
+        if relative_target_name is None:
+            raise _relative_wt_target_error(
+                batch,
+                mode=relative_mode,
+                target_name=relative_target_name,
+                reason="predictive mode requires explicit loss.relative_wt.target_name in YAML.",
+            )
+        try:
+            loss_inputs["auxiliary_target"] = _select_batch_target(batch, target_name=relative_target_name, device=device)
+        except ValueError as exc:
+            raise _relative_wt_target_error(
+                batch,
+                mode=relative_mode,
+                target_name=relative_target_name,
+                reason=str(exc),
+            ) from exc
+        loss_inputs["relative_wt_target_name"] = relative_target_name
+
+    delta_mode = loss_assembler.delta.mode
+    delta_target_name = loss_assembler.delta_target_name
+    if loss_assembler.weights["delta"] > 0.0 and delta_mode != "none":
+        if output_payload.get("z_delta") is None:
+            raise ValueError("Delta loss requires z_delta, but model.mlp_delta.enabled=false or z_delta is unavailable.")
+        if delta_mode == "descriptor":
+            if delta_target_name is None:
+                raise ValueError("DeltaLoss descriptor mode requires loss.delta.target_name in YAML.")
+            if delta_target_name in {"severity", "severity_target"}:
+                loss_inputs["delta_target"] = output_payload.get("severity")
+            elif delta_target_name in {"mechanism_direction", "mechanism_direction_target"}:
+                loss_inputs["delta_target"] = output_payload.get("mechanism_direction")
+            else:
+                loss_inputs["delta_target"] = _select_batch_target(batch, target_name=delta_target_name, device=device)
+            loss_inputs["delta_target_name"] = delta_target_name
+
+    return loss_inputs
+
+
 def run_model_b_epoch(
     model: nn.Module,
     dataloader: Any,
@@ -238,6 +397,12 @@ def run_model_b_epoch(
     total_loss = 0.0
     total_examples = 0
     total_batches = 0
+    component_totals: dict[str, float] = defaultdict(float)
+    metric_values: dict[str, list[float]] = defaultdict(list)
+    metric_labels: dict[str, Any] = {}
+    active_components_seen: set[str] = set()
+    inactive_components_seen: set[str] = set()
+    skipped_components_seen: set[str] = set()
 
     grad_context = torch.enable_grad() if is_training else torch.no_grad()
     with grad_context:
@@ -252,8 +417,26 @@ def run_model_b_epoch(
             if is_training:
                 optimizer.zero_grad(set_to_none=True)
             output = model(**model_inputs)
-            loss_output = loss_fn(output.z1, output.z2)
-            loss = loss_output.loss
+            if isinstance(loss_fn, TotalLossAssembler):
+                assembled = loss_fn(**_build_model_b_loss_inputs(batch, output, loss_assembler=loss_fn, device=runtime_device))
+                loss = assembled.loss
+                for name, component in assembled.components.items():
+                    component_totals[name] += float(component.detach().cpu().item()) * batch_size
+                active_components_seen.update(assembled.active_components)
+                inactive_components_seen.update(assembled.inactive_components)
+                skipped_components_seen.update(assembled.skipped_components)
+                for name, value in assembled.metrics.items():
+                    if isinstance(value, Tensor) and value.ndim == 0:
+                        metric_values[name].append(float(value.detach().cpu().item()))
+                    elif isinstance(value, (float, int)):
+                        metric_values[name].append(float(value))
+                    elif isinstance(value, (str, bool)):
+                        metric_labels[name] = value
+            else:
+                loss_output = loss_fn(output.z1, output.z2)
+                loss = loss_output.loss
+                component_totals["nt_xent"] += float(loss.detach().cpu().item()) * batch_size
+                active_components_seen.add("nt_xent")
             if not torch.isfinite(loss):
                 raise RuntimeError(f"{phase} loss became non-finite.")
             if is_training:
@@ -272,6 +455,16 @@ def run_model_b_epoch(
         num_examples=total_examples,
         used_eval_mode=not is_training and not model.training,
         gradients_enabled=is_training,
+        component_means={
+            name: value / max(total_examples, 1) for name, value in sorted(component_totals.items())
+        },
+        metrics=(
+            {name: _mean(values) for name, values in sorted(metric_values.items())}
+            | dict(sorted(metric_labels.items()))
+        ),
+        active_components=sorted(active_components_seen),
+        inactive_components=sorted(inactive_components_seen),
+        skipped_components=sorted(skipped_components_seen),
     )
 
 
@@ -320,6 +513,8 @@ def fit_model_b_baseline(
         validation_history=validation_history,
         final_train_loss=train_history[-1].mean_loss,
         final_validation_loss=validation_history[-1].mean_loss,
+        final_train_metrics=dict(train_history[-1].metrics),
+        final_validation_metrics=dict(validation_history[-1].metrics),
         device=str(runtime_device),
         epochs_completed=int(epochs),
     )

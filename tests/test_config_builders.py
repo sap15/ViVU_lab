@@ -48,6 +48,9 @@ def test_load_config_extends_and_builder_consumes_changed_yaml_option(tmp_path: 
     assert pipeline.model.architecture_name == "model_b"
     assert pipeline.model.siamese_model.projection_instance.output_dim == 7
     assert isinstance(pipeline.loss_fn, NTXentLoss)
+    assert pipeline.total_loss_assembler.weights["nt_xent"] == pytest.approx(1.0)
+    assert pipeline.total_loss_assembler.weights["relative_wt"] == pytest.approx(0.0)
+    assert pipeline.total_loss_assembler.weights["delta"] == pytest.approx(0.0)
     assert isinstance(pipeline.optimizer, torch.optim.Adam)
 
 

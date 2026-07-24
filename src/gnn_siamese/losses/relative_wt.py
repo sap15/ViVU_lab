@@ -178,8 +178,10 @@ class RelativeWTLoss(nn.Module):
             )
 
         if self.mode == "ranking":
-            target = ranking_target if ranking_target is not None else severity_target
-            ranking_values = self._require_target(target, mode_name=self.mode).to(device=distances.device)
+            if not target_name:
+                raise ValueError("RelativeWTLoss ranking mode requires an explicit target_name.")
+            del severity_target
+            ranking_values = self._require_target(ranking_target, mode_name=self.mode).to(device=distances.device)
             if ranking_values.shape[0] != distances.shape[0]:
                 raise ValueError("RelativeWTLoss ranking target length must match batch size.")
             loss, num_pairs = self._compute_ranking_loss(distances, ranking_values)
@@ -190,13 +192,15 @@ class RelativeWTLoss(nn.Module):
                 mean_distance=mean_distance,
                 margin=self.margin,
                 num_pairs=num_pairs,
-                target_name=target_name or "severity_target",
+                target_name=target_name,
             )
 
+        if not target_name:
+            raise ValueError("RelativeWTLoss predictive mode requires an explicit target_name.")
         target = self._require_target(auxiliary_target, mode_name=self.mode).to(device=distances.device)
         if target.shape[0] != distances.shape[0]:
             raise ValueError("RelativeWTLoss predictive target length must match batch size.")
-        normalized_target_name = target_name or "auxiliary_target"
+        normalized_target_name = target_name
         if normalized_target_name == "custom_structure_energy" and not self.allow_energy_target:
             raise ValueError(
                 "RelativeWTLoss predictive mode does not allow custom_structure_energy "

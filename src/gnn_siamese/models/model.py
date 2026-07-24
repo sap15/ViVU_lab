@@ -76,15 +76,36 @@ class ModelBContrastiveOutput:
     view1: SharedSiameseEncoderOutput
     view2: SharedSiameseEncoderOutput
 
-    def to_dict(self) -> dict[str, Tensor]:
-        return {
+    def to_dict(self) -> dict[str, Tensor | str]:
+        output: dict[str, Tensor | str] = {
             "z1": self.z1,
             "z2": self.z2,
+            "h_mut": self.view1.h_mut,
+            "h_wt": self.view1.h_wt,
+            "h_mut_2": self.view2.h_mut,
+            "h_wt_2": self.view2.h_wt,
+            "r_delta": self.view1.r_delta,
+            "r_delta_2": self.view2.r_delta,
+            "severity": self.view1.severity,
+            "severity_2": self.view2.severity,
+            "mechanism_direction": self.view1.mechanism_direction,
+            "mechanism_direction_2": self.view2.mechanism_direction,
             "h_encoder_mut_view1": self.view1.h_encoder_mut,
             "h_encoder_mut_view2": self.view2.h_encoder_mut,
             "h_encoder_wt_view1": self.view1.h_encoder_wt,
             "h_encoder_wt_view2": self.view2.h_encoder_wt,
+            "z_delta_status": self.view1.z_delta_status,
+            "z_delta_status_2": self.view2.z_delta_status,
         }
+        if self.view1.z_delta is not None:
+            output["z_delta"] = self.view1.z_delta
+        if self.view2.z_delta is not None:
+            output["z_delta_2"] = self.view2.z_delta
+        if self.view1.z_instance_pair is not None:
+            output["z_instance_pair"] = self.view1.z_instance_pair
+        if self.view2.z_instance_pair is not None:
+            output["z_instance_pair_2"] = self.view2.z_instance_pair
+        return output
 
 
 class SharedSiameseEncoderModel(nn.Module):

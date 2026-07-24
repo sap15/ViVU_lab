@@ -278,17 +278,18 @@ def create_synthetic_mut_wt_hdf5(
                 edge_feature_names=edge_feature_names,
                 graph_feature_names=graph_feature_names,
             )
-            _create_graph_group(
-                wt_handle,
-                graph_key=wt_key,
-                residue_name=residue_name,
-                position=position,
-                variant_index=variant_index,
-                is_wt=True,
-                node_feature_names=node_feature_names,
-                edge_feature_names=edge_feature_names,
-                graph_feature_names=graph_feature_names,
-            )
+            if wt_key not in wt_handle:
+                _create_graph_group(
+                    wt_handle,
+                    graph_key=wt_key,
+                    residue_name=residue_name,
+                    position=position,
+                    variant_index=variant_index,
+                    is_wt=True,
+                    node_feature_names=node_feature_names,
+                    edge_feature_names=edge_feature_names,
+                    graph_feature_names=graph_feature_names,
+                )
     return len(variant_records)
 
 

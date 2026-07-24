@@ -39,7 +39,7 @@ def main() -> int:
             train_dataloader=pipeline.dataloaders.train_loader,
             validation_dataloader=pipeline.dataloaders.validation_loader,
             optimizer=pipeline.optimizer,
-            loss_fn=pipeline.loss_fn,
+            loss_fn=pipeline.total_loss_assembler,
             epochs=int(pipeline.config["training"]["epochs"]),
             device=pipeline.device,
             augmenter=pipeline.augmenter,
@@ -78,6 +78,13 @@ def main() -> int:
         print(f"epochs_completed={output.epochs_completed}")
         print(f"train_loss={output.final_train_loss:.6f}")
         print(f"validation_loss={output.final_validation_loss:.6f}")
+        for metric_name, metric_value in sorted(output.final_validation_metrics.items()):
+            if isinstance(metric_value, bool):
+                print(f"{metric_name}={str(metric_value).lower()}")
+            elif isinstance(metric_value, str):
+                print(f"{metric_name}={metric_value}")
+            elif isinstance(metric_value, (int, float)):
+                print(f"{metric_name}={metric_value:.6f}")
         print(f"device={output.device}")
         return 0
     finally:

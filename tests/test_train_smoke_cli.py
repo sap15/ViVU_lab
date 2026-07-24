@@ -107,7 +107,7 @@ def test_smoke_cli_runs_without_manual_pythonpath_and_uses_synthetic_fallback(tm
 
     result = subprocess.run(
         [
-            "python3",
+            sys.executable,
             "scripts/train.py",
             "--config",
             str(config_path),
@@ -133,6 +133,80 @@ def test_smoke_cli_runs_without_manual_pythonpath_and_uses_synthetic_fallback(tm
     assert summary["device"] == "cpu"
     assert math.isfinite(float(summary["train_loss"]))
     assert math.isfinite(float(summary["validation_loss"]))
+    assert float(summary["weighted_loss_relative_wt"]) == pytest.approx(0.0, abs=1.0e-8)
+    assert float(summary["weighted_loss_delta"]) == pytest.approx(0.0, abs=1.0e-8)
+    assert float(summary["loss_total"]) == pytest.approx(float(summary["weighted_loss_nt_xent"]), abs=1.0e-6)
+    smoke_artifacts = _list_smoke_artifacts(tmp_root)
+    assert smoke_artifacts == [], f"Smoke artifacts left in TMPDIR: {smoke_artifacts}"
+
+
+def test_auxiliary_losses_smoke_cli_runs_and_reports_separate_metrics(tmp_path: Path) -> None:
+    pytest.importorskip("torch")
+    pytest.importorskip("h5py")
+    pytest.importorskip("torch_geometric")
+
+    repo_root = Path(__file__).resolve().parents[1]
+    tmp_root = tmp_path / "tmp_runtime"
+    tmp_root.mkdir(parents=True, exist_ok=True)
+
+    config_path = tmp_path / "aux_smoke_cli.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "extends": str((repo_root / "configs" / "model_b_auxiliary_losses_smoke.yaml").resolve()),
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["TMPDIR"] = str(tmp_root)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/train.py",
+            "--config",
+            str(config_path),
+            "--smoke-test",
+            "--device",
+            "cpu",
+        ],
+        cwd=repo_root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr or result.stdout
+    stdout_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    summary = dict(line.split("=", 1) for line in stdout_lines if "=" in line)
+
+    assert summary["smoke_dataset_source"] == "synthetic_temporary"
+    assert int(summary["epochs_completed"]) == 2
+    assert summary["device"] == "cpu"
+    assert summary["relative_wt_mode"] == "margin"
+    assert summary["delta_mode"] == "variance"
+    assert summary["false_negative_mask_mode"] == "same_position"
+    assert float(summary["false_negative_mask_has_degenerate_anchors"]) == pytest.approx(0.0, abs=1.0e-8)
+    assert float(summary["false_negative_mask_number_degenerate_anchors"]) == pytest.approx(0.0, abs=1.0e-8)
+    assert math.isfinite(float(summary["train_loss"]))
+    assert math.isfinite(float(summary["validation_loss"]))
+    assert "nt_xent_mean_positive_similarity" in summary
+    assert "relative_wt_mean_distance" in summary
+    assert "delta_mean_norm" in summary
+    assert float(summary["weighted_loss_nt_xent"]) > 0.0
+    assert float(summary["weighted_loss_relative_wt"]) > 0.0
+    assert float(summary["weighted_loss_delta"]) > 0.0
+    expected_total = (
+        float(summary["weighted_loss_nt_xent"])
+        + float(summary["weighted_loss_relative_wt"])
+        + float(summary["weighted_loss_delta"])
+    )
+    assert float(summary["loss_total"]) == pytest.approx(expected_total, abs=1.0e-6)
     smoke_artifacts = _list_smoke_artifacts(tmp_root)
     assert smoke_artifacts == [], f"Smoke artifacts left in TMPDIR: {smoke_artifacts}"
 
