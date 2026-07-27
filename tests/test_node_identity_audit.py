@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import h5py
@@ -151,3 +153,23 @@ def test_summary_and_artifacts_are_deterministic(tmp_path):
     assert [row["case_key"] for row in payload["graphs"]] == sorted(
         row["case_key"] for row in payload["graphs"]
     )
+
+def test_node_identity_audit_cli_help_runs_from_repository_root() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/audit_node_identity.py",
+            "--help",
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "usage:" in result.stdout.lower()
+    assert "traceback" not in result.stderr.lower()
+
