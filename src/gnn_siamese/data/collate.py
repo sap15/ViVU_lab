@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import numpy as np
@@ -39,6 +39,40 @@ class MutWtPairBatch:
     wt_keys: list[str]
     pair_keys: list[PairingKey]
     batch_size: int
+    mut_aligned_index: torch.Tensor
+    wt_aligned_index: torch.Tensor
+    aligned_pair_batch: torch.Tensor
+    alignment_ptr: torch.Tensor
+    exists_MUT: torch.Tensor
+    exists_WT: torch.Tensor
+    union_pair_batch: torch.Tensor
+    union_ptr: torch.Tensor
+    local_mut_aligned_index: torch.Tensor
+    local_wt_aligned_index: torch.Tensor
+    local_alignment_ptr: torch.Tensor
+
+    def to(self, device: torch.device | str) -> MutWtPairBatch:
+        """Return the complete paired batch on ``device``."""
+
+        tensor_names = (
+            "mut_aligned_index",
+            "wt_aligned_index",
+            "aligned_pair_batch",
+            "alignment_ptr",
+            "exists_MUT",
+            "exists_WT",
+            "union_pair_batch",
+            "union_ptr",
+            "local_mut_aligned_index",
+            "local_wt_aligned_index",
+            "local_alignment_ptr",
+        )
+        return replace(
+            self,
+            graph_mut=self.graph_mut.to(device),
+            graph_wt=self.graph_wt.to(device),
+            **{name: getattr(self, name).to(device) for name in tensor_names},
+        )
 
 
 def _validate_non_empty_samples(samples: Sequence[MutWtPairSample]) -> None:
@@ -231,6 +265,66 @@ def _collate_graphs(
     return batch
 
 
+def _ptr(lengths: Sequence[int]) -> torch.Tensor:
+    return torch.tensor([0, *np.cumsum(lengths, dtype=np.int64).tolist()], dtype=torch.long)
+
+
+def _cat_long(parts: Sequence[torch.Tensor]) -> torch.Tensor:
+    return torch.cat(list(parts)) if parts else torch.empty(0, dtype=torch.long)
+
+
+def _collate_alignments(
+    samples: Sequence[MutWtPairSample],
+) -> dict[str, torch.Tensor]:
+    mut_offsets = np.cumsum(
+        [0, *(int(sample.graph_mut.x.shape[0]) for sample in samples[:-1])],
+        dtype=np.int64,
+    )
+    wt_offsets = np.cumsum(
+        [0, *(int(sample.graph_wt.x.shape[0]) for sample in samples[:-1])],
+        dtype=np.int64,
+    )
+    alignment_lengths = [len(sample.mut_aligned_index) for sample in samples]
+    union_lengths = [len(sample.exists_MUT) for sample in samples]
+    local_lengths = [len(sample.local_mut_aligned_index) for sample in samples]
+
+    def offset_parts(attribute: str, offsets: np.ndarray) -> list[torch.Tensor]:
+        return [
+            torch.as_tensor(getattr(sample, attribute), dtype=torch.long) + int(offset)
+            for sample, offset in zip(samples, offsets)
+        ]
+
+    return {
+        "mut_aligned_index": _cat_long(offset_parts("mut_aligned_index", mut_offsets)),
+        "wt_aligned_index": _cat_long(offset_parts("wt_aligned_index", wt_offsets)),
+        "aligned_pair_batch": torch.repeat_interleave(
+            torch.arange(len(samples), dtype=torch.long),
+            torch.tensor(alignment_lengths, dtype=torch.long),
+        ),
+        "alignment_ptr": _ptr(alignment_lengths),
+        "exists_MUT": torch.as_tensor(
+            [value for sample in samples for value in sample.exists_MUT],
+            dtype=torch.bool,
+        ),
+        "exists_WT": torch.as_tensor(
+            [value for sample in samples for value in sample.exists_WT],
+            dtype=torch.bool,
+        ),
+        "union_pair_batch": torch.repeat_interleave(
+            torch.arange(len(samples), dtype=torch.long),
+            torch.tensor(union_lengths, dtype=torch.long),
+        ),
+        "union_ptr": _ptr(union_lengths),
+        "local_mut_aligned_index": _cat_long(
+            offset_parts("local_mut_aligned_index", mut_offsets)
+        ),
+        "local_wt_aligned_index": _cat_long(
+            offset_parts("local_wt_aligned_index", wt_offsets)
+        ),
+        "local_alignment_ptr": _ptr(local_lengths),
+    }
+
+
 def collate_mut_wt_pairs(samples: Sequence[MutWtPairSample]) -> MutWtPairBatch:
     """Collate a non-empty sequence of paired mutant-WT samples into one batch."""
 
@@ -241,6 +335,7 @@ def collate_mut_wt_pairs(samples: Sequence[MutWtPairSample]) -> MutWtPairBatch:
     _, _, mask_keys = _validate_cross_graph_compatibility(graph_mut, graph_wt)
     _validate_mutation_counts(graph_mut, graph_role="Mutant", expected_sum=1.0)
     _validate_mutation_counts(graph_wt, graph_role="WT", expected_sum=0.0)
+    alignment_batch = _collate_alignments(samples)
 
     return MutWtPairBatch(
         graph_mut=_collate_graphs(graph_mut, mask_keys=mask_keys),
@@ -251,4 +346,5 @@ def collate_mut_wt_pairs(samples: Sequence[MutWtPairSample]) -> MutWtPairBatch:
         wt_keys=[sample.wt_key for sample in samples],
         pair_keys=[sample.pair_key for sample in samples],
         batch_size=len(samples),
+        **alignment_batch,
     )

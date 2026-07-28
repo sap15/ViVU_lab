@@ -11,6 +11,7 @@ import h5py
 
 from gnn_siamese.data.feature_selection import split_encoder_inputs_and_auxiliary_features
 from gnn_siamese.data.hdf5_loader import HDF5GraphComponents, load_hdf5_graph_components
+from gnn_siamese.data.node_pair_alignment import NodePairAlignment, align_node_pair
 from gnn_siamese.data.pairing import PairingKey, pair_mutants_with_wt
 
 
@@ -45,6 +46,39 @@ class MutWtPairSample:
     variant_id: str
     mutant_key: str
     wt_key: str
+    node_pair_alignment: NodePairAlignment | None = None
+
+    @property
+    def mut_aligned_index(self) -> tuple[int, ...]:
+        return () if self.node_pair_alignment is None else self.node_pair_alignment.mut_aligned_index
+
+    @property
+    def wt_aligned_index(self) -> tuple[int, ...]:
+        return () if self.node_pair_alignment is None else self.node_pair_alignment.wt_aligned_index
+
+    @property
+    def exists_MUT(self) -> tuple[bool, ...]:
+        return () if self.node_pair_alignment is None else self.node_pair_alignment.exists_MUT
+
+    @property
+    def exists_WT(self) -> tuple[bool, ...]:
+        return () if self.node_pair_alignment is None else self.node_pair_alignment.exists_WT
+
+    @property
+    def local_mut_aligned_index(self) -> tuple[int, ...]:
+        if self.node_pair_alignment is None or not self.node_pair_alignment.local_views:
+            return ()
+        return self.node_pair_alignment.local_view(
+            self.node_pair_alignment.technical_radius_angstrom
+        ).local_mut_aligned_index
+
+    @property
+    def local_wt_aligned_index(self) -> tuple[int, ...]:
+        if self.node_pair_alignment is None or not self.node_pair_alignment.local_views:
+            return ()
+        return self.node_pair_alignment.local_view(
+            self.node_pair_alignment.technical_radius_angstrom
+        ).local_wt_aligned_index
 
 
 @dataclass(frozen=True)
@@ -157,6 +191,25 @@ def _validate_pair_compatibility(
         )
 
 
+def _align_pair_nodes(pair: MutWtPairRecord) -> NodePairAlignment:
+    """Run the A1.4 aligner directly on the documented raw HDF5 fields."""
+
+    with h5py.File(pair.mutant_source_h5, "r") as mutant_handle, h5py.File(
+        pair.wt_source_h5, "r"
+    ) as wt_handle:
+        mutant_nodes = mutant_handle[pair.mutant_key]["node_features"]
+        wt_nodes = wt_handle[pair.wt_key]["node_features"]
+        return align_node_pair(
+            mutant_nodes["_chain_id"][()],
+            mutant_nodes["res_id"][()],
+            mutant_nodes["_position"][()],
+            wt_nodes["_chain_id"][()],
+            wt_nodes["res_id"][()],
+            wt_nodes["_position"][()],
+            anchor_key=(pair.chain_id, pair.position),
+        )
+
+
 class MutWtPairDataset:
     """Minimal deterministic dataset of paired mutant and WT graph components."""
 
@@ -236,6 +289,7 @@ class MutWtPairDataset:
     def __getitem__(self, index: int) -> MutWtPairSample:
         pair = self.pairs[index]
         graph_mut, graph_wt = self._load_pair_graphs(pair)
+        node_pair_alignment = _align_pair_nodes(pair)
 
         metadata = {
             "variant_id": pair.variant_id,
@@ -260,4 +314,5 @@ class MutWtPairDataset:
             variant_id=pair.variant_id,
             mutant_key=pair.mutant_key,
             wt_key=pair.wt_key,
+            node_pair_alignment=node_pair_alignment,
         )

@@ -86,6 +86,7 @@ def _create_graph(
     custom_structure_energy: float = 7.5,
 ) -> None:
     num_nodes = len(diff_mass)
+    position = int(graph_key.split(":")[2])
     edge_index = np.array([[0, 1], [1, 2]], dtype=np.int64)
     with h5py.File(path, "a") as handle:
         graph = handle.create_group(graph_key)
@@ -94,6 +95,9 @@ def _create_graph(
         graph_group = graph.create_group("graph_features")
 
         node_group.create_dataset("_chain_id", data=[b"A"] * num_nodes)
+        node_group.create_dataset(
+            "res_id", data=np.arange(position, position + num_nodes, dtype=np.int64)
+        )
         node_group.create_dataset("_name", data=[b"GLY"] * num_nodes)
         node_group.create_dataset(
             "_position",
@@ -137,6 +141,11 @@ def test_mut_wt_pair_dataset_loads_single_pair(tmp_path: Path) -> None:
     item = dataset[0]
     assert item.graph_mut is not None
     assert item.graph_wt is not None
+    assert item.node_pair_alignment is not None
+    assert item.mut_aligned_index == (0, 1, 2)
+    assert item.wt_aligned_index == (0, 1, 2)
+    assert item.exists_MUT == (True, True, True)
+    assert item.exists_WT == (True, True, True)
 
 
 def test_mut_wt_pair_dataset_preserves_pair_metadata(tmp_path: Path) -> None:
