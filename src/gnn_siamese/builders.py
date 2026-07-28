@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+import random
 from typing import Any
 
 import torch
@@ -66,6 +67,7 @@ class DataLoadersBundle:
     train_loader: DataLoader
     validation_loader: DataLoader
     test_loader: DataLoader
+    train_generator: torch.Generator | None = None
 
 
 @dataclass(frozen=True)
@@ -79,6 +81,7 @@ class TrainingPipeline:
     loss_fn: NTXentLoss
     total_loss_assembler: TotalLossAssembler
     optimizer: torch.optim.Optimizer
+    scheduler: Any | None
     augmenter: GraphViewAugmenter
     device: torch.device
     smoke_data: SmokeDataArtifacts | None = None
@@ -94,6 +97,27 @@ def _resolve_device(requested: str | None) -> torch.device:
     if requested in (None, "auto"):
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
     return torch.device(str(requested))
+
+
+def _apply_reproducibility_seeds(config: Mapping[str, Any]) -> None:
+    reproducibility_cfg = _require_mapping(config.get("reproducibility", {}), field_name="config.reproducibility")
+    project_cfg = _require_mapping(config.get("project", {}), field_name="config.project")
+    seed = int(
+        reproducibility_cfg.get(
+            "seed_torch",
+            reproducibility_cfg.get("seed_python", project_cfg.get("seed", 42)),
+        )
+    )
+    random.seed(int(reproducibility_cfg.get("seed_python", seed)))
+    try:
+        import numpy as np
+
+        np.random.seed(int(reproducibility_cfg.get("seed_numpy", seed)))
+    except ImportError:
+        pass
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(int(reproducibility_cfg.get("seed_cuda", seed)))
 
 
 def _resolve_path(config: Mapping[str, Any], raw_path: str | None) -> Path:
@@ -184,6 +208,7 @@ def _subset_dataset(dataset: MutWtPairDataset, indices: list[int]) -> Subset:
 
 def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, split_bundle: SplitBundle) -> DataLoadersBundle:
     training_cfg = _require_mapping(config.get("training"), field_name="config.training")
+    project_cfg = _require_mapping(config.get("project"), field_name="config.project")
     batch_size = int(training_cfg.get("batch_size", 4))
     if batch_size <= 0:
         raise BuilderError("training.batch_size must be positive.")
@@ -197,13 +222,16 @@ def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, spli
         "num_workers": num_workers,
         "collate_fn": collate_mut_wt_pairs,
     }
+    train_generator = torch.Generator(device="cpu")
+    train_generator.manual_seed(int(project_cfg.get("seed", 42)))
     return DataLoadersBundle(
         train_dataset=train_dataset,
         validation_dataset=validation_dataset,
         test_dataset=test_dataset,
-        train_loader=DataLoader(train_dataset, shuffle=True, **loader_kwargs),
+        train_loader=DataLoader(train_dataset, shuffle=True, generator=train_generator, **loader_kwargs),
         validation_loader=DataLoader(validation_dataset, shuffle=False, **loader_kwargs),
         test_loader=DataLoader(test_dataset, shuffle=False, **loader_kwargs),
+        train_generator=train_generator,
     )
 
 
@@ -398,6 +426,22 @@ def build_optimizer(config: Mapping[str, Any], model: torch.nn.Module) -> torch.
     raise BuilderError(f"Unsupported training.optimizer {optimizer_name!r}.")
 
 
+def build_scheduler(
+    config: Mapping[str, Any],
+    optimizer: torch.optim.Optimizer,
+) -> Any | None:
+    training_cfg = _require_mapping(config.get("training"), field_name="config.training")
+    scheduler_name = str(training_cfg.get("scheduler", "none")).lower()
+    epochs = int(training_cfg.get("epochs", 1))
+    if scheduler_name in {"none", "", "null"}:
+        return None
+    if scheduler_name == "cosine":
+        return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(epochs, 1))
+    if scheduler_name == "step":
+        return torch.optim.lr_scheduler.StepLR(optimizer, step_size=max(epochs // 3, 1), gamma=0.1)
+    raise BuilderError(f"Unsupported training.scheduler {scheduler_name!r}.")
+
+
 def build_augmenter(config: Mapping[str, Any], dataset: MutWtPairDataset) -> GraphViewAugmenter:
     project_cfg = _require_mapping(config.get("project"), field_name="config.project")
     try:
@@ -414,6 +458,7 @@ def build_augmenter(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Gra
 
 
 def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
+    _apply_reproducibility_seeds(config)
     dataset_bundle = build_dataset_bundle(config)
     try:
         split_bundle = build_split_bundle(config, dataset_bundle.dataset, smoke_data=dataset_bundle.smoke_data)
@@ -423,6 +468,7 @@ def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
         loss_fn = build_nt_xent_loss(config)
         total_loss_assembler = build_total_loss_assembler(config)
         optimizer = build_optimizer(config, model)
+        scheduler = build_scheduler(config, optimizer)
         augmenter = build_augmenter(config, dataset_bundle.dataset)
         device = _resolve_device(str(_require_mapping(config.get("training"), field_name="config.training").get("device", "auto")))
         return TrainingPipeline(
@@ -435,6 +481,7 @@ def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
             loss_fn=loss_fn,
             total_loss_assembler=total_loss_assembler,
             optimizer=optimizer,
+            scheduler=scheduler,
             augmenter=augmenter,
             device=device,
             smoke_data=dataset_bundle.smoke_data,
