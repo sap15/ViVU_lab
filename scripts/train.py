@@ -15,7 +15,7 @@ for candidate in (str(REPO_ROOT), str(SRC_ROOT)):
 
 from gnn_siamese.builders import build_training_pipeline
 from gnn_siamese.config import apply_runtime_overrides, load_config
-from gnn_siamese.training import fit_model_b_baseline
+from gnn_siamese.training import train_model_b_pipeline
 
 
 def _parse_args() -> argparse.Namespace:
@@ -23,6 +23,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--config", required=True, help="Path to the YAML config file.")
     parser.add_argument("--device", default=None, help="Override training.device.")
     parser.add_argument("--smoke-test", action="store_true", help="Run the reduced smoke-test setup.")
+    parser.add_argument("--resume-from", default=None, help="Resume from an existing checkpoint.")
     return parser.parse_args()
 
 
@@ -34,34 +35,23 @@ def main() -> int:
     pipeline = None
     try:
         pipeline = build_training_pipeline(config)
-        output = fit_model_b_baseline(
-            pipeline.model,
-            train_dataloader=pipeline.dataloaders.train_loader,
-            validation_dataloader=pipeline.dataloaders.validation_loader,
-            optimizer=pipeline.optimizer,
-            loss_fn=pipeline.total_loss_assembler,
-            epochs=int(pipeline.config["training"]["epochs"]),
-            device=pipeline.device,
-            augmenter=pipeline.augmenter,
+        output = train_model_b_pipeline(
+            pipeline,
+            config_path=args.config,
+            resume_from=args.resume_from,
         )
 
         if not args.smoke_test:
-            print(
-                "split_path=",
-                pipeline.split_bundle.split_path,
-                "created=",
-                pipeline.split_bundle.created,
-                "device=",
-                output.device,
-            )
-            print(
-                "train_loss=",
-                f"{output.final_train_loss:.6f}",
-                "validation_loss=",
-                f"{output.final_validation_loss:.6f}",
-                "epochs_completed=",
-                output.epochs_completed,
-            )
+            print(f"split_path={pipeline.split_bundle.split_path}")
+            print(f"split_created={str(pipeline.split_bundle.created).lower()}")
+            print(f"device={output.device}")
+            print(f"train_loss={output.final_train_loss:.6f}")
+            print(f"validation_loss={output.final_validation_loss:.6f}")
+            print(f"epochs_completed={output.epochs_completed}")
+            print(f"run_dir={output.run_dir}")
+            print(f"best_checkpoint={output.best_checkpoint_path}")
+            print(f"last_checkpoint={output.last_checkpoint_path}")
+            print(f"manifest_path={output.manifest_path}")
             return 0
 
         if not (math.isfinite(output.final_train_loss) and math.isfinite(output.final_validation_loss)):

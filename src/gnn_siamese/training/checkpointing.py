@@ -1,0 +1,370 @@
+"""Checkpoint save/load helpers for the operational training pipeline."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from dataclasses import dataclass
+import json
+from pathlib import Path
+import random
+from typing import Any
+
+import torch
+
+from gnn_siamese.data import fingerprint_split_records
+
+try:
+    import numpy as np
+except ImportError:  # pragma: no cover
+    np = None  # type: ignore[assignment]
+
+
+@dataclass(frozen=True)
+class CheckpointSelectionConfig:
+    monitor: str
+    mode: str
+
+    def is_improved(self, candidate: float, best_so_far: float | None) -> bool:
+        if best_so_far is None:
+            return True
+        if self.mode == "min":
+            return candidate < best_so_far
+        if self.mode == "max":
+            return candidate > best_so_far
+        raise ValueError(f"Unsupported checkpoint selection mode {self.mode!r}.")
+
+
+@dataclass(frozen=True)
+class ResumeState:
+    epoch_completed: int
+    next_epoch: int
+    global_step: int
+    best_metric: float | None
+    checkpoint_path: str
+    checkpoint_payload: dict[str, Any]
+
+
+def capture_rng_state() -> dict[str, Any]:
+    state: dict[str, Any] = {
+        "python_random_state": random.getstate(),
+        "numpy_random_state": None,
+        "torch_cpu_rng_state": torch.get_rng_state(),
+        "torch_cuda_rng_state": None,
+    }
+    if np is not None:
+        state["numpy_random_state"] = np.random.get_state()
+    if torch.cuda.is_available():
+        state["torch_cuda_rng_state"] = torch.cuda.get_rng_state_all()
+    return state
+
+
+def restore_rng_state(payload: Mapping[str, Any]) -> None:
+    random.setstate(tuple(payload["python_random_state"]))
+    numpy_state = payload.get("numpy_random_state")
+    if numpy_state is not None and np is not None:
+        np.random.set_state(_normalize_numpy_state(numpy_state))
+    torch.set_rng_state(_to_byte_tensor(payload["torch_cpu_rng_state"]))
+    cuda_state = payload.get("torch_cuda_rng_state")
+    if cuda_state is not None and torch.cuda.is_available():
+        torch.cuda.set_rng_state_all([_to_byte_tensor(item) for item in cuda_state])
+
+
+def build_dataset_fingerprint(dataset: Any) -> str:
+    return fingerprint_split_records(dataset.pairs)
+
+
+def build_resume_compatibility_payload(
+    *,
+    config: Mapping[str, Any],
+    dataset: Any,
+    split_bundle: Any,
+    optimizer: torch.optim.Optimizer,
+    scheduler: Any | None,
+) -> dict[str, Any]:
+    model_cfg = dict(config.get("model", {}))
+    loss_cfg = dict(config.get("loss", {}))
+    training_cfg = dict(config.get("training", {}))
+    projection_instance_cfg = dict(model_cfg.get("projection_instance", {}))
+    projection_pair_cfg = dict(model_cfg.get("projection_pair", {}))
+    mlp_delta_cfg = dict(model_cfg.get("mlp_delta", {}))
+    false_negative_mask_cfg = dict(loss_cfg.get("false_negative_mask", {}))
+    relative_wt_cfg = dict(loss_cfg.get("relative_wt", {}))
+    delta_cfg = dict(loss_cfg.get("delta", {}))
+    scheduler_name = str(training_cfg.get("scheduler", "none")).lower()
+    mask_mode = "none"
+    if bool(false_negative_mask_cfg.get("enabled", False)):
+        mask_mode = str(false_negative_mask_cfg.get("mode", "none"))
+    return {
+        "architecture": {
+            "name": str(model_cfg.get("architecture", "model_b")),
+            "dimensions": {
+                "graph_dim": int(model_cfg.get("graph_dim", 0)),
+                "hidden_dim": int(model_cfg.get("hidden_dim", 0)),
+                "num_layers": int(model_cfg.get("num_layers", 0)),
+                "dropout": float(model_cfg.get("dropout", 0.0)),
+            },
+            "pooling": _json_safe(dict(model_cfg.get("pooling", {}))),
+            "mlp_delta": {
+                "enabled": bool(mlp_delta_cfg.get("enabled", False)),
+                "hidden_dim": int(mlp_delta_cfg.get("hidden_dim", 0)),
+                "output_dim": int(mlp_delta_cfg.get("output_dim", 0)),
+                "num_layers": int(mlp_delta_cfg.get("num_layers", 0)),
+                "dropout": float(mlp_delta_cfg.get("dropout", 0.0)),
+            },
+            "projection_instance": {
+                "enabled": bool(projection_instance_cfg.get("enabled", False)),
+                "hidden_dim": int(projection_instance_cfg.get("hidden_dim", 0)),
+                "output_dim": int(projection_instance_cfg.get("output_dim", 0)),
+                "num_layers": int(projection_instance_cfg.get("num_layers", 0)),
+                "normalize_output": bool(projection_instance_cfg.get("normalize_output", False)),
+            },
+            "projection_pair": {
+                "enabled": bool(projection_pair_cfg.get("enabled", False)),
+                "input": str(projection_pair_cfg.get("input", "r_delta")),
+                "hidden_dim": int(projection_pair_cfg.get("hidden_dim", 0)),
+                "output_dim": int(projection_pair_cfg.get("output_dim", 0)),
+                "normalize_output": bool(projection_pair_cfg.get("normalize_output", False)),
+            },
+        },
+        "features": {
+            "node_feature_names": list(dataset.node_feature_names),
+            "edge_feature_names": list(dataset.edge_feature_names),
+            "graph_feature_names": list(getattr(dataset, "graph_feature_names", [])),
+        },
+        "losses": {
+            "main": str(loss_cfg.get("main", "nt_xent")),
+            "temperature": float(loss_cfg.get("temperature", 0.2)),
+            "false_negative_mask": {
+                "enabled": bool(false_negative_mask_cfg.get("enabled", False)),
+                "mode": mask_mode,
+                "same_position": bool(false_negative_mask_cfg.get("same_position", False)),
+                "strict": bool(false_negative_mask_cfg.get("strict", False)),
+                "min_valid_negatives": float(false_negative_mask_cfg.get("min_valid_negatives", 8.0)),
+                "min_valid_negative_fraction": float(false_negative_mask_cfg.get("min_valid_negative_fraction", 0.25)),
+                "structural_soft": _json_safe(dict(false_negative_mask_cfg.get("structural_soft", {}))),
+            },
+            "lambda_wt": float(loss_cfg.get("lambda_wt", 0.0)),
+            "relative_wt": _json_safe(relative_wt_cfg),
+            "lambda_delta": float(loss_cfg.get("lambda_delta", 0.0)),
+            "delta": _json_safe(delta_cfg),
+        },
+        "augmentations": _json_safe(dict(config.get("augmentation", {}))),
+        "gradient_clipping": training_cfg.get("gradient_clip_norm"),
+        "optimizer": {
+            "class": optimizer.__class__.__name__,
+            "config": _optimizer_config_from_instance(optimizer),
+        },
+        "scheduler": {
+            "class": None if scheduler is None else scheduler.__class__.__name__,
+            "config": _scheduler_config_from_instance(scheduler, scheduler_name=scheduler_name),
+        },
+        "dataset_fingerprint": build_dataset_fingerprint(dataset),
+        "split_fingerprint": str(split_bundle.split.dataset_fingerprint),
+        "split_type": str(split_bundle.split.split_type),
+    }
+
+
+def validate_resume_compatibility(
+    checkpoint_payload: Mapping[str, Any],
+    expected: Mapping[str, Any],
+) -> None:
+    checkpoint_compat = checkpoint_payload.get("compatibility")
+    if not isinstance(checkpoint_compat, Mapping):
+        raise ValueError("Checkpoint is missing compatibility metadata required for resume.")
+    if _json_safe(checkpoint_compat) != _json_safe(expected):
+        mismatch = _find_first_mismatch(checkpoint_compat, expected, path="compatibility")
+        raise ValueError(f"Checkpoint resume incompatibility detected for {mismatch}.")
+
+
+def save_checkpoint(
+    path: str | Path,
+    *,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    scheduler: Any | None,
+    epoch_completed: int,
+    global_step: int,
+    best_metric: float | None,
+    train_metrics: Mapping[str, Any],
+    validation_metrics: Mapping[str, Any],
+    resolved_config: Mapping[str, Any],
+    seed: int | None,
+    split_id: str,
+    split_fingerprint: str,
+    dataset_fingerprint: str,
+    dataset_id: Mapping[str, Any],
+    compatibility: Mapping[str, Any],
+    run_id: str,
+    augmenter_state: Mapping[str, Any] | None = None,
+    data_loader_state: Mapping[str, Any] | None = None,
+) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "format_version": 1,
+        "run_id": run_id,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "scheduler_state_dict": None if scheduler is None else scheduler.state_dict(),
+        "epoch_completed": int(epoch_completed),
+        "global_step": int(global_step),
+        "best_metric": best_metric,
+        "train_metrics": dict(train_metrics),
+        "validation_metrics": dict(validation_metrics),
+        "resolved_config": _json_safe(dict(resolved_config)),
+        "seed": seed,
+        "split_id": split_id,
+        "split_fingerprint": split_fingerprint,
+        "dataset_fingerprint": dataset_fingerprint,
+        "dataset_id": dict(dataset_id),
+        "compatibility": _json_safe(dict(compatibility)),
+        "rng_state": capture_rng_state(),
+        "augmenter_state": None if augmenter_state is None else dict(augmenter_state),
+        "data_loader_state": None if data_loader_state is None else dict(data_loader_state),
+    }
+    torch.save(payload, target)
+
+
+def load_checkpoint(path: str | Path, *, map_location: str | torch.device = "cpu") -> dict[str, Any]:
+    payload = torch.load(Path(path), map_location=map_location, weights_only=False)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Checkpoint payload must be a dict: {path}")
+    return payload
+
+
+def resume_from_checkpoint(
+    path: str | Path,
+    *,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    scheduler: Any | None,
+    expected_compatibility: Mapping[str, Any],
+    map_location: str | torch.device = "cpu",
+) -> ResumeState:
+    payload = load_checkpoint(path, map_location=map_location)
+    _validate_scheduler_resume(scheduler=scheduler, checkpoint_payload=payload, expected_compatibility=expected_compatibility)
+    validate_resume_compatibility(payload, expected_compatibility)
+    model.load_state_dict(payload["model_state_dict"], strict=True)
+    optimizer.load_state_dict(payload["optimizer_state_dict"])
+    if scheduler is not None:
+        scheduler.load_state_dict(payload["scheduler_state_dict"])
+    restore_rng_state(payload["rng_state"])
+    epoch_completed = int(payload.get("epoch_completed", 0))
+    return ResumeState(
+        epoch_completed=epoch_completed,
+        next_epoch=epoch_completed + 1,
+        global_step=int(payload.get("global_step", 0)),
+        best_metric=None if payload.get("best_metric") is None else float(payload["best_metric"]),
+        checkpoint_path=str(path),
+        checkpoint_payload=payload,
+    )
+
+
+def _normalize_numpy_state(value: Any) -> tuple[Any, ...]:
+    if isinstance(value, tuple):
+        return value
+    if isinstance(value, list):
+        if len(value) >= 2 and isinstance(value[1], list):
+            normalized = list(value)
+            normalized[1] = np.array(normalized[1], dtype=np.uint32)
+            return tuple(normalized)
+        return tuple(value)
+    raise TypeError(f"Unsupported numpy RNG state type: {type(value)!r}")
+
+
+def _to_byte_tensor(value: Any) -> torch.Tensor:
+    if isinstance(value, torch.Tensor):
+        return value
+    return torch.tensor(value, dtype=torch.uint8)
+
+
+def _json_safe(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, torch.Tensor):
+        raise TypeError("Torch tensors are not JSON-safe metadata.")
+    if np is not None and isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, Mapping):
+        normalized_items = sorted(((str(key), _json_safe(item)) for key, item in value.items()), key=lambda item: item[0])
+        return {key: item for key, item in normalized_items}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    raise TypeError(f"Unsupported non-JSON metadata type: {type(value)!r}")
+
+
+def _optimizer_config_from_instance(optimizer: torch.optim.Optimizer) -> dict[str, Any]:
+    group = dict(optimizer.param_groups[0]) if optimizer.param_groups else {}
+    group.pop("params", None)
+    allowed = ("lr", "weight_decay", "betas", "eps", "amsgrad", "momentum", "dampening", "nesterov", "maximize")
+    return {key: _json_safe(group[key]) for key in allowed if key in group}
+
+
+def _scheduler_config_from_instance(scheduler: Any | None, *, scheduler_name: str) -> dict[str, Any] | None:
+    if scheduler is None:
+        return None
+    config: dict[str, Any] = {"name": scheduler_name}
+    for key in ("gamma", "step_size", "eta_min"):
+        if hasattr(scheduler, key):
+            config[key] = _json_safe(getattr(scheduler, key))
+    return config
+
+
+def _validate_scheduler_resume(
+    *,
+    scheduler: Any | None,
+    checkpoint_payload: Mapping[str, Any],
+    expected_compatibility: Mapping[str, Any],
+) -> None:
+    checkpoint_scheduler_state = checkpoint_payload.get("scheduler_state_dict")
+    checkpoint_scheduler = dict(checkpoint_payload.get("compatibility", {}).get("scheduler", {}))
+    expected_scheduler = dict(expected_compatibility.get("scheduler", {}))
+    checkpoint_has_scheduler = checkpoint_scheduler_state is not None
+    current_has_scheduler = scheduler is not None
+    if checkpoint_has_scheduler != current_has_scheduler:
+        raise ValueError(
+            "Checkpoint resume incompatibility detected for scheduler presence: "
+            f"checkpoint_has_scheduler={checkpoint_has_scheduler!r} expected_has_scheduler={current_has_scheduler!r}."
+        )
+    if not checkpoint_has_scheduler:
+        return
+    checkpoint_class = checkpoint_scheduler.get("class")
+    expected_class = expected_scheduler.get("class")
+    if checkpoint_class != expected_class:
+        raise ValueError(
+            "Checkpoint resume incompatibility detected for scheduler class: "
+            f"checkpoint={checkpoint_class!r} expected={expected_class!r}."
+        )
+    checkpoint_config = checkpoint_scheduler.get("config")
+    expected_config = expected_scheduler.get("config")
+    if checkpoint_config != expected_config:
+        raise ValueError(
+            "Checkpoint resume incompatibility detected for scheduler config: "
+            f"checkpoint={checkpoint_config!r} expected={expected_config!r}."
+        )
+
+
+def _find_first_mismatch(checkpoint_value: Any, expected_value: Any, *, path: str) -> str:
+    if isinstance(checkpoint_value, Mapping) and isinstance(expected_value, Mapping):
+        checkpoint_keys = set(str(key) for key in checkpoint_value.keys())
+        expected_keys = set(str(key) for key in expected_value.keys())
+        for missing_key in sorted(checkpoint_keys ^ expected_keys):
+            return f"{path}.{missing_key}: checkpoint={checkpoint_value.get(missing_key)!r} expected={expected_value.get(missing_key)!r}"
+        for key in sorted(checkpoint_keys):
+            nested = _find_first_mismatch(checkpoint_value.get(key), expected_value.get(key), path=f"{path}.{key}")
+            if nested:
+                return nested
+        return ""
+    if isinstance(checkpoint_value, list) and isinstance(expected_value, list):
+        if len(checkpoint_value) != len(expected_value):
+            return f"{path}.length: checkpoint={len(checkpoint_value)!r} expected={len(expected_value)!r}"
+        for index, (checkpoint_item, expected_item) in enumerate(zip(checkpoint_value, expected_value, strict=False)):
+            nested = _find_first_mismatch(checkpoint_item, expected_item, path=f"{path}[{index}]")
+            if nested:
+                return nested
+        return ""
+    if checkpoint_value != expected_value:
+        return f"{path}: checkpoint={checkpoint_value!r} expected={expected_value!r}"
+    return ""
