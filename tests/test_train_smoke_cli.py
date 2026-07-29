@@ -277,8 +277,7 @@ def test_smoke_cli_cleans_smoke_artifacts_when_training_raises(tmp_path: Path, m
         ],
     )
 
-    with pytest.raises(RuntimeError, match="forced training failure"):
-        train_script.main()
+    assert train_script.main() == 1
 
     temp_dir = captured_temp_dir["path"]
     assert temp_dir.name.startswith("gnn_siamese_smoke_")

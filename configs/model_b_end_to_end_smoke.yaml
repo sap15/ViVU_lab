@@ -1,0 +1,11 @@
+extends: model_b_baseline.yaml
+
+training:
+  device: cpu
+  num_workers: 0
+  smoke_test:
+    enabled: true
+    max_pairs: 8
+    epochs: 1
+    resume_epochs: 1
+    batch_size: 2
