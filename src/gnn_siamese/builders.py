@@ -47,6 +47,7 @@ class DatasetBundle:
     dataset: MutWtPairDataset
     schema: dict[str, Any]
     smoke_data: SmokeDataArtifacts | None = None
+    smoke_selection: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -85,6 +86,7 @@ class TrainingPipeline:
     augmenter: GraphViewAugmenter
     device: torch.device
     smoke_data: SmokeDataArtifacts | None = None
+    smoke_selection: dict[str, Any] | None = None
 
 
 def _require_mapping(value: Any, *, field_name: str) -> Mapping[str, Any]:
@@ -129,7 +131,13 @@ def _resolve_path(config: Mapping[str, Any], raw_path: str | None) -> Path:
     config_path = config.get("__config_path__")
     if config_path is None:
         return candidate.resolve()
-    return (Path(str(config_path)).resolve().parent / candidate).resolve()
+    config_relative = (Path(str(config_path)).resolve().parent / candidate).resolve()
+    if config_relative.exists():
+        return config_relative
+    working_tree_relative = candidate.resolve()
+    if working_tree_relative.exists():
+        return working_tree_relative
+    return config_relative
 
 
 def build_dataset_bundle(config: Mapping[str, Any]) -> DatasetBundle:
@@ -140,6 +148,7 @@ def build_dataset_bundle(config: Mapping[str, Any]) -> DatasetBundle:
     )
     smoke_enabled = bool(smoke_cfg.get("enabled", False))
     smoke_data: SmokeDataArtifacts | None = None
+    smoke_selection: dict[str, Any] | None = None
 
     mutants_path_raw = paths_cfg.get("mutants_hdf5")
     wt_path_raw = paths_cfg.get("wt_companion_hdf5")
@@ -159,7 +168,84 @@ def build_dataset_bundle(config: Mapping[str, Any]) -> DatasetBundle:
         config=config,
         schema=schema,
     )
-    return DatasetBundle(dataset=dataset, schema=schema, smoke_data=smoke_data)
+    if smoke_enabled and smoke_data is None:
+        dataset, smoke_selection = _apply_real_data_smoke_subset(config, dataset)
+    return DatasetBundle(
+        dataset=dataset,
+        schema=schema,
+        smoke_data=smoke_data,
+        smoke_selection=smoke_selection,
+    )
+
+
+def _apply_real_data_smoke_subset(
+    config: Mapping[str, Any],
+    dataset: MutWtPairDataset,
+) -> tuple[MutWtPairDataset, dict[str, Any] | None]:
+    training_cfg = _require_mapping(config.get("training"), field_name="config.training")
+    smoke_cfg = _require_mapping(training_cfg.get("smoke_test", {}), field_name="config.training.smoke_test")
+    max_pairs = smoke_cfg.get("max_pairs")
+    if max_pairs is None:
+        return dataset, None
+
+    max_pairs_int = int(max_pairs)
+    if max_pairs_int <= 0:
+        raise BuilderError("training.smoke_test.max_pairs must be positive when provided.")
+    if len(dataset.pairs) <= max_pairs_int:
+        return dataset, {
+            "enabled": True,
+            "source": "configured_hdf5_full_dataset",
+            "requested_max_pairs": max_pairs_int,
+            "selected_pair_count": len(dataset.pairs),
+            "selected_variant_ids": [pair.variant_id for pair in dataset.pairs],
+            "selected_positions": sorted({int(pair.position) for pair in dataset.pairs}),
+        }
+
+    split_cfg = _require_mapping(config.get("split"), field_name="config.split")
+    seed = int(split_cfg.get("seed", _require_mapping(config.get("project"), field_name="config.project").get("seed", 42)))
+    rng = random.Random(seed)
+
+    by_position: dict[int, list[tuple[int, Any]]] = {}
+    for index, pair in enumerate(dataset.pairs):
+        by_position.setdefault(int(pair.position), []).append((index, pair))
+
+    ordered_positions = sorted(by_position)
+    rng.shuffle(ordered_positions)
+    selected_indices: list[int] = []
+
+    # Prefer one pair per position first so leave-position-out keeps train/validation non-empty.
+    for position in ordered_positions:
+        if len(selected_indices) >= max_pairs_int:
+            break
+        selected_indices.append(by_position[position][0][0])
+
+    if len(selected_indices) < max_pairs_int:
+        for position in ordered_positions:
+            for index, _pair in by_position[position][1:]:
+                if len(selected_indices) >= max_pairs_int:
+                    break
+                selected_indices.append(index)
+            if len(selected_indices) >= max_pairs_int:
+                break
+
+    selected_indices = sorted(selected_indices)
+    selected_pairs = [dataset.pairs[index] for index in selected_indices]
+    selected_positions = sorted({int(pair.position) for pair in selected_pairs})
+    if len(selected_positions) < 3:
+        raise BuilderError(
+            "Smoke subset resolved fewer than three unique positions; "
+            "cannot build non-empty train/validation/test splits deterministically."
+        )
+
+    return dataset.subset_with_pairs(selected_pairs), {
+        "enabled": True,
+        "source": "configured_hdf5_subset",
+        "requested_max_pairs": max_pairs_int,
+        "selected_pair_count": len(selected_pairs),
+        "selected_variant_ids": [pair.variant_id for pair in selected_pairs],
+        "selected_positions": selected_positions,
+        "selection_seed": seed,
+    }
 
 
 def build_split_bundle(
@@ -485,6 +571,7 @@ def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
             augmenter=augmenter,
             device=device,
             smoke_data=dataset_bundle.smoke_data,
+            smoke_selection=dataset_bundle.smoke_selection,
         )
     except Exception:
         if dataset_bundle.smoke_data is not None:
