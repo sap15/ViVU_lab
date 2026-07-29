@@ -1,5 +1,10 @@
 """Model components for the PKP2 siamese GNN project."""
 
+from gnn_siamese.models.delta_block import (
+    NodeDeltaBlock,
+    NodeDeltaOutput,
+    build_node_delta_features,
+)
 from gnn_siamese.models.encoder import EdgeAwareGraphEncoder, EncoderBranchOutput
 from gnn_siamese.models.model import (
     ModelBContrastiveBaseline,
@@ -21,6 +26,8 @@ __all__ = [
     "MLPDelta",
     "ModelBContrastiveBaseline",
     "ModelBContrastiveOutput",
+    "NodeDeltaBlock",
+    "NodeDeltaOutput",
     "PairProjectionHead",
     "ProjectionHeadConfig",
     "RDelta",
@@ -28,4 +35,5 @@ __all__ = [
     "RelationalRepresentation",
     "SharedSiameseEncoderModel",
     "SharedSiameseEncoderOutput",
+    "build_node_delta_features",
 ]
