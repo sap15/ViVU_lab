@@ -58,15 +58,41 @@ def capture_rng_state() -> dict[str, Any]:
     return state
 
 
-def restore_rng_state(payload: Mapping[str, Any]) -> None:
+def restore_rng_state(payload: Mapping[str, Any], *, device: torch.device | str | None = None) -> None:
     random.setstate(tuple(payload["python_random_state"]))
     numpy_state = payload.get("numpy_random_state")
     if numpy_state is not None and np is not None:
         np.random.set_state(_normalize_numpy_state(numpy_state))
     torch.set_rng_state(_to_byte_tensor(payload["torch_cpu_rng_state"]))
     cuda_state = payload.get("torch_cuda_rng_state")
-    if cuda_state is not None and torch.cuda.is_available():
+    requested_device = None if device is None else torch.device(device)
+    if cuda_state is not None and torch.cuda.is_available() and (
+        requested_device is None or requested_device.type == "cuda"
+    ):
         torch.cuda.set_rng_state_all([_to_byte_tensor(item) for item in cuda_state])
+
+
+def move_optimizer_state_to_device(
+    optimizer: torch.optim.Optimizer,
+    device: torch.device | str,
+) -> None:
+    """Move all tensors nested in optimizer state to the training device."""
+
+    target = torch.device(device)
+
+    def move(value: Any) -> Any:
+        if isinstance(value, torch.Tensor):
+            return value.to(target)
+        if isinstance(value, dict):
+            return {key: move(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [move(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(move(item) for item in value)
+        return value
+
+    for parameter, state in list(optimizer.state.items()):
+        optimizer.state[parameter] = move(state)
 
 
 def build_dataset_fingerprint(dataset: Any) -> str:
@@ -240,15 +266,19 @@ def resume_from_checkpoint(
     scheduler: Any | None,
     expected_compatibility: Mapping[str, Any],
     map_location: str | torch.device = "cpu",
+    device: str | torch.device | None = None,
 ) -> ResumeState:
     payload = load_checkpoint(path, map_location=map_location)
     _validate_scheduler_resume(scheduler=scheduler, checkpoint_payload=payload, expected_compatibility=expected_compatibility)
     validate_resume_compatibility(payload, expected_compatibility)
     model.load_state_dict(payload["model_state_dict"], strict=True)
     optimizer.load_state_dict(payload["optimizer_state_dict"])
+    training_device = torch.device(map_location if device is None else device)
+    model.to(training_device)
+    move_optimizer_state_to_device(optimizer, training_device)
     if scheduler is not None:
         scheduler.load_state_dict(payload["scheduler_state_dict"])
-    restore_rng_state(payload["rng_state"])
+    restore_rng_state(payload["rng_state"], device=training_device)
     epoch_completed = int(payload.get("epoch_completed", 0))
     return ResumeState(
         epoch_completed=epoch_completed,

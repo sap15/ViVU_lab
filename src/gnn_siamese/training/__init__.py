@@ -16,7 +16,12 @@ from gnn_siamese.training.loop import (
     run_model_b_epoch,
     train_model_b_pipeline,
 )
-from gnn_siamese.training.checkpointing import load_checkpoint, resume_from_checkpoint, save_checkpoint
+from gnn_siamese.training.checkpointing import (
+    load_checkpoint,
+    move_optimizer_state_to_device,
+    resume_from_checkpoint,
+    save_checkpoint,
+)
 from gnn_siamese.training.gradient_audit import create_gradient_audit, finalize_gradient_audit
 from gnn_siamese.training.step import training_step
 
@@ -34,6 +39,7 @@ __all__ = [
     "fit_model_b_baseline",
     "finalize_gradient_audit",
     "load_checkpoint",
+    "move_optimizer_state_to_device",
     "run_model_b_epoch",
     "resume_from_checkpoint",
     "save_checkpoint",

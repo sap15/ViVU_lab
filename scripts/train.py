@@ -289,10 +289,10 @@ def _run_smoke_end_to_end(config: dict, *, config_path: str) -> int:
 
 def main() -> int:
     args = _parse_args()
-    config = load_config(args.config)
-    config["__config_path__"] = str(Path(args.config).resolve())
-    config = apply_runtime_overrides(config, device=args.device, smoke_test=args.smoke_test)
     try:
+        config = load_config(args.config)
+        config["__config_path__"] = str(Path(args.config).resolve())
+        config = apply_runtime_overrides(config, device=args.device, smoke_test=args.smoke_test)
         if args.smoke_test:
             return _run_smoke_end_to_end(config, config_path=args.config)
 

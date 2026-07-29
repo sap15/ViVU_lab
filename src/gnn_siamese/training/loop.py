@@ -21,6 +21,7 @@ from gnn_siamese.training.checkpointing import (
     CheckpointSelectionConfig,
     build_dataset_fingerprint,
     build_resume_compatibility_payload,
+    load_checkpoint,
     resume_from_checkpoint,
     save_checkpoint,
 )
@@ -384,6 +385,7 @@ def run_model_b_epoch(
     device: str | torch.device,
     augmenter: Any | None = None,
     gradient_trackers: Mapping[str, Any] | None = None,
+    gradient_clip_norm: float | None = None,
 ) -> BaselineEpochOutput:
     """Run one train or validation epoch for the integrated Model B baseline."""
 
@@ -447,6 +449,13 @@ def run_model_b_epoch(
                 if gradient_trackers is not None:
                     for tracker in gradient_trackers.values():
                         tracker.record_step()
+                if gradient_clip_norm is not None and gradient_clip_norm > 0.0:
+                    parameters = [
+                        parameter
+                        for parameter in model.parameters()
+                        if parameter.requires_grad and parameter.grad is not None
+                    ]
+                    torch.nn.utils.clip_grad_norm_(parameters, max_norm=gradient_clip_norm)
                 optimizer.step()
 
             total_loss += float(loss.detach().cpu().item()) * batch_size
@@ -782,6 +791,16 @@ def train_model_b_pipeline(
     project_cfg = dict(config.get("project", {}))
     reproducibility_cfg = dict(config.get("reproducibility", {}))
 
+    if resume_from is not None:
+        checkpoint_epoch = int(load_checkpoint(resume_from, map_location="cpu").get("epoch_completed", 0))
+        requested_epochs = int(training_cfg.get("epochs", 1))
+        if requested_epochs <= checkpoint_epoch:
+            raise ValueError(
+                "training.epochs must be greater than checkpoint.epoch_completed when resuming; "
+                "training.epochs is the desired total historical epoch count "
+                f"(training.epochs={requested_epochs}, checkpoint.epoch_completed={checkpoint_epoch})."
+            )
+
     layout = _create_unique_run_layout(outputs_cfg)
     run_id = layout.run_id
     layout.checkpoints_dir.mkdir(parents=True, exist_ok=False)
@@ -933,6 +952,7 @@ def train_model_b_pipeline(
                 scheduler=pipeline.scheduler,
                 expected_compatibility=compatibility,
                 map_location="cpu",
+                device=pipeline.device,
             )
             start_epoch = resume_state.next_epoch
             global_step = resume_state.global_step
@@ -964,6 +984,7 @@ def train_model_b_pipeline(
                 device=pipeline.device,
                 augmenter=pipeline.augmenter,
                 gradient_trackers=gradient_trackers,
+                gradient_clip_norm=training_cfg.get("gradient_clip_norm"),
             )
             train_history.append(train_epoch)
 
@@ -1166,6 +1187,7 @@ def _create_unique_run_layout(outputs_cfg: Mapping[str, Any]) -> RunArtifactsLay
     manifest_filename = str(outputs_cfg.get("manifest_filename", "run_manifest.json"))
     resolved_config_filename = str(outputs_cfg.get("resolved_config_filename", "config_resolved.yaml"))
     gradient_audit_filename = str(outputs_cfg.get("gradient_audit_filename", "gradient_audit.json"))
+    metrics_filename = str(outputs_cfg.get("metrics_filename", "metrics.jsonl"))
     checkpoints_dirname = str(outputs_cfg.get("directories", {}).get("checkpoints", "checkpoints"))
     last_error: FileExistsError | None = None
     for _ in range(8):
@@ -1175,7 +1197,7 @@ def _create_unique_run_layout(outputs_cfg: Mapping[str, Any]) -> RunArtifactsLay
             run_id=generate_run_id(),
             manifest_filename=manifest_filename,
             resolved_config_filename=resolved_config_filename,
-            metrics_filename="metrics.jsonl",
+            metrics_filename=metrics_filename,
             gradient_audit_filename=gradient_audit_filename,
             split_filename="split.json",
             checkpoints_dirname=checkpoints_dirname,

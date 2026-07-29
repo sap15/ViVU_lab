@@ -36,9 +36,6 @@ paths:
   # Archivo HDF5 con WT companions.
   wt_companion_hdf5: null
 
-  # Directorio de salida de ejecuciones.
-  runs_root: runs
-
   # Esquema documentado de la muestra.
   sample_schema: sample_data/sample_schema.json
 
@@ -448,14 +445,14 @@ training:
   persistent_workers: false
 
   mixed_precision:
-    enabled: auto
+    enabled: false
     gpu_only: true
 
   gradient_clip_norm: 1.0
   gradient_accumulation_steps: 1
 
   early_stopping:
-    enabled: true
+    enabled: false
     monitor: validation_loss
     mode: min
     patience: 15
@@ -754,12 +751,13 @@ logging:
     project: null
 
 outputs:
+  root_dir: runs
   create_run_manifest: true
   manifest_filename: run_manifest.json
   resolved_config_filename: config_resolved.yaml
   environment_filename: environment.json
   git_state_filename: git_state.json
-  metrics_filename: metrics.csv
+  metrics_filename: metrics.jsonl
   gradient_audit_filename: gradient_audit.json
   dataset_audit_filename: dataset_audit.json
 
