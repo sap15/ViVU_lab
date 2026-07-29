@@ -12,6 +12,16 @@ from gnn_siamese.models.model import (
     SharedSiameseEncoderModel,
     SharedSiameseEncoderOutput,
 )
+from gnn_siamese.models.multiscale_pooling_a import (
+    BranchMultiscalePooling,
+    ModelAMultiscalePooling,
+    ModelAMultiscalePoolingOutput,
+    ScalePoolResult,
+    aligned_selection_mask,
+    indices_to_mask,
+    segmented_pool,
+    validate_delta_segmentation,
+)
 from gnn_siamese.models.projection import (
     InstanceProjectionHead,
     PairProjectionHead,
@@ -26,6 +36,9 @@ __all__ = [
     "MLPDelta",
     "ModelBContrastiveBaseline",
     "ModelBContrastiveOutput",
+    "ModelAMultiscalePooling",
+    "ModelAMultiscalePoolingOutput",
+    "BranchMultiscalePooling",
     "NodeDeltaBlock",
     "NodeDeltaOutput",
     "PairProjectionHead",
@@ -35,5 +48,10 @@ __all__ = [
     "RelationalRepresentation",
     "SharedSiameseEncoderModel",
     "SharedSiameseEncoderOutput",
+    "ScalePoolResult",
+    "aligned_selection_mask",
     "build_node_delta_features",
+    "indices_to_mask",
+    "segmented_pool",
+    "validate_delta_segmentation",
 ]
