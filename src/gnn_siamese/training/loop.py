@@ -10,7 +10,6 @@ import json
 import logging
 from pathlib import Path
 import random
-import subprocess
 from typing import Any
 
 import torch
@@ -18,8 +17,25 @@ from torch import Tensor, nn
 
 from gnn_siamese.losses import NTXentLoss
 from gnn_siamese.losses.false_negative_mask import build_false_negative_mask
+from gnn_siamese.training.checkpointing import (
+    CheckpointSelectionConfig,
+    build_dataset_fingerprint,
+    build_resume_compatibility_payload,
+    resume_from_checkpoint,
+    save_checkpoint,
+)
+from gnn_siamese.training.gradient_audit import create_gradient_audit, finalize_gradient_audit
 from gnn_siamese.training.losses import TotalLossAssembler
 from gnn_siamese.training.step import training_step
+from gnn_siamese.utils.manifest import (
+    MetricsJsonlWriter,
+    RunArtifactsLayout,
+    RunManifestWriter,
+    build_run_layout,
+    collect_environment_metadata,
+    collect_git_metadata,
+    generate_run_id,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -89,6 +105,15 @@ class ModelBTrainingOutput:
     final_validation_metrics: dict[str, Any]
     device: str
     epochs_completed: int
+    epochs_run_this_invocation: int
+    run_dir: str | None = None
+    best_checkpoint_path: str | None = None
+    last_checkpoint_path: str | None = None
+    metrics_path: str | None = None
+    gradient_audit_path: str | None = None
+    manifest_path: str | None = None
+    resumed_from: str | None = None
+    best_metric: float | None = None
 
 
 def _resolve_device(requested: str | torch.device | None) -> torch.device:
@@ -160,29 +185,6 @@ def _prepare_batch(
         if "model_batch" in adapted:
             return _PreparedBatch(batch=_move_to_device(adapted["model_batch"], device))
     return _PreparedBatch(batch=_move_to_device(adapted, device))
-
-
-def _git_code_version() -> dict[str, Any]:
-    payload: dict[str, Any] = {"commit": None, "working_tree_dirty": None}
-    try:
-        commit = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        payload["commit"] = commit.stdout.strip()
-        status = subprocess.run(
-            ["git", "status", "--short"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        payload["working_tree_dirty"] = bool(status.stdout.strip())
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        payload["commit"] = "unknown"
-        payload["working_tree_dirty"] = "unknown"
-    return payload
 
 
 def _default_output_dir(config: TrainingLoopConfig) -> Path:
@@ -381,6 +383,7 @@ def run_model_b_epoch(
     optimizer: torch.optim.Optimizer | None,
     device: str | torch.device,
     augmenter: Any | None = None,
+    gradient_trackers: Mapping[str, Any] | None = None,
 ) -> BaselineEpochOutput:
     """Run one train or validation epoch for the integrated Model B baseline."""
 
@@ -441,6 +444,9 @@ def run_model_b_epoch(
                 raise RuntimeError(f"{phase} loss became non-finite.")
             if is_training:
                 loss.backward()
+                if gradient_trackers is not None:
+                    for tracker in gradient_trackers.values():
+                        tracker.record_step()
                 optimizer.step()
 
             total_loss += float(loss.detach().cpu().item()) * batch_size
@@ -517,6 +523,7 @@ def fit_model_b_baseline(
         final_validation_metrics=dict(validation_history[-1].metrics),
         device=str(runtime_device),
         epochs_completed=int(epochs),
+        epochs_run_this_invocation=int(epochs),
     )
 
 
@@ -558,7 +565,7 @@ def build_run_manifest(
         "custom_structure_energy_primary_target": False,
         "stop_reason": output.stop_reason,
         "final_metrics": output.final_metrics,
-        "code_version": _git_code_version(),
+        "code_version": collect_git_metadata(),
     }
 
     should_write = config.write_manifest if write_manifest is None else write_manifest
@@ -756,3 +763,474 @@ def fit(
         manifest=manifest,
         audit_flags=audit_flags,
     )
+
+
+def train_model_b_pipeline(
+    pipeline: Any,
+    *,
+    config_path: str | Path,
+    resume_from: str | Path | None = None,
+) -> ModelBTrainingOutput:
+    """Run the operational train/validation loop with checkpointing and manifest updates."""
+
+    config = dict(pipeline.config)
+    training_cfg = dict(config.get("training", {}))
+    outputs_cfg = dict(config.get("outputs", {}))
+    loss_cfg = dict(config.get("loss", {}))
+    model_cfg = dict(config.get("model", {}))
+    split_cfg = dict(config.get("split", {}))
+    project_cfg = dict(config.get("project", {}))
+    reproducibility_cfg = dict(config.get("reproducibility", {}))
+
+    layout = _create_unique_run_layout(outputs_cfg)
+    run_id = layout.run_id
+    layout.checkpoints_dir.mkdir(parents=True, exist_ok=False)
+    Path(layout.split_path).write_text(
+        json.dumps(pipeline.split_bundle.split.to_dict(), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    manifest_writer = RunManifestWriter(layout.manifest_path, resolved_config_path=layout.resolved_config_path)
+    manifest_writer.save_resolved_config(config)
+    metrics_writer = MetricsJsonlWriter(layout.metrics_path)
+
+    active_loss_components = ["nt_xent"]
+    if float(loss_cfg.get("lambda_wt", 0.0)) > 0.0:
+        active_loss_components.append("relative_wt")
+    if float(loss_cfg.get("lambda_delta", 0.0)) > 0.0:
+        active_loss_components.append("delta")
+    compatibility = build_resume_compatibility_payload(
+        config=config,
+        dataset=pipeline.dataset,
+        split_bundle=pipeline.split_bundle,
+        optimizer=pipeline.optimizer,
+        scheduler=pipeline.scheduler,
+    )
+    dataset_fingerprint = build_dataset_fingerprint(pipeline.dataset)
+    split_fingerprint = str(pipeline.split_bundle.split.dataset_fingerprint)
+    selection = CheckpointSelectionConfig(
+        monitor=str(training_cfg.get("checkpointing", {}).get("monitor", "validation_loss")),
+        mode=str(training_cfg.get("checkpointing", {}).get("mode", "min")),
+    )
+    manifest_writer.initialize(
+        {
+            "run_id": run_id,
+            "architecture": str(model_cfg.get("architecture", "model_b")),
+            "model_name": str(outputs_cfg.get("model_name", "model_b_graph_level_relational")),
+            "status": "running",
+            "code": collect_git_metadata(),
+            "environment": collect_environment_metadata(str(pipeline.device)),
+            "data": {
+                "dataset_id": {
+                    "mutants_hdf5": Path(pipeline.dataset.mutant_h5_path).name,
+                    "wt_companion_hdf5": Path(pipeline.dataset.wt_h5_path).name,
+                },
+                "hdf5_files": [
+                    Path(pipeline.dataset.mutant_h5_path).name,
+                    Path(pipeline.dataset.wt_h5_path).name,
+                ],
+                "dataset_fingerprint": dataset_fingerprint,
+                "hdf5_schema": {
+                    "schema_name": pipeline.schema.get("schema_name"),
+                    "schema_version": pipeline.schema.get("schema_version"),
+                },
+                "split_id": Path(pipeline.split_bundle.split_path).name,
+                "split_seed": split_cfg.get("seed"),
+                "split_fingerprint": split_fingerprint,
+                "split_path": str(layout.split_path),
+                "train_examples": len(pipeline.dataloaders.train_dataset),
+                "validation_examples": len(pipeline.dataloaders.validation_dataset),
+                "test_examples": len(pipeline.dataloaders.test_dataset),
+            },
+            "configuration": {
+                "config_path": str(Path(config_path)),
+                "resolved_config": {key: value for key, value in config.items() if not str(key).startswith("__")},
+                "seed": project_cfg.get("seed"),
+                "seed_bundle": {
+                    "project": project_cfg.get("seed"),
+                    "python": reproducibility_cfg.get("seed_python"),
+                    "numpy": reproducibility_cfg.get("seed_numpy"),
+                    "torch": reproducibility_cfg.get("seed_torch"),
+                    "cuda": reproducibility_cfg.get("seed_cuda"),
+                },
+                "node_feature_names": list(pipeline.dataset.node_feature_names),
+                "edge_feature_names": list(pipeline.dataset.edge_feature_names),
+                "graph_feature_names": list(getattr(pipeline.dataset, "graph_feature_names", [])),
+                "augmentations": dict(config.get("augmentation", {})),
+                "pooling": dict(model_cfg.get("pooling", {})),
+                "model": {
+                    "hidden_dim": model_cfg.get("hidden_dim"),
+                    "graph_dim": model_cfg.get("graph_dim"),
+                    "num_layers": model_cfg.get("num_layers"),
+                    "projection_instance_enabled": model_cfg.get("projection_instance", {}).get("enabled"),
+                    "projection_pair_enabled": model_cfg.get("projection_pair", {}).get("enabled"),
+                    "mlp_delta_enabled": model_cfg.get("mlp_delta", {}).get("enabled"),
+                },
+            },
+            "training": {
+                "optimizer": str(training_cfg.get("optimizer", "adamw")),
+                "scheduler": str(training_cfg.get("scheduler", "none")),
+                "learning_rate": float(training_cfg.get("learning_rate", 0.0)),
+                "weight_decay": float(training_cfg.get("weight_decay", 0.0)),
+                "batch_size": int(training_cfg.get("batch_size", 0)),
+                "epochs_planned": int(training_cfg.get("epochs", 0)),
+                "epochs_completed": 0,
+                "epochs_run_this_invocation": 0,
+                "epochs_completed_semantics": "total historical epochs completed by the run, including resumed epochs",
+                "mixed_precision": dict(training_cfg.get("mixed_precision", {})),
+                "gradient_clipping": training_cfg.get("gradient_clip_norm"),
+                "best_selection": {"monitor": selection.monitor, "mode": selection.mode},
+                "resume_from": None if resume_from is None else str(resume_from),
+            },
+            "losses": {
+                "main": str(loss_cfg.get("main", "nt_xent")),
+                "temperature": float(loss_cfg.get("temperature", 0.2)),
+                "false_negative_mask": dict(loss_cfg.get("false_negative_mask", {})),
+                "lambda_wt": float(loss_cfg.get("lambda_wt", 0.0)),
+                "relative_wt": dict(loss_cfg.get("relative_wt", {})),
+                "lambda_delta": float(loss_cfg.get("lambda_delta", 0.0)),
+                "delta": dict(loss_cfg.get("delta", {})),
+                "active_components": active_loss_components,
+                "weights": dict(pipeline.total_loss_assembler.weights),
+            },
+            "artifacts": {
+                "run_dir": str(layout.run_dir),
+                "best_checkpoint": str(layout.checkpoints_dir / "best.pt"),
+                "last_checkpoint": str(layout.checkpoints_dir / "last.pt"),
+                "metrics": str(layout.metrics_path),
+                "gradient_audit": str(layout.gradient_audit_path),
+                "resolved_config": str(layout.resolved_config_path),
+                "split": str(layout.split_path),
+            },
+        }
+    )
+
+    loss_weights = {
+        "nt_xent": float(pipeline.total_loss_assembler.weights["nt_xent"]),
+        "relative_wt": float(pipeline.total_loss_assembler.weights["relative_wt"]),
+        "delta": float(pipeline.total_loss_assembler.weights["delta"]),
+    }
+    gradient_trackers = create_gradient_audit(
+        pipeline.model,
+        pipeline.optimizer,
+        loss_weights=loss_weights,
+    )
+
+    start_epoch = 1
+    global_step = 0
+    best_metric: float | None = None
+    resumed_from_path: str | None = None
+    resumed_epoch_completed = 0
+    train_history: list[BaselineEpochOutput] = []
+    validation_history: list[BaselineEpochOutput] = []
+    try:
+        if resume_from is not None:
+            resume_state = resume_from_checkpoint(
+                resume_from,
+                model=pipeline.model,
+                optimizer=pipeline.optimizer,
+                scheduler=pipeline.scheduler,
+                expected_compatibility=compatibility,
+                map_location="cpu",
+            )
+            start_epoch = resume_state.next_epoch
+            global_step = resume_state.global_step
+            best_metric = resume_state.best_metric
+            resumed_from_path = resume_state.checkpoint_path
+            resumed_epoch_completed = resume_state.epoch_completed
+            _restore_pipeline_random_state(pipeline, resume_state.checkpoint_payload)
+            manifest_writer.update(
+                {
+                    "training": {
+                        "resume_from": resumed_from_path,
+                        "resume_epoch": resume_state.epoch_completed,
+                        "epochs_completed": resume_state.epoch_completed,
+                        "global_step": global_step,
+                        "best_metric": best_metric,
+                    }
+                }
+            )
+
+        epochs = int(training_cfg.get("epochs", 1))
+        for epoch in range(start_epoch, epochs + 1):
+            train_epoch = run_model_b_epoch(
+                pipeline.model,
+                pipeline.dataloaders.train_loader,
+                pipeline.total_loss_assembler,
+                optimizer=pipeline.optimizer,
+                device=pipeline.device,
+                augmenter=pipeline.augmenter,
+                gradient_trackers=gradient_trackers,
+            )
+            train_history.append(train_epoch)
+
+            validation_epoch = run_model_b_epoch(
+                pipeline.model,
+                pipeline.dataloaders.validation_loader,
+                pipeline.total_loss_assembler,
+                optimizer=None,
+                device=pipeline.device,
+                augmenter=pipeline.augmenter,
+            )
+            validation_history.append(validation_epoch)
+            global_step += train_epoch.num_batches
+            if pipeline.scheduler is not None:
+                pipeline.scheduler.step()
+
+            epoch_metrics = {
+                "epoch": epoch,
+                "global_step": global_step,
+                "train": _epoch_output_to_dict(train_epoch),
+                "validation": _epoch_output_to_dict(validation_epoch),
+            }
+            metrics_writer.append(epoch_metrics)
+
+            monitor_value = _select_monitor_value(selection.monitor, train_epoch, validation_epoch)
+            if selection.is_improved(monitor_value, best_metric):
+                best_metric = float(monitor_value)
+                save_checkpoint(
+                    layout.checkpoints_dir / "best.pt",
+                    model=pipeline.model,
+                    optimizer=pipeline.optimizer,
+                    scheduler=pipeline.scheduler,
+                    epoch_completed=epoch,
+                    global_step=global_step,
+                    best_metric=best_metric,
+                    train_metrics=_epoch_output_to_dict(train_epoch),
+                    validation_metrics=_epoch_output_to_dict(validation_epoch),
+                    resolved_config=config,
+                    seed=project_cfg.get("seed"),
+                    split_id=Path(pipeline.split_bundle.split_path).name,
+                    split_fingerprint=split_fingerprint,
+                    dataset_fingerprint=dataset_fingerprint,
+                    dataset_id={
+                        "mutants_hdf5": Path(pipeline.dataset.mutant_h5_path).name,
+                        "wt_companion_hdf5": Path(pipeline.dataset.wt_h5_path).name,
+                    },
+                    compatibility=compatibility,
+                    run_id=run_id,
+                    augmenter_state=_capture_augmenter_state(pipeline.augmenter),
+                    data_loader_state=_capture_data_loader_state(pipeline.dataloaders),
+                )
+            save_checkpoint(
+                layout.checkpoints_dir / "last.pt",
+                model=pipeline.model,
+                optimizer=pipeline.optimizer,
+                scheduler=pipeline.scheduler,
+                epoch_completed=epoch,
+                global_step=global_step,
+                best_metric=best_metric,
+                train_metrics=_epoch_output_to_dict(train_epoch),
+                validation_metrics=_epoch_output_to_dict(validation_epoch),
+                resolved_config=config,
+                seed=project_cfg.get("seed"),
+                split_id=Path(pipeline.split_bundle.split_path).name,
+                split_fingerprint=split_fingerprint,
+                dataset_fingerprint=dataset_fingerprint,
+                dataset_id={
+                    "mutants_hdf5": Path(pipeline.dataset.mutant_h5_path).name,
+                    "wt_companion_hdf5": Path(pipeline.dataset.wt_h5_path).name,
+                },
+                compatibility=compatibility,
+                run_id=run_id,
+                augmenter_state=_capture_augmenter_state(pipeline.augmenter),
+                data_loader_state=_capture_data_loader_state(pipeline.dataloaders),
+            )
+
+            manifest_writer.update(
+                {
+                    "training": {
+                        "epochs_completed": epoch,
+                        "epochs_run_this_invocation": epoch - resumed_epoch_completed,
+                        "global_step": global_step,
+                        "best_metric": best_metric,
+                        "last_epoch_metrics": epoch_metrics,
+                    }
+                }
+            )
+
+        module_audit = finalize_gradient_audit(gradient_trackers)
+        layout.gradient_audit_path.write_text(json.dumps(module_audit, indent=2, sort_keys=True), encoding="utf-8")
+        z_delta_learned, z_delta_reason = _resolve_z_delta_learned(
+            module_audit.get("mlp_delta", {}),
+            config=config,
+        )
+        total_parameters = sum(parameter.numel() for parameter in pipeline.model.parameters())
+        trainable_parameters = sum(parameter.numel() for parameter in pipeline.model.parameters() if parameter.requires_grad)
+        manifest_writer.finalize(
+            status="completed",
+            extra_updates={
+                "training": {
+                    "epochs_completed": resumed_epoch_completed + len(train_history),
+                    "epochs_run_this_invocation": len(train_history),
+                    "best_metric": best_metric,
+                },
+                "modules": module_audit,
+                "module_summary": {
+                    "total_parameters": total_parameters,
+                    "trainable_parameters": trainable_parameters,
+                },
+                "z_delta_learned": z_delta_learned,
+                "z_delta_reason": z_delta_reason,
+            },
+        )
+    except KeyboardInterrupt as exc:
+        manifest_writer.finalize(
+            status="interrupted",
+            error=f"{type(exc).__name__}: {exc}",
+            extra_updates={
+                "training": {
+                    "epochs_completed": resumed_epoch_completed + len(train_history),
+                    "epochs_run_this_invocation": len(train_history),
+                    "global_step": global_step,
+                    "best_metric": best_metric,
+                }
+            },
+        )
+        raise
+    except Exception as exc:
+        manifest_writer.finalize(
+            status="failed",
+            error=f"{type(exc).__name__}: {exc}",
+            extra_updates={
+                "training": {
+                    "epochs_completed": resumed_epoch_completed + len(train_history),
+                    "epochs_run_this_invocation": len(train_history),
+                    "global_step": global_step,
+                    "best_metric": best_metric,
+                }
+            },
+        )
+        raise
+
+    total_epochs_completed = resumed_epoch_completed + len(train_history)
+    return ModelBTrainingOutput(
+        train_history=train_history,
+        validation_history=validation_history,
+        final_train_loss=train_history[-1].mean_loss,
+        final_validation_loss=validation_history[-1].mean_loss,
+        final_train_metrics=dict(train_history[-1].metrics),
+        final_validation_metrics=dict(validation_history[-1].metrics),
+        device=str(pipeline.device),
+        epochs_completed=total_epochs_completed,
+        epochs_run_this_invocation=len(train_history),
+        run_dir=str(layout.run_dir),
+        best_checkpoint_path=str(layout.checkpoints_dir / "best.pt"),
+        last_checkpoint_path=str(layout.checkpoints_dir / "last.pt"),
+        metrics_path=str(layout.metrics_path),
+        gradient_audit_path=str(layout.gradient_audit_path),
+        manifest_path=str(layout.manifest_path),
+        resumed_from=resumed_from_path,
+        best_metric=best_metric,
+    )
+
+
+def _epoch_output_to_dict(epoch: BaselineEpochOutput) -> dict[str, Any]:
+    return {
+        "phase": epoch.phase,
+        "mean_loss": epoch.mean_loss,
+        "num_batches": epoch.num_batches,
+        "num_examples": epoch.num_examples,
+        "used_eval_mode": epoch.used_eval_mode,
+        "gradients_enabled": epoch.gradients_enabled,
+        "component_means": dict(epoch.component_means),
+        "metrics": dict(epoch.metrics),
+        "active_components": list(epoch.active_components),
+        "inactive_components": list(epoch.inactive_components),
+        "skipped_components": list(epoch.skipped_components),
+    }
+
+
+def _select_monitor_value(
+    monitor: str,
+    train_epoch: BaselineEpochOutput,
+    validation_epoch: BaselineEpochOutput,
+) -> float:
+    if monitor == "validation_loss":
+        return float(validation_epoch.mean_loss)
+    if monitor == "train_loss":
+        return float(train_epoch.mean_loss)
+    if monitor in validation_epoch.metrics:
+        return float(validation_epoch.metrics[monitor])
+    if monitor in train_epoch.metrics:
+        return float(train_epoch.metrics[monitor])
+    raise KeyError(f"Configured checkpoint monitor {monitor!r} is unavailable.")
+
+
+def _create_unique_run_layout(outputs_cfg: Mapping[str, Any]) -> RunArtifactsLayout:
+    root_dir = outputs_cfg.get("root_dir", "runs")
+    model_name = str(outputs_cfg.get("model_name", "model_b_graph_level_relational"))
+    manifest_filename = str(outputs_cfg.get("manifest_filename", "run_manifest.json"))
+    resolved_config_filename = str(outputs_cfg.get("resolved_config_filename", "config_resolved.yaml"))
+    gradient_audit_filename = str(outputs_cfg.get("gradient_audit_filename", "gradient_audit.json"))
+    checkpoints_dirname = str(outputs_cfg.get("directories", {}).get("checkpoints", "checkpoints"))
+    last_error: FileExistsError | None = None
+    for _ in range(8):
+        layout = build_run_layout(
+            root_dir=root_dir,
+            model_name=model_name,
+            run_id=generate_run_id(),
+            manifest_filename=manifest_filename,
+            resolved_config_filename=resolved_config_filename,
+            metrics_filename="metrics.jsonl",
+            gradient_audit_filename=gradient_audit_filename,
+            split_filename="split.json",
+            checkpoints_dirname=checkpoints_dirname,
+        )
+        try:
+            layout.run_dir.mkdir(parents=True, exist_ok=False)
+            return layout
+        except FileExistsError as exc:
+            last_error = exc
+    raise RuntimeError("Failed to allocate a unique run directory without reusing an existing run.") from last_error
+
+
+def _capture_augmenter_state(augmenter: Any | None) -> dict[str, Any] | None:
+    if augmenter is None:
+        return None
+    if hasattr(augmenter, "_call_index"):
+        return {"call_index": int(getattr(augmenter, "_call_index"))}
+    return None
+
+
+def _capture_data_loader_state(dataloaders: Any) -> dict[str, Any] | None:
+    generator = getattr(dataloaders, "train_generator", None)
+    if generator is None:
+        return None
+    return {"train_generator_state": generator.get_state()}
+
+
+def _restore_pipeline_random_state(pipeline: Any, checkpoint_payload: Mapping[str, Any]) -> None:
+    augmenter_state = checkpoint_payload.get("augmenter_state")
+    if isinstance(augmenter_state, Mapping) and hasattr(pipeline.augmenter, "_call_index"):
+        pipeline.augmenter._call_index = int(augmenter_state.get("call_index", 0))
+    data_loader_state = checkpoint_payload.get("data_loader_state")
+    generator = getattr(pipeline.dataloaders, "train_generator", None)
+    if isinstance(data_loader_state, Mapping) and generator is not None:
+        generator_state = data_loader_state.get("train_generator_state")
+        if generator_state is not None:
+            generator.set_state(generator_state)
+
+
+def _resolve_z_delta_learned(module_record: Mapping[str, Any], *, config: Mapping[str, Any]) -> tuple[bool, str]:
+    mlp_delta_enabled = bool(config.get("model", {}).get("mlp_delta", {}).get("enabled", False))
+    lambda_delta = float(config.get("loss", {}).get("lambda_delta", 0.0))
+    if not mlp_delta_enabled:
+        return False, "model.mlp_delta.enabled=false"
+    if lambda_delta <= 0.0:
+        return False, "loss.lambda_delta=0"
+    if not module_record:
+        return False, "mlp_delta audit missing"
+    if module_record.get("status") != "trained":
+        return False, f"mlp_delta status={module_record.get('status')}"
+    if not module_record.get("optimizer_group"):
+        return False, "mlp_delta missing optimizer group"
+    if "delta" not in list(module_record.get("connected_losses", [])):
+        return False, "mlp_delta not connected to L_delta"
+    if bool(module_record.get("has_nan_or_inf", False)):
+        return False, "mlp_delta gradients invalid"
+    if float(module_record.get("mean_gradient_norm", 0.0)) <= 0.0 and float(module_record.get("max_gradient_norm", 0.0)) <= 0.0:
+        return False, "mlp_delta gradients are zero"
+    if float(module_record.get("relative_weight_change", 0.0)) <= 0.0:
+        return False, "mlp_delta weights did not change"
+    return True, "mlp_delta trained and audited"

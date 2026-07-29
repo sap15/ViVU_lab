@@ -259,11 +259,11 @@ def test_smoke_cli_cleans_smoke_artifacts_when_training_raises(tmp_path: Path, m
         captured_temp_dir["path"] = Path(pipeline.smoke_data.temp_dir)
         return pipeline
 
-    def failing_fit_model_b_baseline(*args: object, **kwargs: object) -> object:
+    def failing_train_model_b_pipeline(*args: object, **kwargs: object) -> object:
         raise RuntimeError("forced training failure")
 
     monkeypatch.setattr(train_script, "build_training_pipeline", tracked_build_training_pipeline)
-    monkeypatch.setattr(train_script, "fit_model_b_baseline", failing_fit_model_b_baseline)
+    monkeypatch.setattr(train_script, "train_model_b_pipeline", failing_train_model_b_pipeline)
     monkeypatch.setattr(
         sys,
         "argv",
