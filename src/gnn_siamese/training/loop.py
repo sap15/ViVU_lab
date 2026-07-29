@@ -841,6 +841,7 @@ def train_model_b_pipeline(
                 "train_examples": len(pipeline.dataloaders.train_dataset),
                 "validation_examples": len(pipeline.dataloaders.validation_dataset),
                 "test_examples": len(pipeline.dataloaders.test_dataset),
+                "smoke_test": dict(pipeline.smoke_selection or {}),
             },
             "configuration": {
                 "config_path": str(Path(config_path)),
@@ -950,6 +951,8 @@ def train_model_b_pipeline(
                     }
                 }
             )
+            if best_metric is not None:
+                torch.save(resume_state.checkpoint_payload, layout.checkpoints_dir / "best.pt")
 
         epochs = int(training_cfg.get("epochs", 1))
         for epoch in range(start_epoch, epochs + 1):

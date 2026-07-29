@@ -316,3 +316,23 @@ class MutWtPairDataset:
             wt_key=pair.wt_key,
             node_pair_alignment=node_pair_alignment,
         )
+
+    def subset_with_pairs(self, pairs: Sequence[MutWtPairRecord]) -> "MutWtPairDataset":
+        """Return a shallow dataset clone restricted to already validated pair records."""
+
+        clone = object.__new__(MutWtPairDataset)
+        clone.mutant_h5_path = self.mutant_h5_path
+        clone.wt_h5_path = self.wt_h5_path
+        clone.config = self.config
+        clone.schema = self.schema
+        clone.configured_node_feature_names = self.configured_node_feature_names
+        clone.node_feature_names = self.node_feature_names
+        clone.edge_feature_names = self.edge_feature_names
+        clone.node_availability_masks = self.node_availability_masks
+        clone.pairs = list(pairs)
+        clone.input_spec = self.input_spec
+        clone.node_input_dim = self.node_input_dim
+        clone.edge_input_dim = self.edge_input_dim
+        if not clone.pairs:
+            raise MutWtPairDatasetError("Smoke subset resolved zero mutant-WT pairs.")
+        return clone
