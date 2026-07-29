@@ -11,7 +11,7 @@ from typing import Any
 import torch
 from torch.utils.data import DataLoader, Subset
 
-from gnn_siamese.config import load_schema
+from gnn_siamese.config import load_schema, resolve_training_device, validate_c1_config
 from gnn_siamese.data import (
     MutWtPairDataset,
     SmokeDataArtifacts,
@@ -93,12 +93,6 @@ def _require_mapping(value: Any, *, field_name: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise BuilderError(f"{field_name} must be a mapping.")
     return value
-
-
-def _resolve_device(requested: str | None) -> torch.device:
-    if requested in (None, "auto"):
-        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    return torch.device(str(requested))
 
 
 def _apply_reproducibility_seeds(config: Mapping[str, Any]) -> None:
@@ -306,6 +300,8 @@ def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, spli
     loader_kwargs = {
         "batch_size": batch_size,
         "num_workers": num_workers,
+        "pin_memory": bool(training_cfg.get("pin_memory", False)),
+        "persistent_workers": bool(training_cfg.get("persistent_workers", False)),
         "collate_fn": collate_mut_wt_pairs,
     }
     train_generator = torch.Generator(device="cpu")
@@ -544,6 +540,10 @@ def build_augmenter(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Gra
 
 
 def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
+    config = validate_c1_config(config)
+    device = resolve_training_device(
+        str(_require_mapping(config.get("training"), field_name="config.training").get("device", "auto"))
+    )
     _apply_reproducibility_seeds(config)
     dataset_bundle = build_dataset_bundle(config)
     try:
@@ -551,12 +551,12 @@ def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
         dataloaders = build_dataloaders(config, dataset_bundle.dataset, split_bundle)
         model = build_model(config, dataset_bundle.dataset)
         _validate_model_input_dim(dataset_bundle.dataset, model)
+        model.to(device)
         loss_fn = build_nt_xent_loss(config)
         total_loss_assembler = build_total_loss_assembler(config)
         optimizer = build_optimizer(config, model)
         scheduler = build_scheduler(config, optimizer)
         augmenter = build_augmenter(config, dataset_bundle.dataset)
-        device = _resolve_device(str(_require_mapping(config.get("training"), field_name="config.training").get("device", "auto")))
         return TrainingPipeline(
             config=dict(config),
             dataset=dataset_bundle.dataset,
