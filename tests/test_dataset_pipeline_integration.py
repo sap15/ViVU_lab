@@ -98,6 +98,7 @@ def _create_graph(
     custom_structure_energy: float,
 ) -> None:
     num_nodes = len(diff_mass)
+    position = int(graph_key.split(":")[2])
     edge_index = np.asarray([[0, 1], [1, 2]], dtype=np.int64)
     num_edges = edge_index.shape[0]
 
@@ -108,6 +109,9 @@ def _create_graph(
         graph_group = graph.create_group("graph_features")
 
         node_group.create_dataset("_chain_id", data=[b"A"] * num_nodes)
+        node_group.create_dataset(
+            "res_id", data=np.arange(position, position + num_nodes, dtype=np.int64)
+        )
         node_group.create_dataset("_name", data=[residue_name] * num_nodes)
         node_group.create_dataset(
             "_position",
@@ -220,6 +224,17 @@ def test_integrated_dataset_pipeline_builds_valid_mut_wt_batch(tmp_path: Path) -
     batch = collate_mut_wt_pairs([sample0, sample1])
 
     assert batch.batch_size == 2
+    assert batch.alignment_ptr.shape == (3,)
+    assert batch.union_ptr.shape == (3,)
+    assert batch.local_alignment_ptr.shape == (3,)
+    assert batch.mut_aligned_index.numel() == int(batch.alignment_ptr[-1])
+    assert batch.wt_aligned_index.numel() == int(batch.alignment_ptr[-1])
+    assert batch.exists_MUT.numel() == int(batch.union_ptr[-1])
+    assert batch.exists_WT.numel() == int(batch.union_ptr[-1])
+    assert batch.mut_aligned_index.dtype == torch.long
+    assert batch.wt_aligned_index.dtype == torch.long
+    assert batch.exists_MUT.dtype == torch.bool
+    assert batch.exists_WT.dtype == torch.bool
     assert isinstance(batch.graph_mut, torch_geometric.data.Batch)
     assert isinstance(batch.graph_wt, torch_geometric.data.Batch)
     assert batch.graph_mut.x.dtype == torch.float32

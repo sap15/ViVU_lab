@@ -170,6 +170,10 @@ def _create_graph_group(
     node_group = graph.create_group("node_features")
     edge_group = graph.create_group("edge_features")
     graph_group = graph.create_group("graph_features")
+    node_group.create_dataset(
+        "res_id",
+        data=np.arange(position, position + num_nodes, dtype=np.int64),
+    )
 
     edge_index = np.asarray([[0, 1], [1, 2], [2, 3], [0, 2]], dtype=np.int64)
     num_edges = int(edge_index.shape[0])
