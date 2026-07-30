@@ -14,6 +14,7 @@ from typing import Any
 from uuid import uuid4
 
 from gnn_siamese.config import save_config
+from gnn_siamese.utils.atomic_io import atomic_write_text
 
 try:
     import torch
@@ -191,7 +192,8 @@ class RunManifestWriter:
         save_config(payload, self.resolved_config_path)
 
     def _write(self) -> None:
-        self.path.write_text(json.dumps(self.payload, indent=2, sort_keys=True), encoding="utf-8")
+        serialized = json.dumps(self.payload, indent=2, sort_keys=True)
+        atomic_write_text(self.path, serialized, encoding="utf-8")
 
 
 def _deep_update(base: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:

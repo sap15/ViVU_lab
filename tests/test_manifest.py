@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -31,6 +32,55 @@ def test_manifest_writer_creates_and_updates_run_manifest(tmp_path: Path) -> Non
     assert final["status"] == "completed"
     assert final["training"]["epochs_completed"] == 2
     assert "finished_at_utc" in final
+
+
+def test_manifest_update_publication_failure_preserves_previous_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path = tmp_path / "run_manifest.json"
+    writer = RunManifestWriter(manifest_path)
+    writer.initialize({"run_id": "atomic-case", "training": {"epochs_completed": 0}})
+    previous_content = manifest_path.read_text(encoding="utf-8")
+
+    def _fail_replace(source: str | Path, destination: str | Path) -> None:
+        raise OSError("simulated publication failure")
+
+    monkeypatch.setattr(os, "replace", _fail_replace)
+    with pytest.raises(OSError, match="simulated publication failure"):
+        writer.update({"training": {"epochs_completed": 1}})
+
+    assert manifest_path.read_text(encoding="utf-8") == previous_content
+    assert json.loads(previous_content)["training"]["epochs_completed"] == 0
+    assert list(tmp_path.glob(".run_manifest.json.*.tmp")) == []
+
+
+def test_manifest_update_preserves_existing_fields_and_writes_valid_json(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "run_manifest.json"
+    writer = RunManifestWriter(manifest_path)
+    writer.initialize({"run_id": "update-case", "training": {"epochs_completed": 0}})
+
+    writer.update({"training": {"epochs_completed": 1}, "metrics": {"loss": 0.5}})
+
+    updated = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert updated["run_id"] == "update-case"
+    assert updated["status"] == "running"
+    assert updated["training"]["epochs_completed"] == 1
+    assert updated["metrics"]["loss"] == 0.5
+    assert list(tmp_path.glob(".run_manifest.json.*.tmp")) == []
+
+
+def test_manifest_json_serialization_failure_preserves_previous_json(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "run_manifest.json"
+    writer = RunManifestWriter(manifest_path)
+    writer.initialize({"run_id": "serialization-case"})
+    previous_content = manifest_path.read_text(encoding="utf-8")
+
+    with pytest.raises(TypeError):
+        writer.update({"not_json_serializable": object()})
+
+    assert manifest_path.read_text(encoding="utf-8") == previous_content
+    assert json.loads(previous_content)["run_id"] == "serialization-case"
+    assert list(tmp_path.glob(".run_manifest.json.*.tmp")) == []
 
 
 def test_train_pipeline_writes_resolved_manifest_fields(tmp_path: Path) -> None:
