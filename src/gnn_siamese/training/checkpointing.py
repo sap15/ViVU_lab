@@ -12,6 +12,7 @@ from typing import Any
 import torch
 
 from gnn_siamese.data import fingerprint_split_records
+from gnn_siamese.utils.atomic_io import atomic_publish
 
 try:
     import numpy as np
@@ -224,8 +225,6 @@ def save_checkpoint(
     augmenter_state: Mapping[str, Any] | None = None,
     data_loader_state: Mapping[str, Any] | None = None,
 ) -> None:
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "format_version": 1,
         "run_id": run_id,
@@ -248,7 +247,57 @@ def save_checkpoint(
         "augmenter_state": None if augmenter_state is None else dict(augmenter_state),
         "data_loader_state": None if data_loader_state is None else dict(data_loader_state),
     }
-    torch.save(payload, target)
+    save_checkpoint_payload_atomic(payload, path)
+
+
+_CHECKPOINT_V1_REQUIRED_KEYS = frozenset(
+    {
+        "format_version",
+        "run_id",
+        "model_state_dict",
+        "optimizer_state_dict",
+        "scheduler_state_dict",
+        "epoch_completed",
+        "global_step",
+        "best_metric",
+        "train_metrics",
+        "validation_metrics",
+        "resolved_config",
+        "seed",
+        "split_id",
+        "split_fingerprint",
+        "dataset_fingerprint",
+        "dataset_id",
+        "compatibility",
+        "rng_state",
+        "augmenter_state",
+        "data_loader_state",
+    }
+)
+
+
+def save_checkpoint_payload_atomic(payload: Mapping[str, Any], path: str | Path) -> None:
+    """Serialize and atomically publish an already-constructed v1 checkpoint."""
+
+    expected_keys = frozenset(payload.keys())
+
+    def write_payload(handle: Any) -> None:
+        torch.save(payload, handle)
+
+    def validate_payload(temporary_path: Path) -> None:
+        loaded = torch.load(temporary_path, map_location="cpu", weights_only=False)
+        if not isinstance(loaded, dict):
+            raise ValueError("Serialized checkpoint payload must be a dict.")
+        if loaded.get("format_version") != 1:
+            raise ValueError("Serialized checkpoint must retain format_version == 1.")
+        missing_keys = _CHECKPOINT_V1_REQUIRED_KEYS.difference(loaded)
+        if missing_keys:
+            missing = ", ".join(sorted(missing_keys))
+            raise ValueError(f"Serialized checkpoint is missing required keys: {missing}.")
+        if frozenset(loaded.keys()) != expected_keys:
+            raise ValueError("Serialized checkpoint keys differ from the expected payload.")
+
+    atomic_publish(path, write_payload, validator=validate_payload)
 
 
 def load_checkpoint(path: str | Path, *, map_location: str | torch.device = "cpu") -> dict[str, Any]:

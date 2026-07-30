@@ -5,22 +5,24 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import stat
+from typing import BinaryIO, Callable
 from uuid import uuid4
 
 
-def atomic_write_text(
+def atomic_publish(
     destination: str | Path,
-    content: str,
+    writer: Callable[[BinaryIO], None],
     *,
-    encoding: str = "utf-8",
+    validator: Callable[[Path], None] | None = None,
 ) -> None:
-    """Publish complete text atomically on filesystems supporting ``os.replace``.
+    """Publish callback-produced binary content atomically when supported.
 
-    The temporary file is created in the destination directory so publication
-    does not cross filesystem boundaries. Existing destinations retain their
-    permission bits; new files use ``0o666`` filtered by the process umask, as
-    regular text-file creation does. Directory synchronization is best effort
-    because opening or syncing directories is not supported everywhere.
+    The callback receives an open binary file backed by an exclusive temporary
+    in the destination directory. The temporary is flushed, synchronized,
+    closed, and optionally validated before ``os.replace`` publishes it.
+    Existing destinations retain their permission bits; new files use
+    ``0o666`` filtered by the process umask. Directory synchronization is best
+    effort because it is not supported consistently by every filesystem.
     """
 
     destination_path = Path(destination)
@@ -40,7 +42,7 @@ def atomic_write_text(
         temporary_path, descriptor = _create_temporary(parent, destination_path.name)
         descriptor_owned = True
         try:
-            handle = os.fdopen(descriptor, mode="w", encoding=encoding)
+            handle = os.fdopen(descriptor, mode="w+b")
         except BaseException:
             try:
                 os.close(descriptor)
@@ -50,12 +52,45 @@ def atomic_write_text(
             raise
 
         descriptor_owned = False
-        with handle:
+        primary_error: BaseException | None = None
+        primary_traceback = None
+        try:
             if existing_mode is not None:
                 os.fchmod(handle.fileno(), existing_mode)
-            handle.write(content)
+            writer(handle)
             handle.flush()
             os.fsync(handle.fileno())
+        except BaseException as exc:
+            primary_error = exc
+            primary_traceback = exc.__traceback__
+
+        try:
+            if primary_error is None:
+                handle.__exit__(None, None, None)
+            else:
+                handle.__exit__(
+                    type(primary_error),
+                    primary_error,
+                    primary_traceback,
+                )
+        except BaseException:
+            try:
+                os.fstat(descriptor)
+            except OSError:
+                pass
+            else:
+                try:
+                    os.close(descriptor)
+                except BaseException:
+                    pass
+            if primary_error is None:
+                raise
+
+        if primary_error is not None:
+            raise primary_error.with_traceback(primary_traceback)
+
+        if validator is not None:
+            validator(temporary_path)
 
         os.replace(temporary_path, destination_path)
         _fsync_directory(parent)
@@ -74,10 +109,31 @@ def atomic_write_text(
         raise
 
 
+def atomic_write_text(
+    destination: str | Path,
+    content: str,
+    *,
+    encoding: str = "utf-8",
+) -> None:
+    """Publish complete text atomically on filesystems supporting ``os.replace``.
+
+    The temporary file is created in the destination directory so publication
+    does not cross filesystem boundaries. Existing destinations retain their
+    permission bits; new files use ``0o666`` filtered by the process umask, as
+    regular text-file creation does. Directory synchronization is best effort
+    because opening or syncing directories is not supported everywhere.
+    """
+
+    def write_text(handle: BinaryIO) -> None:
+        handle.write(content.encode(encoding))
+
+    atomic_publish(destination, write_text)
+
+
 def _create_temporary(parent: Path, destination_name: str) -> tuple[Path, int]:
     """Create an exclusive same-directory temporary with regular file permissions."""
 
-    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    flags = os.O_RDWR | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_CLOEXEC"):
         flags |= os.O_CLOEXEC
 

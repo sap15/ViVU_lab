@@ -24,6 +24,7 @@ from gnn_siamese.training.checkpointing import (
     load_checkpoint,
     resume_from_checkpoint,
     save_checkpoint,
+    save_checkpoint_payload_atomic,
 )
 from gnn_siamese.training.gradient_audit import create_gradient_audit, finalize_gradient_audit
 from gnn_siamese.training.losses import TotalLossAssembler
@@ -972,7 +973,10 @@ def train_model_b_pipeline(
                 }
             )
             if best_metric is not None:
-                torch.save(resume_state.checkpoint_payload, layout.checkpoints_dir / "best.pt")
+                save_checkpoint_payload_atomic(
+                    resume_state.checkpoint_payload,
+                    layout.checkpoints_dir / "best.pt",
+                )
 
         epochs = int(training_cfg.get("epochs", 1))
         for epoch in range(start_epoch, epochs + 1):
