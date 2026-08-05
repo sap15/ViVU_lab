@@ -23,6 +23,15 @@ class HDF5GraphLoadError(ValueError):
 
 
 @dataclass(frozen=True)
+class NodeFeatureSlice:
+    """Exact half-open column interval produced for one node feature."""
+
+    name: str
+    start: int
+    stop: int
+
+
+@dataclass(frozen=True)
 class HDF5GraphComponents:
     """Arrays and metadata needed to build one PyG graph."""
 
@@ -31,6 +40,7 @@ class HDF5GraphComponents:
     edge_attr: np.ndarray
     metadata: dict[str, Any]
     node_feature_names: tuple[str, ...]
+    node_feature_slices: tuple[NodeFeatureSlice, ...]
     edge_feature_names: tuple[str, ...]
     node_availability_masks: dict[str, np.ndarray]
     mutation_node_index: int | None
@@ -183,6 +193,94 @@ def _load_feature_block(
         rows = 0 if expected_rows is None else int(expected_rows)
         return np.empty((rows, 0), dtype=np.float32)
     return np.concatenate(matrices, axis=1).astype(np.float32, copy=False)
+
+
+def _load_node_feature_block(
+    features: Mapping[str, Any],
+    feature_names: Sequence[str],
+    *,
+    expected_rows: int,
+    reject_nan: bool,
+    reject_inf: bool,
+) -> tuple[np.ndarray, tuple[NodeFeatureSlice, ...]]:
+    """Load node columns and record their exact runtime concatenation slices."""
+
+    matrices: list[np.ndarray] = []
+    slices: list[NodeFeatureSlice] = []
+    offset = 0
+    for feature_name in feature_names:
+        if feature_name not in features:
+            raise HDF5GraphLoadError(f"node feature {feature_name!r} is missing.")
+        matrix = _as_feature_matrix(
+            features[feature_name],
+            feature_name=feature_name,
+            expected_rows=expected_rows,
+            feature_kind="node",
+            reject_nan=reject_nan,
+            reject_inf=reject_inf,
+        )
+        stop = offset + int(matrix.shape[1])
+        slices.append(NodeFeatureSlice(feature_name, offset, stop))
+        matrices.append(matrix)
+        offset = stop
+    if not matrices:
+        return np.empty((expected_rows, 0), dtype=np.float32), ()
+    return (
+        np.concatenate(matrices, axis=1).astype(np.float32, copy=False),
+        tuple(slices),
+    )
+
+
+def validate_node_feature_slices(
+    slices: Sequence[NodeFeatureSlice],
+    *,
+    width: int,
+) -> tuple[NodeFeatureSlice, ...]:
+    """Validate a complete, ordered, non-overlapping node-column layout."""
+
+    resolved = tuple(slices)
+    if not resolved:
+        raise HDF5GraphLoadError("node_feature_slices must be non-empty.")
+    names: set[str] = set()
+    expected_start = 0
+    for index, item in enumerate(resolved):
+        if not isinstance(item, NodeFeatureSlice):
+            raise HDF5GraphLoadError(
+                f"node_feature_slices[{index}] must be a NodeFeatureSlice."
+            )
+        if not isinstance(item.name, str) or not item.name:
+            raise HDF5GraphLoadError("Node feature slice names must be non-empty strings.")
+        if item.name in names:
+            raise HDF5GraphLoadError(
+                f"Duplicate node feature slice name {item.name!r}."
+            )
+        if (
+            not isinstance(item.start, int)
+            or isinstance(item.start, bool)
+            or not isinstance(item.stop, int)
+            or isinstance(item.stop, bool)
+        ):
+            raise HDF5GraphLoadError(
+                f"Slice for {item.name!r} must use integer start and stop."
+            )
+        if item.start != expected_start:
+            relation = "overlaps" if item.start < expected_start else "leaves a gap"
+            raise HDF5GraphLoadError(
+                f"Slice for {item.name!r} {relation}: expected start "
+                f"{expected_start}, got {item.start}."
+            )
+        if not 0 <= item.start < item.stop <= width:
+            raise HDF5GraphLoadError(
+                f"Slice for {item.name!r} is outside width {width}: "
+                f"[{item.start}, {item.stop})."
+            )
+        names.add(item.name)
+        expected_start = item.stop
+    if expected_start != width:
+        raise HDF5GraphLoadError(
+            f"node_feature_slices are incomplete: covered {expected_start} of {width} columns."
+        )
+    return resolved
 
 
 def _num_nodes_from_selected_features(
@@ -384,6 +482,14 @@ def validate_graph_components(components: HDF5GraphComponents) -> None:
             f"is_mutation must have shape ({components.x.shape[0]},), "
             f"got {components.is_mutation.shape!r}."
         )
+    validated_slices = validate_node_feature_slices(
+        components.node_feature_slices,
+        width=int(components.x.shape[1]),
+    )
+    if tuple(item.name for item in validated_slices) != components.node_feature_names:
+        raise HDF5GraphLoadError(
+            "node_feature_slices names must exactly match node_feature_names in order."
+        )
     if not np.isfinite(components.x).all():
         raise HDF5GraphLoadError("x contains NaN or Inf.")
     if not np.isfinite(components.edge_attr).all():
@@ -426,11 +532,10 @@ def load_hdf5_graph_components(
         graph_features = _read_group_datasets(graph["graph_features"])
 
     num_nodes = _num_nodes_from_selected_features(node_features, node_names)
-    x = _load_feature_block(
+    x, node_feature_slices = _load_node_feature_block(
         node_features,
         node_names,
         expected_rows=num_nodes,
-        feature_kind="node",
         reject_nan=reject_nan,
         reject_inf=reject_inf,
     )
@@ -463,11 +568,20 @@ def load_hdf5_graph_components(
 
     output_node_names = node_names
     if bool(mutation_cfg.get("create_is_mutation_channel", True)):
+        mutation_start = int(x.shape[1])
         x = np.concatenate([x, is_mutation.reshape(num_nodes, 1)], axis=1).astype(
             np.float32,
             copy=False,
         )
         output_node_names = (*node_names, "is_mutation")
+        node_feature_slices = (
+            *node_feature_slices,
+            NodeFeatureSlice("is_mutation", mutation_start, mutation_start + 1),
+        )
+    node_feature_slices = validate_node_feature_slices(
+        node_feature_slices,
+        width=int(x.shape[1]),
+    )
 
     components = HDF5GraphComponents(
         x=x.astype(np.float32, copy=False),
@@ -475,6 +589,7 @@ def load_hdf5_graph_components(
         edge_attr=edge_attr.astype(np.float32, copy=False),
         metadata=extract_variant_metadata(graph_key, h5_path=h5_path, graph_features=graph_features),
         node_feature_names=output_node_names,
+        node_feature_slices=node_feature_slices,
         edge_feature_names=edge_names,
         node_availability_masks=masks,
         mutation_node_index=mutation_node_index,

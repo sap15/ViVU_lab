@@ -12,7 +12,12 @@ from gnn_siamese.models.model import (
     SharedSiameseEncoderModel,
     SharedSiameseEncoderOutput,
 )
-from gnn_siamese.models.model_a import ModelAOneView, ModelAOneViewOutput
+from gnn_siamese.models.model_a import (
+    ModelAOneView,
+    ModelAOneViewOutput,
+    ModelATwoView,
+    ModelATwoViewOutput,
+)
 from gnn_siamese.models.multiscale_relational_a import (
     ModelAMultiscaleRelational,
     ModelAMultiscaleRelationalOutput,
@@ -45,6 +50,8 @@ __all__ = [
     "MLPPairFusion",
     "ModelAOneView",
     "ModelAOneViewOutput",
+    "ModelATwoView",
+    "ModelATwoViewOutput",
     "ModelAMultiscaleRelational",
     "ModelAMultiscaleRelationalOutput",
     "ModelBContrastiveBaseline",

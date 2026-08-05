@@ -7,7 +7,11 @@ from torch.utils.data import DataLoader
 
 from gnn_siamese.data.collate import MutWtPairCollateError, collate_mut_wt_pairs
 from gnn_siamese.data.dataset import MutWtPairSample
-from gnn_siamese.data.hdf5_loader import HDF5GraphComponents
+from gnn_siamese.data.hdf5_loader import HDF5GraphComponents, NodeFeatureSlice
+from gnn_siamese.data.model_a_pair_augmentations import (
+    ModelAPairAugmentationConfig,
+    ModelAPairAugmenter,
+)
 from gnn_siamese.data.pairing import PairingKey
 
 torch_geometric = pytest.importorskip("torch_geometric")
@@ -28,6 +32,11 @@ def _make_graph(
         edge_attr=np.asarray(edge_attr, dtype=np.float32),
         metadata={"variant_id": variant_id},
         node_feature_names=("bsa", "diff_mass", "is_mutation"),
+        node_feature_slices=(
+            NodeFeatureSlice("bsa", 0, 1),
+            NodeFeatureSlice("diff_mass", 1, 2),
+            NodeFeatureSlice("is_mutation", 2, 3),
+        ),
         edge_feature_names=("distance", "covalent"),
         node_availability_masks={"diff_mass": np.asarray(diff_mass_mask, dtype=np.float32)},
         mutation_node_index=None,
@@ -365,6 +374,10 @@ def test_collate_rejects_empty_or_incompatible_samples() -> None:
         edge_attr=valid.graph_mut.edge_attr,
         metadata=dict(valid.graph_mut.metadata),
         node_feature_names=("other_feature", "is_mutation"),
+        node_feature_slices=(
+            NodeFeatureSlice("other_feature", 0, 2),
+            NodeFeatureSlice("is_mutation", 2, 3),
+        ),
         edge_feature_names=valid.graph_mut.edge_feature_names,
         node_availability_masks=valid.graph_mut.node_availability_masks,
         mutation_node_index=valid.graph_mut.mutation_node_index,
@@ -382,3 +395,50 @@ def test_collate_rejects_empty_or_incompatible_samples() -> None:
 
     with pytest.raises(MutWtPairCollateError, match="node_feature_names"):
         collate_mut_wt_pairs([valid, incompatible])
+
+
+def test_official_collate_normalizes_layout_for_model_a_augmenter() -> None:
+    sample_a = _make_sample(
+        suffix="100",
+        pair_key=PairingKey("A", 100, "G"),
+        mut_x=[[1.0, 10.0, 1.0], [2.0, -10.0, 0.0]],
+        wt_x=[[3.0, 10.0, 0.0], [4.0, -10.0, 0.0]],
+        mut_edge_index=[[0], [1]],
+        wt_edge_index=[[0], [1]],
+        mut_is_mutation=[1.0, 0.0],
+        wt_is_mutation=[0.0, 0.0],
+        mut_mask=[1.0, 1.0],
+        wt_mask=[1.0, 1.0],
+    )
+    sample_b = _make_sample(
+        suffix="200",
+        pair_key=PairingKey("A", 200, "G"),
+        mut_x=[[5.0, 20.0, 1.0], [6.0, -20.0, 0.0], [7.0, 0.0, 0.0]],
+        wt_x=[[8.0, 20.0, 0.0], [9.0, -20.0, 0.0], [10.0, 0.0, 0.0]],
+        mut_edge_index=[[0, 1], [1, 2]],
+        wt_edge_index=[[0, 1], [1, 2]],
+        mut_is_mutation=[1.0, 0.0, 0.0],
+        wt_is_mutation=[0.0, 0.0, 0.0],
+        mut_mask=[1.0, 1.0, 1.0],
+        wt_mask=[1.0, 1.0, 1.0],
+    )
+    pair_batch = collate_mut_wt_pairs([sample_a, sample_b])
+    expected = (
+        NodeFeatureSlice("bsa", 0, 1),
+        NodeFeatureSlice("diff_mass", 1, 2),
+        NodeFeatureSlice("is_mutation", 2, 3),
+    )
+    assert pair_batch.graph_mut.node_feature_slices == expected
+    assert pair_batch.graph_wt.node_feature_slices == expected
+    pair_batch.to(torch.device("cpu"))
+    assert tuple(pair_batch.graph_mut.node_feature_slices) == expected
+    augmenter = ModelAPairAugmenter(
+        ModelAPairAugmentationConfig(
+            feature_mask_probability=1.0,
+            allowed_feature_names=("bsa",),
+            masked_value=-9.0,
+        )
+    )
+    view = augmenter.create_view(pair_batch, run_seed=1, epoch=0, view_id=1)
+    assert torch.all(view.graph_mut.x[:, 0] == -9.0)
+    assert torch.all(view.graph_wt.x[:, 0] == -9.0)

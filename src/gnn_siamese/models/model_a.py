@@ -7,6 +7,10 @@ from typing import Any
 
 from torch import Tensor, nn
 
+from gnn_siamese.data.model_a_pair_augmentations import (
+    ModelAAugmentationExampleMetadata,
+    ModelAPairAugmenter,
+)
 from gnn_siamese.models.delta_block import NodeDeltaBlock
 from gnn_siamese.models.multiscale_pooling_a import ModelAMultiscalePooling
 from gnn_siamese.models.multiscale_relational_a import ModelAMultiscaleRelational
@@ -184,4 +188,94 @@ class ModelAOneView(nn.Module):
                 "alignment_ptr": alignment_ptr,
             },
             variant_id=variant_id,
+        )
+
+
+@dataclass(frozen=True)
+class ModelATwoViewOutput:
+    """A5 output before any pair projection head or contrastive loss."""
+
+    view1: ModelAOneViewOutput
+    view2: ModelAOneViewOutput
+    h_pair_delta_view1: Tensor
+    h_pair_delta_view2: Tensor
+    z_delta_pair_view1: Tensor
+    z_delta_pair_view2: Tensor
+    augmentation_metadata_view1: tuple[ModelAAugmentationExampleMetadata, ...]
+    augmentation_metadata_view2: tuple[ModelAAugmentationExampleMetadata, ...]
+
+
+class ModelATwoView(nn.Module):
+    """Run one shared A1-A4 instance over two conservative paired A5 views."""
+
+    def __init__(
+        self,
+        *,
+        one_view_model: ModelAOneView,
+        pair_augmenter: ModelAPairAugmenter,
+    ) -> None:
+        super().__init__()
+        if not isinstance(one_view_model, ModelAOneView):
+            raise TypeError("one_view_model must be a ModelAOneView.")
+        if not isinstance(pair_augmenter, ModelAPairAugmenter):
+            raise TypeError("pair_augmenter must be a ModelAPairAugmenter.")
+        self.one_view_model = one_view_model
+        self.pair_augmenter = pair_augmenter
+
+    def forward(
+        self,
+        pair_batch: object,
+        *,
+        run_seed: int,
+        epoch: int,
+        mutation_mask_MUT: Tensor | None = None,
+        mutation_mask_WT: Tensor | None = None,
+        mutation_mask_delta: Tensor | None = None,
+        local_mask_MUT: Tensor | None = None,
+        local_mask_WT: Tensor | None = None,
+        local_mask_delta: Tensor | None = None,
+        domain_mask_MUT: Tensor | None = None,
+        domain_mask_WT: Tensor | None = None,
+        domain_mask_delta: Tensor | None = None,
+    ) -> ModelATwoViewOutput:
+        view1, view2 = self.pair_augmenter.create_two_views(
+            pair_batch, run_seed=run_seed, epoch=epoch
+        )
+        masks = {
+            "mutation_mask_MUT": mutation_mask_MUT,
+            "mutation_mask_WT": mutation_mask_WT,
+            "mutation_mask_delta": mutation_mask_delta,
+            "local_mask_MUT": local_mask_MUT,
+            "local_mask_WT": local_mask_WT,
+            "local_mask_delta": local_mask_delta,
+            "domain_mask_MUT": domain_mask_MUT,
+            "domain_mask_WT": domain_mask_WT,
+            "domain_mask_delta": domain_mask_delta,
+        }
+
+        def run(view: object) -> ModelAOneViewOutput:
+            batch = view.pair_batch
+            return self.one_view_model(
+                graph_mut=batch.graph_mut,
+                graph_wt=batch.graph_wt,
+                mut_aligned_index=batch.mut_aligned_index,
+                wt_aligned_index=batch.wt_aligned_index,
+                aligned_pair_batch=batch.aligned_pair_batch,
+                alignment_ptr=batch.alignment_ptr,
+                num_pairs=batch.batch_size,
+                variant_id=tuple(batch.variant_ids),
+                **masks,
+            )
+
+        output1 = run(view1)
+        output2 = run(view2)
+        return ModelATwoViewOutput(
+            view1=output1,
+            view2=output2,
+            h_pair_delta_view1=output1.h_pair_delta,
+            h_pair_delta_view2=output2.h_pair_delta,
+            z_delta_pair_view1=output1.z_delta_pair,
+            z_delta_pair_view2=output2.z_delta_pair,
+            augmentation_metadata_view1=view1.augmentation_metadata,
+            augmentation_metadata_view2=view2.augmentation_metadata,
         )
