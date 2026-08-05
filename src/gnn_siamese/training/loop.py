@@ -20,6 +20,7 @@ from gnn_siamese.losses.false_negative_mask import build_false_negative_mask
 from gnn_siamese.training.checkpointing import (
     CheckpointSelectionConfig,
     build_dataset_fingerprint,
+    build_legacy_resume_compatibility_payload,
     build_resume_compatibility_payload,
     load_checkpoint,
     resume_from_checkpoint,
@@ -38,6 +39,9 @@ from gnn_siamese.utils.manifest import (
     collect_git_metadata,
     generate_run_id,
 )
+from gnn_siamese.utils.atomic_io import atomic_write_text
+from gnn_siamese.utils.fingerprints import fingerprint_hdf5_inputs, fingerprint_pairing_inventory
+from gnn_siamese.utils.interruptions import InterruptionController
 
 
 logger = logging.getLogger(__name__)
@@ -116,6 +120,99 @@ class ModelBTrainingOutput:
     manifest_path: str | None = None
     resumed_from: str | None = None
     best_metric: float | None = None
+
+
+@dataclass
+class OperationalRunContext:
+    layout: RunArtifactsLayout
+    manifest_writer: RunManifestWriter
+    last_valid_checkpoint: str | None = None
+    persisted_epoch_completed: int = 0
+    persisted_global_step: int = 0
+
+
+def bootstrap_operational_run(
+    config: Mapping[str, Any],
+    *,
+    config_path: str | Path,
+) -> OperationalRunContext:
+    """Create the run and its readable initializing manifest before pipeline construction."""
+
+    outputs_cfg = dict(config.get("outputs", {}))
+    layout = _create_unique_run_layout(outputs_cfg)
+    layout.checkpoints_dir.mkdir(parents=True, exist_ok=False)
+    writer = RunManifestWriter(layout.manifest_path, resolved_config_path=layout.resolved_config_path)
+    writer.initialize(
+        {
+            "run_id": layout.run_id,
+            "status": "initializing",
+            "lifecycle": {"stage": "bootstrap"},
+            "model_name": str(outputs_cfg.get("model_name", "model_b_graph_level_relational")),
+            "configuration": {
+                "config_path_provenance": str(Path(config_path).resolve()),
+                "resolved_config": {key: value for key, value in config.items() if not str(key).startswith("__")},
+            },
+            "artifacts": {
+                "run_dir": ".",
+                "best_checkpoint": "checkpoints/best.pt",
+                "last_checkpoint": "checkpoints/last.pt",
+                "metrics": layout.relative_reference(layout.metrics_path),
+                "gradient_audit": layout.relative_reference(layout.gradient_audit_path),
+                "resolved_config": layout.relative_reference(layout.resolved_config_path),
+                "split": layout.relative_reference(layout.split_path),
+            },
+        }
+    )
+    context = OperationalRunContext(layout=layout, manifest_writer=writer)
+    try:
+        writer.set_stage("saving_resolved_config")
+        writer.save_resolved_config(config)
+    except BaseException as exc:
+        record_run_failure(context, exc)
+        raise
+    return context
+
+
+def record_run_failure(
+    context: OperationalRunContext,
+    exc: BaseException,
+    *,
+    stage: str | None = None,
+    interrupted: bool = False,
+    interruption: Mapping[str, Any] | None = None,
+) -> None:
+    import traceback
+
+    if context.manifest_writer.payload.get("status") in {"completed", "failed", "interrupted"}:
+        return
+    if stage is not None:
+        context.manifest_writer.set_stage(stage)
+    trace = traceback.format_exception(type(exc), exc, exc.__traceback__, limit=12)
+    status = "interrupted" if interrupted else "failed"
+    context.manifest_writer.finalize(
+        status=status,
+        error=f"{type(exc).__name__}: {exc}",
+        extra_updates={
+            "error": {
+                "type": type(exc).__name__,
+                "message": str(exc),
+                "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+                "traceback": "".join(trace)[-12000:],
+            },
+            "training": {
+                "epochs_completed": context.persisted_epoch_completed,
+                "global_step": context.persisted_global_step,
+                "last_valid_checkpoint": context.last_valid_checkpoint,
+            },
+            **({"interruption": dict(interruption or {})} if interrupted else {}),
+        },
+    )
+
+
+def complete_operational_run(context: OperationalRunContext) -> dict[str, Any]:
+    """Publish the successful terminal state after caller-owned validation."""
+
+    return context.manifest_writer.finalize(status="completed")
 
 
 def _resolve_device(requested: str | torch.device | None) -> torch.device:
@@ -387,6 +484,7 @@ def run_model_b_epoch(
     augmenter: Any | None = None,
     gradient_trackers: Mapping[str, Any] | None = None,
     gradient_clip_norm: float | None = None,
+    stop_requested: Callable[[], None] | None = None,
 ) -> BaselineEpochOutput:
     """Run one train or validation epoch for the integrated Model B baseline."""
 
@@ -413,6 +511,8 @@ def run_model_b_epoch(
     grad_context = torch.enable_grad() if is_training else torch.no_grad()
     with grad_context:
         for batch in dataloader:
+            if stop_requested is not None:
+                stop_requested()
             batch_size = _count_batch_examples(batch)
             if batch_size < 2:
                 raise ValueError(
@@ -458,6 +558,8 @@ def run_model_b_epoch(
                     ]
                     torch.nn.utils.clip_grad_norm_(parameters, max_norm=gradient_clip_norm)
                 optimizer.step()
+            if stop_requested is not None:
+                stop_requested()
 
             total_loss += float(loss.detach().cpu().item()) * batch_size
             total_examples += batch_size
@@ -775,11 +877,14 @@ def fit(
     )
 
 
-def train_model_b_pipeline(
+def _train_model_b_pipeline_impl(
     pipeline: Any,
     *,
     config_path: str | Path,
     resume_from: str | Path | None = None,
+    run_context: OperationalRunContext,
+    interruption_controller: InterruptionController | None = None,
+    defer_completion: bool = False,
 ) -> ModelBTrainingOutput:
     """Run the operational train/validation loop with checkpointing and manifest updates."""
 
@@ -792,7 +897,13 @@ def train_model_b_pipeline(
     project_cfg = dict(config.get("project", {}))
     reproducibility_cfg = dict(config.get("reproducibility", {}))
 
+    context = run_context
+    layout = context.layout
+    manifest_writer = context.manifest_writer
+    manifest_writer.set_stage("initializing_training")
+
     if resume_from is not None:
+        manifest_writer.set_stage("resuming")
         checkpoint_epoch = int(load_checkpoint(resume_from, map_location="cpu").get("epoch_completed", 0))
         requested_epochs = int(training_cfg.get("epochs", 1))
         if requested_epochs <= checkpoint_epoch:
@@ -802,16 +913,14 @@ def train_model_b_pipeline(
                 f"(training.epochs={requested_epochs}, checkpoint.epoch_completed={checkpoint_epoch})."
             )
 
-    layout = _create_unique_run_layout(outputs_cfg)
     run_id = layout.run_id
-    layout.checkpoints_dir.mkdir(parents=True, exist_ok=False)
-    Path(layout.split_path).write_text(
+    manifest_writer.set_stage("copying_split")
+    atomic_write_text(
+        layout.split_path,
         json.dumps(pipeline.split_bundle.split.to_dict(), indent=2, sort_keys=True),
         encoding="utf-8",
     )
 
-    manifest_writer = RunManifestWriter(layout.manifest_path, resolved_config_path=layout.resolved_config_path)
-    manifest_writer.save_resolved_config(config)
     metrics_writer = MetricsJsonlWriter(layout.metrics_path)
 
     active_loss_components = ["nt_xent"]
@@ -819,12 +928,26 @@ def train_model_b_pipeline(
         active_loss_components.append("relative_wt")
     if float(loss_cfg.get("lambda_delta", 0.0)) > 0.0:
         active_loss_components.append("delta")
+    manifest_writer.set_stage("fingerprinting_hdf5")
+    hdf5_content_fingerprint = fingerprint_hdf5_inputs(
+        mutants_path=pipeline.dataset.mutant_h5_path,
+        wt_companion_path=pipeline.dataset.wt_h5_path,
+        dataset_id=str(project_cfg.get("name", "dataset")),
+    )
+    manifest_writer.set_stage("building_resume_compatibility")
     compatibility = build_resume_compatibility_payload(
         config=config,
         dataset=pipeline.dataset,
         split_bundle=pipeline.split_bundle,
         optimizer=pipeline.optimizer,
         scheduler=pipeline.scheduler,
+        hdf5_content_fingerprint=hdf5_content_fingerprint["combined"],
+        schema=pipeline.schema,
+    )
+    legacy_compatibility = build_legacy_resume_compatibility_payload(
+        new_compatibility=compatibility,
+        dataset=pipeline.dataset,
+        split_bundle=pipeline.split_bundle,
     )
     dataset_fingerprint = build_dataset_fingerprint(pipeline.dataset)
     split_fingerprint = str(pipeline.split_bundle.split.dataset_fingerprint)
@@ -832,12 +955,12 @@ def train_model_b_pipeline(
         monitor=str(training_cfg.get("checkpointing", {}).get("monitor", "validation_loss")),
         mode=str(training_cfg.get("checkpointing", {}).get("mode", "min")),
     )
-    manifest_writer.initialize(
+    manifest_writer.set_stage("expanding_manifest")
+    manifest_writer.update(
         {
             "run_id": run_id,
             "architecture": str(model_cfg.get("architecture", "model_b")),
             "model_name": str(outputs_cfg.get("model_name", "model_b_graph_level_relational")),
-            "status": "running",
             "code": collect_git_metadata(),
             "environment": collect_environment_metadata(str(pipeline.device)),
             "data": {
@@ -850,6 +973,18 @@ def train_model_b_pipeline(
                     Path(pipeline.dataset.wt_h5_path).name,
                 ],
                 "dataset_fingerprint": dataset_fingerprint,
+                "pairing_inventory_fingerprint": fingerprint_pairing_inventory(pipeline.dataset.pairs),
+                "dataset_identity": {
+                    "dataset_id": str(project_cfg.get("name", "dataset")),
+                    "schema_name": pipeline.schema.get("schema_name"),
+                    "schema_version": pipeline.schema.get("schema_version"),
+                    "roles": ["mutants", "wt_companion"],
+                },
+                "hdf5_content_fingerprint": hdf5_content_fingerprint,
+                "locators": {
+                    "mutants": {"path": str(Path(pipeline.dataset.mutant_h5_path).resolve()), "provenance": "current_execution"},
+                    "wt_companion": {"path": str(Path(pipeline.dataset.wt_h5_path).resolve()), "provenance": "current_execution"},
+                },
                 "hdf5_schema": {
                     "schema_name": pipeline.schema.get("schema_name"),
                     "schema_version": pipeline.schema.get("schema_version"),
@@ -857,7 +992,7 @@ def train_model_b_pipeline(
                 "split_id": Path(pipeline.split_bundle.split_path).name,
                 "split_seed": split_cfg.get("seed"),
                 "split_fingerprint": split_fingerprint,
-                "split_path": str(layout.split_path),
+                "split_path": layout.relative_reference(layout.split_path),
                 "train_examples": len(pipeline.dataloaders.train_dataset),
                 "validation_examples": len(pipeline.dataloaders.validation_dataset),
                 "test_examples": len(pipeline.dataloaders.test_dataset),
@@ -923,35 +1058,51 @@ def train_model_b_pipeline(
                 "resolved_config": str(layout.resolved_config_path),
                 "split": str(layout.split_path),
             },
+            "artifact_references": {
+                "best_checkpoint": "checkpoints/best.pt",
+                "last_checkpoint": "checkpoints/last.pt",
+                "metrics": layout.relative_reference(layout.metrics_path),
+                "gradient_audit": layout.relative_reference(layout.gradient_audit_path),
+                "resolved_config": layout.relative_reference(layout.resolved_config_path),
+                "split": layout.relative_reference(layout.split_path),
+            },
         }
     )
+    manifest_writer.transition("running", stage="initializing_training")
 
+    manifest_writer.set_stage("initializing_gradient_audit")
     loss_weights = {
         "nt_xent": float(pipeline.total_loss_assembler.weights["nt_xent"]),
         "relative_wt": float(pipeline.total_loss_assembler.weights["relative_wt"]),
         "delta": float(pipeline.total_loss_assembler.weights["delta"]),
     }
-    gradient_trackers = create_gradient_audit(
-        pipeline.model,
-        pipeline.optimizer,
-        loss_weights=loss_weights,
-    )
+    gradient_trackers: Mapping[str, Any] = {}
 
     start_epoch = 1
     global_step = 0
     best_metric: float | None = None
     resumed_from_path: str | None = None
     resumed_epoch_completed = 0
+    completed_epoch = 0
     train_history: list[BaselineEpochOutput] = []
     validation_history: list[BaselineEpochOutput] = []
     try:
+        gradient_trackers = create_gradient_audit(
+            pipeline.model,
+            pipeline.optimizer,
+            loss_weights=loss_weights,
+        )
+        if interruption_controller is not None:
+            interruption_controller.raise_if_requested()
         if resume_from is not None:
+            manifest_writer.set_stage("resuming")
             resume_state = resume_from_checkpoint(
                 resume_from,
                 model=pipeline.model,
                 optimizer=pipeline.optimizer,
                 scheduler=pipeline.scheduler,
                 expected_compatibility=compatibility,
+                legacy_expected_compatibility=legacy_compatibility,
                 map_location="cpu",
                 device=pipeline.device,
             )
@@ -960,9 +1111,22 @@ def train_model_b_pipeline(
             best_metric = resume_state.best_metric
             resumed_from_path = resume_state.checkpoint_path
             resumed_epoch_completed = resume_state.epoch_completed
+            completed_epoch = resume_state.epoch_completed
             _restore_pipeline_random_state(pipeline, resume_state.checkpoint_payload)
+            legacy_content_fingerprint = (
+                resume_state.content_verification
+                == "legacy_unavailable_historical_controls_only"
+            )
             manifest_writer.update(
                 {
+                    "resume_compatibility": {
+                        "content_verification": (
+                            "legacy_unavailable_historical_controls_only"
+                            if legacy_content_fingerprint
+                            else "sha256_raw_file_bytes_verified"
+                        ),
+                        "strong_content_verification": not legacy_content_fingerprint,
+                    },
                     "training": {
                         "resume_from": resumed_from_path,
                         "resume_epoch": resume_state.epoch_completed,
@@ -979,6 +1143,7 @@ def train_model_b_pipeline(
                 )
 
         epochs = int(training_cfg.get("epochs", 1))
+        manifest_writer.set_stage("training")
         for epoch in range(start_epoch, epochs + 1):
             train_epoch = run_model_b_epoch(
                 pipeline.model,
@@ -989,6 +1154,7 @@ def train_model_b_pipeline(
                 augmenter=pipeline.augmenter,
                 gradient_trackers=gradient_trackers,
                 gradient_clip_norm=training_cfg.get("gradient_clip_norm"),
+                stop_requested=None if interruption_controller is None else interruption_controller.raise_if_requested,
             )
             train_history.append(train_epoch)
 
@@ -999,6 +1165,7 @@ def train_model_b_pipeline(
                 optimizer=None,
                 device=pipeline.device,
                 augmenter=pipeline.augmenter,
+                stop_requested=None if interruption_controller is None else interruption_controller.raise_if_requested,
             )
             validation_history.append(validation_epoch)
             global_step += train_epoch.num_batches
@@ -1031,6 +1198,7 @@ def train_model_b_pipeline(
                     split_id=Path(pipeline.split_bundle.split_path).name,
                     split_fingerprint=split_fingerprint,
                     dataset_fingerprint=dataset_fingerprint,
+                    hdf5_content_fingerprint=hdf5_content_fingerprint["combined"],
                     dataset_id={
                         "mutants_hdf5": Path(pipeline.dataset.mutant_h5_path).name,
                         "wt_companion_hdf5": Path(pipeline.dataset.wt_h5_path).name,
@@ -1055,6 +1223,7 @@ def train_model_b_pipeline(
                 split_id=Path(pipeline.split_bundle.split_path).name,
                 split_fingerprint=split_fingerprint,
                 dataset_fingerprint=dataset_fingerprint,
+                hdf5_content_fingerprint=hdf5_content_fingerprint["combined"],
                 dataset_id={
                     "mutants_hdf5": Path(pipeline.dataset.mutant_h5_path).name,
                     "wt_companion_hdf5": Path(pipeline.dataset.wt_h5_path).name,
@@ -1064,6 +1233,10 @@ def train_model_b_pipeline(
                 augmenter_state=_capture_augmenter_state(pipeline.augmenter),
                 data_loader_state=_capture_data_loader_state(pipeline.dataloaders),
             )
+            completed_epoch = epoch
+            context.last_valid_checkpoint = "checkpoints/last.pt"
+            context.persisted_epoch_completed = epoch
+            context.persisted_global_step = global_step
 
             manifest_writer.update(
                 {
@@ -1077,61 +1250,58 @@ def train_model_b_pipeline(
                 }
             )
 
+        manifest_writer.set_stage("finalizing")
+        if interruption_controller is not None:
+            interruption_controller.raise_if_requested()
         module_audit = finalize_gradient_audit(gradient_trackers)
-        layout.gradient_audit_path.write_text(json.dumps(module_audit, indent=2, sort_keys=True), encoding="utf-8")
+        atomic_write_text(layout.gradient_audit_path, json.dumps(module_audit, indent=2, sort_keys=True), encoding="utf-8")
+        if interruption_controller is not None:
+            interruption_controller.raise_if_requested()
         z_delta_learned, z_delta_reason = _resolve_z_delta_learned(
             module_audit.get("mlp_delta", {}),
             config=config,
         )
         total_parameters = sum(parameter.numel() for parameter in pipeline.model.parameters())
         trainable_parameters = sum(parameter.numel() for parameter in pipeline.model.parameters() if parameter.requires_grad)
-        manifest_writer.finalize(
-            status="completed",
-            extra_updates={
-                "training": {
-                    "epochs_completed": resumed_epoch_completed + len(train_history),
-                    "epochs_run_this_invocation": len(train_history),
-                    "best_metric": best_metric,
-                },
-                "modules": module_audit,
-                "module_summary": {
-                    "total_parameters": total_parameters,
-                    "trainable_parameters": trainable_parameters,
-                },
-                "z_delta_learned": z_delta_learned,
-                "z_delta_reason": z_delta_reason,
+        if interruption_controller is not None:
+            interruption_controller.raise_if_requested()
+        final_updates = {
+            "training": {
+                "epochs_completed": completed_epoch,
+                "epochs_run_this_invocation": completed_epoch - resumed_epoch_completed,
+                "best_metric": best_metric,
             },
-        )
+            "modules": module_audit,
+            "module_summary": {
+                "total_parameters": total_parameters,
+                "trainable_parameters": trainable_parameters,
+            },
+            "z_delta_learned": z_delta_learned,
+            "z_delta_reason": z_delta_reason,
+        }
+        if defer_completion:
+            manifest_writer.update(final_updates)
+            manifest_writer.set_stage("validating_smoke_artifacts")
+        else:
+            manifest_writer.finalize(status="completed", extra_updates=final_updates)
     except KeyboardInterrupt as exc:
-        manifest_writer.finalize(
-            status="interrupted",
-            error=f"{type(exc).__name__}: {exc}",
-            extra_updates={
-                "training": {
-                    "epochs_completed": resumed_epoch_completed + len(train_history),
-                    "epochs_run_this_invocation": len(train_history),
-                    "global_step": global_step,
-                    "best_metric": best_metric,
-                }
-            },
+        interruption = (
+            interruption_controller.metadata()
+            if interruption_controller is not None
+            else {"reason": "KeyboardInterrupt", "signal": None, "signal_name": None, "exit_code": 130}
+        )
+        record_run_failure(
+            context,
+            exc,
+            interrupted=True,
+            interruption=interruption,
         )
         raise
     except Exception as exc:
-        manifest_writer.finalize(
-            status="failed",
-            error=f"{type(exc).__name__}: {exc}",
-            extra_updates={
-                "training": {
-                    "epochs_completed": resumed_epoch_completed + len(train_history),
-                    "epochs_run_this_invocation": len(train_history),
-                    "global_step": global_step,
-                    "best_metric": best_metric,
-                }
-            },
-        )
+        record_run_failure(context, exc)
         raise
 
-    total_epochs_completed = resumed_epoch_completed + len(train_history)
+    total_epochs_completed = completed_epoch
     return ModelBTrainingOutput(
         train_history=train_history,
         validation_history=validation_history,
@@ -1151,6 +1321,47 @@ def train_model_b_pipeline(
         resumed_from=resumed_from_path,
         best_metric=best_metric,
     )
+
+
+def train_model_b_pipeline(
+    pipeline: Any,
+    *,
+    config_path: str | Path,
+    resume_from: str | Path | None = None,
+    run_context: OperationalRunContext | None = None,
+    interruption_controller: InterruptionController | None = None,
+    defer_completion: bool = False,
+) -> ModelBTrainingOutput:
+    """Run Model B with one lifecycle guard covering every post-bootstrap operation."""
+
+    context = run_context or bootstrap_operational_run(
+        dict(pipeline.config),
+        config_path=config_path,
+    )
+    try:
+        return _train_model_b_pipeline_impl(
+            pipeline,
+            config_path=config_path,
+            resume_from=resume_from,
+            run_context=context,
+            interruption_controller=interruption_controller,
+            defer_completion=defer_completion,
+        )
+    except KeyboardInterrupt as exc:
+        record_run_failure(
+            context,
+            exc,
+            interrupted=True,
+            interruption=(
+                interruption_controller.metadata()
+                if interruption_controller is not None
+                else {"reason": "KeyboardInterrupt", "signal": None, "signal_name": None, "exit_code": 130}
+            ),
+        )
+        raise
+    except BaseException as exc:
+        record_run_failure(context, exc)
+        raise
 
 
 def _epoch_output_to_dict(epoch: BaselineEpochOutput) -> dict[str, Any]:

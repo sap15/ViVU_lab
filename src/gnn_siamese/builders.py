@@ -6,8 +6,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 import random
-from typing import Any
+from typing import Any, Callable
 
+import h5py
 import torch
 from torch.utils.data import DataLoader, Subset
 
@@ -134,7 +135,11 @@ def _resolve_path(config: Mapping[str, Any], raw_path: str | None) -> Path:
     return config_relative
 
 
-def build_dataset_bundle(config: Mapping[str, Any]) -> DatasetBundle:
+def build_dataset_bundle(
+    config: Mapping[str, Any],
+    *,
+    stage_callback: Callable[[str], None] | None = None,
+) -> DatasetBundle:
     paths_cfg = _require_mapping(config.get("paths"), field_name="config.paths")
     smoke_cfg = _require_mapping(
         _require_mapping(config.get("training"), field_name="config.training").get("smoke_test", {}),
@@ -156,6 +161,14 @@ def build_dataset_bundle(config: Mapping[str, Any]) -> DatasetBundle:
         wt_companion_hdf5 = str(_resolve_path(config, str(wt_path_raw) if wt_path_raw else None))
         schema_path = _resolve_path(config, str(paths_cfg.get("sample_schema", "sample_data/sample_schema.json")))
     schema = load_schema(schema_path)
+    if stage_callback is not None:
+        stage_callback("opening_mutants_hdf5")
+        with h5py.File(mutants_hdf5, "r"):
+            pass
+        stage_callback("opening_wt_hdf5")
+        with h5py.File(wt_companion_hdf5, "r"):
+            pass
+        stage_callback("building_dataset")
     dataset = MutWtPairDataset(
         mutant_h5_path=mutants_hdf5,
         wt_h5_path=wt_companion_hdf5,
@@ -539,23 +552,41 @@ def build_augmenter(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Gra
         raise BuilderError(str(exc)) from exc
 
 
-def build_training_pipeline(config: Mapping[str, Any]) -> TrainingPipeline:
+def build_training_pipeline(
+    config: Mapping[str, Any],
+    *,
+    stage_callback: Callable[[str], None] | None = None,
+) -> TrainingPipeline:
+    def stage(name: str) -> None:
+        if stage_callback is not None:
+            stage_callback(name)
+
     config = validate_c1_config(config)
+    stage("resolving_paths")
     device = resolve_training_device(
         str(_require_mapping(config.get("training"), field_name="config.training").get("device", "auto"))
     )
     _apply_reproducibility_seeds(config)
-    dataset_bundle = build_dataset_bundle(config)
+    dataset_bundle = build_dataset_bundle(config, stage_callback=stage_callback)
     try:
+        # Dataset construction is eager for inventory/pairing and lazy for graph reads.
+        len(dataset_bundle.dataset)
+        stage("building_split")
         split_bundle = build_split_bundle(config, dataset_bundle.dataset, smoke_data=dataset_bundle.smoke_data)
+        stage("building_dataloaders")
         dataloaders = build_dataloaders(config, dataset_bundle.dataset, split_bundle)
+        stage("building_model")
         model = build_model(config, dataset_bundle.dataset)
         _validate_model_input_dim(dataset_bundle.dataset, model)
         model.to(device)
+        stage("building_loss")
         loss_fn = build_nt_xent_loss(config)
         total_loss_assembler = build_total_loss_assembler(config)
+        stage("building_optimizer")
         optimizer = build_optimizer(config, model)
+        stage("building_scheduler")
         scheduler = build_scheduler(config, optimizer)
+        stage("building_augmenter")
         augmenter = build_augmenter(config, dataset_bundle.dataset)
         return TrainingPipeline(
             config=dict(config),

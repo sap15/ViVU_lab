@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 import subprocess
 import sys
 
 from gnn_siamese.builders import build_training_pipeline
 from gnn_siamese.config import apply_runtime_overrides, load_config
+from gnn_siamese.training import load_checkpoint
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -85,3 +87,12 @@ def test_versioned_model_b_end_to_end_smoke_config_runs_cli() -> None:
     assert summary["projection_instance_status"] == "trained"
     assert summary["mlp_delta_status"] in {"inactive", "not_applicable"}
     assert summary["z_delta_learned"] == "false"
+    initial_manifest = json.loads(Path(summary["manifest_path"]).read_text(encoding="utf-8"))
+    resumed_manifest = json.loads(Path(summary["resume_manifest_path"]).read_text(encoding="utf-8"))
+    initial_checkpoint = load_checkpoint(summary["last_checkpoint"])
+    resumed_checkpoint = load_checkpoint(summary["resume_last_checkpoint"])
+    assert initial_manifest["status"] == resumed_manifest["status"] == "completed"
+    assert initial_manifest["lifecycle"]["stage"] == "validating_smoke_artifacts"
+    assert resumed_manifest["lifecycle"]["stage"] == "validating_smoke_artifacts"
+    assert (initial_checkpoint["epoch_completed"], initial_checkpoint["global_step"]) == (1, 2)
+    assert (resumed_checkpoint["epoch_completed"], resumed_checkpoint["global_step"]) == (2, 4)

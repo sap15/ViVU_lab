@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from copy import deepcopy
+import inspect
 import json
 import math
 from pathlib import Path
@@ -17,7 +18,14 @@ for candidate in (str(REPO_ROOT), str(SRC_ROOT)):
 
 from gnn_siamese.builders import build_training_pipeline
 from gnn_siamese.config import apply_runtime_overrides, load_config
-from gnn_siamese.training import load_checkpoint, train_model_b_pipeline
+from gnn_siamese.training import (
+    bootstrap_operational_run,
+    complete_operational_run,
+    load_checkpoint,
+    record_run_failure,
+    train_model_b_pipeline,
+)
+from gnn_siamese.utils.interruptions import InterruptionController
 
 
 def _parse_args() -> argparse.Namespace:
@@ -54,6 +62,18 @@ def _count_train_batches(pipeline: object) -> int:
     return len(loader) if hasattr(loader, "__len__") else 0
 
 
+def _all_numeric_values_finite(value: object) -> bool:
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return True
+    if isinstance(value, (int, float)):
+        return math.isfinite(float(value))
+    if isinstance(value, dict):
+        return all(_all_numeric_values_finite(item) for item in value.values())
+    if isinstance(value, list):
+        return all(_all_numeric_values_finite(item) for item in value)
+    return True
+
+
 def _verify_run_artifacts(
     *,
     pipeline: object,
@@ -61,6 +81,7 @@ def _verify_run_artifacts(
     expected_total_epochs: int,
     expected_invocation_epochs: int,
     expected_resume_from: str | None,
+    expected_manifest_status: str = "completed",
 ) -> dict:
     _require(str(output.device) == "cpu", f"Smoke test requires CPU; got {output.device!r}.")
     _require(len(pipeline.dataloaders.train_dataset) > 0, "Smoke split produced empty train dataset.")
@@ -104,10 +125,18 @@ def _verify_run_artifacts(
     gradient_audit = _load_json(output.gradient_audit_path)
     last_checkpoint = load_checkpoint(output.last_checkpoint_path)
     best_checkpoint = load_checkpoint(output.best_checkpoint_path)
+    metrics_rows = [json.loads(line) for line in Path(output.metrics_path).read_text(encoding="utf-8").splitlines()]
 
-    _require(manifest.get("status") == "completed", f"Manifest status must be 'completed', got {manifest.get('status')!r}.")
+    _require(
+        manifest.get("status") == expected_manifest_status,
+        f"Manifest status must be {expected_manifest_status!r}, got {manifest.get('status')!r}.",
+    )
     _require(manifest.get("data", {}).get("dataset_fingerprint"), "Manifest is missing dataset_fingerprint.")
     _require(manifest.get("data", {}).get("split_fingerprint"), "Manifest is missing split_fingerprint.")
+    content_fingerprint = manifest.get("data", {}).get("hdf5_content_fingerprint", {})
+    _require(content_fingerprint.get("algorithm") == "sha256", "Manifest is missing the SHA-256 HDF5 fingerprint.")
+    _require(content_fingerprint.get("version") == 1, "Manifest HDF5 fingerprint version is inconsistent.")
+    _require(content_fingerprint.get("scope") == "raw_file_bytes", "Manifest HDF5 fingerprint scope is inconsistent.")
     _require(manifest.get("training", {}).get("epochs_completed") == expected_total_epochs, "Manifest epochs_completed is inconsistent.")
     _require(
         manifest.get("training", {}).get("epochs_run_this_invocation") == expected_invocation_epochs,
@@ -123,6 +152,19 @@ def _verify_run_artifacts(
     _require(Path(manifest["artifacts"]["gradient_audit"]).exists(), "Manifest gradient audit path does not exist.")
     _require(Path(manifest["artifacts"]["split"]).exists(), "Manifest split path does not exist.")
 
+    run_dir = Path(output.run_dir).resolve()
+    artifact_references = manifest.get("artifact_references", {})
+    _require(bool(artifact_references), "Manifest is missing portable artifact references.")
+    for label, reference in artifact_references.items():
+        reference_path = Path(reference)
+        _require(not reference_path.is_absolute(), f"Portable artifact reference {label!r} is absolute.")
+        resolved = (run_dir / reference_path).resolve()
+        _require(resolved.is_relative_to(run_dir), f"Portable artifact reference {label!r} escapes run_dir.")
+        _require(resolved.exists(), f"Portable artifact reference {label!r} does not exist.")
+    _require(not list(run_dir.rglob(".*.tmp")), "Smoke run left atomic temporary files behind.")
+    _require(bool(metrics_rows), "Smoke metrics file contains no epoch records.")
+    _require(_all_numeric_values_finite(metrics_rows), "Smoke metrics contain NaN or Inf.")
+
     split_manifest_fingerprint = manifest["data"]["split_fingerprint"]
     dataset_manifest_fingerprint = manifest["data"]["dataset_fingerprint"]
     _require(last_checkpoint["split_fingerprint"] == split_manifest_fingerprint, "last.pt split_fingerprint mismatch.")
@@ -132,6 +174,19 @@ def _verify_run_artifacts(
     _require(last_checkpoint["epoch_completed"] == expected_total_epochs, "last.pt epoch_completed is inconsistent.")
     _require(last_checkpoint["global_step"] == manifest["training"]["global_step"], "last.pt global_step mismatch.")
     _require(best_checkpoint["epoch_completed"] >= 1, "best.pt epoch_completed is invalid.")
+    for label, checkpoint in (("last.pt", last_checkpoint), ("best.pt", best_checkpoint)):
+        _require(checkpoint.get("format_version") == 1, f"{label} format_version is inconsistent.")
+        compatibility = checkpoint.get("compatibility", {})
+        _require(
+            compatibility.get("compatibility_metadata", {}).get("version") == 2,
+            f"{label} compatibility metadata version is inconsistent.",
+        )
+        _require(compatibility.get("schema", {}).get("schema_name"), f"{label} is missing schema_name.")
+        _require(compatibility.get("schema", {}).get("schema_version"), f"{label} is missing schema_version.")
+        _require(
+            checkpoint.get("hdf5_content_fingerprint") == content_fingerprint.get("combined"),
+            f"{label} HDF5 content fingerprint mismatch.",
+        )
 
     encoder_audit = gradient_audit.get("encoder", {})
     projection_audit = gradient_audit.get("projection_instance", {})
@@ -160,7 +215,40 @@ def _verify_run_artifacts(
     }
 
 
-def _run_smoke_end_to_end(config: dict, *, config_path: str) -> int:
+def _build_with_early_manifest(
+    config: dict,
+    *,
+    config_path: str,
+    controller: InterruptionController,
+) -> tuple[object, object]:
+    context = bootstrap_operational_run(config, config_path=config_path)
+
+    def stage_callback(stage: str) -> None:
+        context.manifest_writer.set_stage(stage)
+        controller.raise_if_requested()
+
+    try:
+        if "stage_callback" in inspect.signature(build_training_pipeline).parameters:
+            pipeline = build_training_pipeline(config, stage_callback=stage_callback)
+        else:
+            pipeline = build_training_pipeline(config)
+    except BaseException as exc:
+        record_run_failure(
+            context,
+            exc,
+            interrupted=isinstance(exc, KeyboardInterrupt),
+            interruption=controller.metadata() if isinstance(exc, KeyboardInterrupt) else None,
+        )
+        raise
+    return pipeline, context
+
+
+def _run_smoke_end_to_end(
+    config: dict,
+    *,
+    config_path: str,
+    controller: InterruptionController,
+) -> int:
     smoke_cfg = dict(config.get("training", {}).get("smoke_test", {}))
     initial_epochs = int(config.get("training", {}).get("epochs", 1))
     resume_epochs = int(smoke_cfg.get("resume_epochs", 1))
@@ -176,21 +264,40 @@ def _run_smoke_end_to_end(config: dict, *, config_path: str) -> int:
         for name, raw_path in input_paths.items()
     }
 
-    pipeline = build_training_pipeline(config)
+    pipeline, context = _build_with_early_manifest(
+        config,
+        config_path=config_path,
+        controller=controller,
+    )
     shared_smoke_data = pipeline.smoke_data
     try:
-        output = train_model_b_pipeline(
-            pipeline,
-            config_path=config_path,
-            resume_from=None,
-        )
-        initial_checks = _verify_run_artifacts(
-            pipeline=pipeline,
-            output=output,
-            expected_total_epochs=initial_epochs,
-            expected_invocation_epochs=initial_epochs,
-            expected_resume_from=None,
-        )
+        try:
+            output = train_model_b_pipeline(
+                pipeline,
+                config_path=config_path,
+                resume_from=None,
+                run_context=context,
+                interruption_controller=controller,
+                defer_completion=True,
+            )
+            initial_checks = _verify_run_artifacts(
+                pipeline=pipeline,
+                output=output,
+                expected_total_epochs=initial_epochs,
+                expected_invocation_epochs=initial_epochs,
+                expected_resume_from=None,
+                expected_manifest_status="running",
+            )
+            controller.raise_if_requested()
+            initial_checks["manifest"] = complete_operational_run(context)
+        except BaseException as exc:
+            record_run_failure(
+                context,
+                exc,
+                interrupted=isinstance(exc, KeyboardInterrupt),
+                interruption=controller.metadata() if isinstance(exc, KeyboardInterrupt) else None,
+            )
+            raise
         resume_config = deepcopy(config)
         if shared_smoke_data is not None:
             resume_config.setdefault("paths", {})
@@ -200,42 +307,66 @@ def _run_smoke_end_to_end(config: dict, *, config_path: str) -> int:
             resume_config.setdefault("split", {})
             resume_config["split"]["persist_path"] = shared_smoke_data.split_json
         resume_config["training"]["epochs"] = initial_epochs + resume_epochs
-        resumed_pipeline = build_training_pipeline(resume_config)
+        resumed_pipeline, resumed_context = _build_with_early_manifest(
+            resume_config,
+            config_path=config_path,
+            controller=controller,
+        )
         try:
-            resumed_output = train_model_b_pipeline(
-                resumed_pipeline,
-                config_path=config_path,
-                resume_from=output.last_checkpoint_path,
-            )
-            resumed_checks = _verify_run_artifacts(
-                pipeline=resumed_pipeline,
-                output=resumed_output,
-                expected_total_epochs=initial_epochs + resume_epochs,
-                expected_invocation_epochs=resume_epochs,
-                expected_resume_from=output.last_checkpoint_path,
-            )
+            try:
+                resumed_output = train_model_b_pipeline(
+                    resumed_pipeline,
+                    config_path=config_path,
+                    resume_from=output.last_checkpoint_path,
+                    run_context=resumed_context,
+                    interruption_controller=controller,
+                    defer_completion=True,
+                )
+                resumed_checks = _verify_run_artifacts(
+                    pipeline=resumed_pipeline,
+                    output=resumed_output,
+                    expected_total_epochs=initial_epochs + resume_epochs,
+                    expected_invocation_epochs=resume_epochs,
+                    expected_resume_from=output.last_checkpoint_path,
+                    expected_manifest_status="running",
+                )
+
+                _require(output.run_dir != resumed_output.run_dir, "Smoke resume overwrote the original run directory.")
+                _require(
+                    resumed_checks["last_checkpoint"]["global_step"]
+                    > initial_checks["last_checkpoint"]["global_step"],
+                    "Smoke resume did not advance global_step.",
+                )
+                _require(
+                    resumed_checks["last_checkpoint"]["epoch_completed"]
+                    == initial_checks["last_checkpoint"]["epoch_completed"] + resume_epochs,
+                    "Smoke resume did not advance epoch_completed.",
+                )
+
+                for name, raw_path in input_paths.items():
+                    if raw_path in (None, ""):
+                        continue
+                    after_signature = _file_signature(raw_path)
+                    _require(
+                        before_signatures[name] == after_signature,
+                        f"Input HDF5 changed during smoke test: {raw_path}",
+                    )
+                controller.raise_if_requested()
+                resumed_checks["manifest"] = complete_operational_run(resumed_context)
+            except BaseException as exc:
+                record_run_failure(
+                    resumed_context,
+                    exc,
+                    interrupted=isinstance(exc, KeyboardInterrupt),
+                    interruption=controller.metadata() if isinstance(exc, KeyboardInterrupt) else None,
+                )
+                raise
         finally:
             if resumed_pipeline.smoke_data is not None and resumed_pipeline.smoke_data is not shared_smoke_data:
                 resumed_pipeline.smoke_data.cleanup()
     finally:
         if shared_smoke_data is not None:
             shared_smoke_data.cleanup()
-
-    _require(output.run_dir != resumed_output.run_dir, "Smoke resume overwrote the original run directory.")
-    _require(
-        resumed_checks["last_checkpoint"]["global_step"] > initial_checks["last_checkpoint"]["global_step"],
-        "Smoke resume did not advance global_step.",
-    )
-    _require(
-        resumed_checks["last_checkpoint"]["epoch_completed"] == initial_checks["last_checkpoint"]["epoch_completed"] + resume_epochs,
-        "Smoke resume did not advance epoch_completed.",
-    )
-
-    for name, raw_path in input_paths.items():
-        if raw_path in (None, ""):
-            continue
-        after_signature = _file_signature(raw_path)
-        _require(before_signatures[name] == after_signature, f"Input HDF5 changed during smoke test: {raw_path}")
 
     smoke_source = "configured_paths"
     if pipeline.smoke_data is not None:
@@ -289,19 +420,33 @@ def _run_smoke_end_to_end(config: dict, *, config_path: str) -> int:
 
 def main() -> int:
     args = _parse_args()
+    controller = InterruptionController()
+    previous_handlers = controller.install()
+    context = None
     try:
+        # Invalid configuration before an output root can be resolved remains a CLI-only error.
         config = load_config(args.config)
         config["__config_path__"] = str(Path(args.config).resolve())
         config = apply_runtime_overrides(config, device=args.device, smoke_test=args.smoke_test)
         if args.smoke_test:
-            return _run_smoke_end_to_end(config, config_path=args.config)
+            return _run_smoke_end_to_end(
+                config,
+                config_path=args.config,
+                controller=controller,
+            )
 
-        pipeline = build_training_pipeline(config)
+        pipeline, context = _build_with_early_manifest(
+            config,
+            config_path=args.config,
+            controller=controller,
+        )
         try:
             output = train_model_b_pipeline(
                 pipeline,
                 config_path=args.config,
                 resume_from=args.resume_from,
+                run_context=context,
+                interruption_controller=controller,
             )
         finally:
             if pipeline.smoke_data is not None:
@@ -318,9 +463,22 @@ def main() -> int:
         print(f"last_checkpoint={output.last_checkpoint_path}")
         print(f"manifest_path={output.manifest_path}")
         return 0
+    except KeyboardInterrupt as exc:
+        if context is not None:
+            record_run_failure(
+                context,
+                exc,
+                interrupted=True,
+                interruption=controller.metadata(),
+            )
+        return controller.metadata()["exit_code"]
     except Exception as exc:
+        if context is not None:
+            record_run_failure(context, exc)
         print(f"error={type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
+    finally:
+        controller.restore(previous_handlers)
 
 
 if __name__ == "__main__":

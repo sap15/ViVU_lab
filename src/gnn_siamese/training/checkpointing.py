@@ -13,6 +13,10 @@ import torch
 
 from gnn_siamese.data import fingerprint_split_records
 from gnn_siamese.utils.atomic_io import atomic_publish
+from gnn_siamese.utils.fingerprints import (
+    fingerprint_pairing_inventory,
+    fingerprint_split_definition,
+)
 
 try:
     import numpy as np
@@ -43,6 +47,7 @@ class ResumeState:
     best_metric: float | None
     checkpoint_path: str
     checkpoint_payload: dict[str, Any]
+    content_verification: str
 
 
 def capture_rng_state() -> dict[str, Any]:
@@ -107,6 +112,8 @@ def build_resume_compatibility_payload(
     split_bundle: Any,
     optimizer: torch.optim.Optimizer,
     scheduler: Any | None,
+    hdf5_content_fingerprint: Mapping[str, Any] | None = None,
+    schema: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     model_cfg = dict(config.get("model", {}))
     loss_cfg = dict(config.get("loss", {}))
@@ -121,7 +128,12 @@ def build_resume_compatibility_payload(
     mask_mode = "none"
     if bool(false_negative_mask_cfg.get("enabled", False)):
         mask_mode = str(false_negative_mask_cfg.get("mode", "none"))
-    return {
+    payload = {
+        "compatibility_metadata": {"version": 2},
+        "schema": {
+            "schema_name": None if schema is None else schema.get("schema_name"),
+            "schema_version": None if schema is None else schema.get("schema_version"),
+        },
         "architecture": {
             "name": str(model_cfg.get("architecture", "model_b")),
             "dimensions": {
@@ -185,22 +197,68 @@ def build_resume_compatibility_payload(
             "class": None if scheduler is None else scheduler.__class__.__name__,
             "config": _scheduler_config_from_instance(scheduler, scheduler_name=scheduler_name),
         },
-        "dataset_fingerprint": build_dataset_fingerprint(dataset),
-        "split_fingerprint": str(split_bundle.split.dataset_fingerprint),
+        "dataset_fingerprint": (
+            fingerprint_pairing_inventory(dataset.pairs)
+            if hasattr(dataset, "mutant_h5_path")
+            else build_dataset_fingerprint(dataset)
+        ),
+        "split_fingerprint": fingerprint_split_definition(split_bundle.split),
         "split_type": str(split_bundle.split.split_type),
     }
+    if hdf5_content_fingerprint is not None:
+        payload["hdf5_content_fingerprint"] = _json_safe(dict(hdf5_content_fingerprint))
+    return payload
+
+
+def build_legacy_resume_compatibility_payload(
+    *,
+    new_compatibility: Mapping[str, Any],
+    dataset: Any,
+    split_bundle: Any,
+) -> dict[str, Any]:
+    """Reconstruct the exact compatibility semantics used by historical v1 checkpoints."""
+
+    payload = dict(_json_safe(new_compatibility))
+    payload.pop("compatibility_metadata", None)
+    payload.pop("schema", None)
+    payload.pop("hdf5_content_fingerprint", None)
+    payload["dataset_fingerprint"] = build_dataset_fingerprint(dataset)
+    payload["split_fingerprint"] = str(split_bundle.split.dataset_fingerprint)
+    return payload
 
 
 def validate_resume_compatibility(
     checkpoint_payload: Mapping[str, Any],
     expected: Mapping[str, Any],
-) -> None:
+    *,
+    legacy_expected: Mapping[str, Any] | None = None,
+) -> str:
     checkpoint_compat = checkpoint_payload.get("compatibility")
     if not isinstance(checkpoint_compat, Mapping):
         raise ValueError("Checkpoint is missing compatibility metadata required for resume.")
-    if _json_safe(checkpoint_compat) != _json_safe(expected):
-        mismatch = _find_first_mismatch(checkpoint_compat, expected, path="compatibility")
+    checkpoint_normalized = _json_safe(checkpoint_compat)
+    metadata = checkpoint_normalized.get("compatibility_metadata")
+    is_new = isinstance(metadata, Mapping) and int(metadata.get("version", 0)) >= 2
+    if not is_new:
+        if legacy_expected is None:
+            # Backwards-compatible utility behavior for callers that already
+            # provide an expected payload expressed in historical semantics.
+            expected_normalized = dict(_json_safe(expected))
+            expected_normalized.pop("compatibility_metadata", None)
+            expected_normalized.pop("schema", None)
+            expected_normalized.pop("hdf5_content_fingerprint", None)
+        else:
+            expected_normalized = _json_safe(legacy_expected)
+        if checkpoint_normalized != expected_normalized:
+            mismatch = _find_first_mismatch(checkpoint_normalized, expected_normalized, path="compatibility")
+            raise ValueError(f"Checkpoint resume incompatibility detected for {mismatch}.")
+        return "legacy_unavailable_historical_controls_only"
+
+    expected_normalized = _json_safe(expected)
+    if checkpoint_normalized != expected_normalized:
+        mismatch = _find_first_mismatch(checkpoint_normalized, expected_normalized, path="compatibility")
         raise ValueError(f"Checkpoint resume incompatibility detected for {mismatch}.")
+    return "sha256_raw_file_bytes_verified"
 
 
 def save_checkpoint(
@@ -222,6 +280,7 @@ def save_checkpoint(
     dataset_id: Mapping[str, Any],
     compatibility: Mapping[str, Any],
     run_id: str,
+    hdf5_content_fingerprint: Mapping[str, Any] | None = None,
     augmenter_state: Mapping[str, Any] | None = None,
     data_loader_state: Mapping[str, Any] | None = None,
 ) -> None:
@@ -241,6 +300,7 @@ def save_checkpoint(
         "split_id": split_id,
         "split_fingerprint": split_fingerprint,
         "dataset_fingerprint": dataset_fingerprint,
+        "hdf5_content_fingerprint": None if hdf5_content_fingerprint is None else _json_safe(hdf5_content_fingerprint),
         "dataset_id": dict(dataset_id),
         "compatibility": _json_safe(dict(compatibility)),
         "rng_state": capture_rng_state(),
@@ -314,12 +374,17 @@ def resume_from_checkpoint(
     optimizer: torch.optim.Optimizer,
     scheduler: Any | None,
     expected_compatibility: Mapping[str, Any],
+    legacy_expected_compatibility: Mapping[str, Any] | None = None,
     map_location: str | torch.device = "cpu",
     device: str | torch.device | None = None,
 ) -> ResumeState:
     payload = load_checkpoint(path, map_location=map_location)
     _validate_scheduler_resume(scheduler=scheduler, checkpoint_payload=payload, expected_compatibility=expected_compatibility)
-    validate_resume_compatibility(payload, expected_compatibility)
+    content_verification = validate_resume_compatibility(
+        payload,
+        expected_compatibility,
+        legacy_expected=legacy_expected_compatibility,
+    )
     model.load_state_dict(payload["model_state_dict"], strict=True)
     optimizer.load_state_dict(payload["optimizer_state_dict"])
     training_device = torch.device(map_location if device is None else device)
@@ -336,6 +401,7 @@ def resume_from_checkpoint(
         best_metric=None if payload.get("best_metric") is None else float(payload["best_metric"]),
         checkpoint_path=str(path),
         checkpoint_payload=payload,
+        content_verification=content_verification,
     )
 
 
