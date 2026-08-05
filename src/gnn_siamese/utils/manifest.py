@@ -104,6 +104,21 @@ class RunArtifactsLayout:
     gradient_audit_path: Path
     split_path: Path
 
+    def relative_reference(self, path: str | Path) -> str:
+        return Path(path).resolve().relative_to(self.run_dir.resolve()).as_posix()
+
+    def resolve_reference(self, reference: str | Path) -> Path:
+        candidate = Path(reference)
+        if candidate.is_absolute():
+            raise ValueError(f"Internal run reference must be relative: {reference!s}")
+        run_root = self.run_dir.resolve()
+        resolved = (run_root / candidate).resolve()
+        try:
+            resolved.relative_to(run_root)
+        except ValueError as exc:
+            raise ValueError(f"Internal run reference escapes run_dir: {reference!s}") from exc
+        return resolved
+
 
 def build_run_layout(
     *,
@@ -158,6 +173,7 @@ class RunManifestWriter:
     def initialize(self, initial_payload: Mapping[str, Any]) -> dict[str, Any]:
         self.payload = dict(initial_payload)
         self.payload.setdefault("status", "running")
+        self.payload.setdefault("lifecycle", {"stage": "bootstrap", "updated_at_utc": _utc_now_iso()})
         self.payload.setdefault("started_at_utc", _utc_now_iso())
         self._write()
         return dict(self.payload)
@@ -167,6 +183,26 @@ class RunManifestWriter:
         self._write()
         return dict(self.payload)
 
+    def transition(self, status: str, *, stage: str | None = None) -> dict[str, Any]:
+        current = str(self.payload.get("status", "initializing"))
+        self._validate_transition(current, status)
+        updates: dict[str, Any] = {"status": status}
+        if stage is not None:
+            updates["lifecycle"] = {"stage": stage, "updated_at_utc": _utc_now_iso()}
+        return self.update(updates)
+
+    @staticmethod
+    def _validate_transition(current: str, status: str) -> None:
+        allowed = {
+            "initializing": {"running", "failed", "interrupted"},
+            "running": {"completed", "failed", "interrupted"},
+        }
+        if status != current and status not in allowed.get(current, set()):
+            raise ValueError(f"Invalid run lifecycle transition: {current} -> {status}.")
+
+    def set_stage(self, stage: str) -> dict[str, Any]:
+        return self.update({"lifecycle": {"stage": str(stage), "updated_at_utc": _utc_now_iso()}})
+
     def finalize(
         self,
         *,
@@ -175,6 +211,8 @@ class RunManifestWriter:
         error: str | None = None,
         extra_updates: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
+        current = str(self.payload.get("status", "initializing"))
+        self._validate_transition(current, status)
         updates: dict[str, Any] = {
             "status": status,
             "finished_at_utc": finished_at_utc or _utc_now_iso(),

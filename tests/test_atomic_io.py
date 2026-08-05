@@ -8,7 +8,7 @@ import stat
 import pytest
 
 from gnn_siamese.utils import atomic_io
-from gnn_siamese.utils.atomic_io import atomic_write_text
+from gnn_siamese.utils.atomic_io import atomic_publish, atomic_write_text
 
 
 def _own_temporaries(destination: Path) -> list[Path]:
@@ -363,3 +363,193 @@ def test_directory_close_failure_is_best_effort_after_publication(
     atomic_write_text(destination, "published content")
 
     assert destination.read_text(encoding="utf-8") == "published content"
+
+
+def test_atomic_publish_writer_failure_before_write_preserves_destination(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "last.pt"
+    destination.write_bytes(b"last valid checkpoint")
+
+    def fail_before_write(handle) -> None:
+        raise RuntimeError("writer failed before write")
+
+    with pytest.raises(RuntimeError, match="writer failed before write"):
+        atomic_publish(destination, fail_before_write)
+
+    assert destination.read_bytes() == b"last valid checkpoint"
+    assert _own_temporaries(destination) == []
+
+
+def test_atomic_publish_partial_writer_failure_cleans_only_own_temporary(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "last.pt"
+    destination.write_bytes(b"last valid checkpoint")
+    foreign = tmp_path / ".last.pt.foreign.tmp"
+    foreign.write_bytes(b"foreign")
+
+    def write_partially_then_fail(handle) -> None:
+        handle.write(b"partial checkpoint")
+        raise RuntimeError("writer failed after partial write")
+
+    with pytest.raises(RuntimeError, match="writer failed after partial write"):
+        atomic_publish(destination, write_partially_then_fail)
+
+    assert destination.read_bytes() == b"last valid checkpoint"
+    assert _own_temporaries(destination) == [foreign]
+    assert foreign.read_bytes() == b"foreign"
+
+
+def test_atomic_publish_flush_failure_preserves_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "last.pt"
+    destination.write_bytes(b"last valid checkpoint")
+    real_fdopen = os.fdopen
+
+    class FlushFailureHandle:
+        def __init__(self, handle) -> None:
+            self._handle = handle
+
+        def __getattr__(self, name):
+            return getattr(self._handle, name)
+
+        def flush(self) -> None:
+            raise OSError("simulated flush failure")
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return self._handle.__exit__(exc_type, exc_value, traceback)
+
+    monkeypatch.setattr(
+        os,
+        "fdopen",
+        lambda descriptor, *args, **kwargs: FlushFailureHandle(
+            real_fdopen(descriptor, *args, **kwargs)
+        ),
+    )
+
+    with pytest.raises(OSError, match="simulated flush failure"):
+        atomic_publish(destination, lambda handle: handle.write(b"replacement"))
+
+    assert destination.read_bytes() == b"last valid checkpoint"
+    assert _own_temporaries(destination) == []
+
+
+def test_atomic_publish_validator_failure_runs_after_close_and_before_replace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "best.pt"
+    destination.write_bytes(b"last valid checkpoint")
+    state = {"validated": False}
+
+    def validator(temporary_path: Path) -> None:
+        state["validated"] = True
+        with temporary_path.open("rb") as handle:
+            assert handle.read() == b"complete checkpoint"
+        raise ValueError("simulated validation failure")
+
+    monkeypatch.setattr(
+        os,
+        "replace",
+        lambda source, target: (_ for _ in ()).throw(
+            AssertionError("replace must not run after validator failure")
+        ),
+    )
+
+    with pytest.raises(ValueError, match="simulated validation failure"):
+        atomic_publish(
+            destination,
+            lambda handle: handle.write(b"complete checkpoint"),
+            validator=validator,
+        )
+
+    assert state["validated"] is True
+    assert destination.read_bytes() == b"last valid checkpoint"
+    assert _own_temporaries(destination) == []
+
+
+def test_atomic_publish_orders_close_validate_and_replace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "best.pt"
+    events: list[str] = []
+    descriptor: dict[str, int] = {}
+    real_fdopen = os.fdopen
+    real_fsync = os.fsync
+    real_replace = os.replace
+
+    class RecordingHandle:
+        def __init__(self, handle) -> None:
+            self._handle = handle
+
+        def fileno(self) -> int:
+            return self._handle.fileno()
+
+        def write(self, content: bytes) -> int:
+            events.append("write")
+            return self._handle.write(content)
+
+        def flush(self) -> None:
+            events.append("flush")
+            self._handle.flush()
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            result = self._handle.__exit__(exc_type, exc_value, traceback)
+            events.append("close")
+            return result
+
+    def record_fdopen(file_descriptor: int, *args, **kwargs):
+        descriptor["value"] = file_descriptor
+        return RecordingHandle(real_fdopen(file_descriptor, *args, **kwargs))
+
+    def record_fsync(file_descriptor: int) -> None:
+        events.append("fsync")
+        real_fsync(file_descriptor)
+
+    def assert_closed() -> None:
+        with pytest.raises(OSError) as error:
+            os.fstat(descriptor["value"])
+        assert error.value.errno == errno.EBADF
+
+    def validate(temporary_path: Path) -> None:
+        assert_closed()
+        assert temporary_path.read_bytes() == b"complete checkpoint"
+        events.append("validate")
+
+    def record_replace(source: str | Path, target: str | Path) -> None:
+        assert_closed()
+        events.append("replace")
+        real_replace(source, target)
+
+    monkeypatch.setattr(os, "fdopen", record_fdopen)
+    monkeypatch.setattr(os, "fsync", record_fsync)
+    monkeypatch.setattr(os, "replace", record_replace)
+
+    atomic_publish(
+        destination,
+        lambda handle: handle.write(b"complete checkpoint"),
+        validator=validate,
+    )
+
+    assert events[:6] == ["write", "flush", "fsync", "close", "validate", "replace"]
+
+
+def test_atomic_publish_repeated_writer_failures_do_not_leak_descriptors(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "last.pt"
+    destination.write_bytes(b"last valid checkpoint")
+    open_descriptors_before = len(list(Path("/proc/self/fd").iterdir()))
+
+    def fail_repeatedly(handle) -> None:
+        raise RuntimeError("repeated writer failure")
+
+    for _ in range(12):
+        with pytest.raises(RuntimeError, match="repeated writer failure"):
+            atomic_publish(destination, fail_repeatedly)
+
+    open_descriptors_after = len(list(Path("/proc/self/fd").iterdir()))
+    assert open_descriptors_after == open_descriptors_before
+    assert destination.read_bytes() == b"last valid checkpoint"
+    assert _own_temporaries(destination) == []
