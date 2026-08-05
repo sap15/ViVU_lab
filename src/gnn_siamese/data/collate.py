@@ -16,7 +16,12 @@ except ImportError:  # pragma: no cover - exercised only when PyG is unavailable
     Data = None
 
 from gnn_siamese.data.dataset import MutWtPairSample
-from gnn_siamese.data.hdf5_loader import HDF5GraphComponents
+from gnn_siamese.data.hdf5_loader import (
+    HDF5GraphComponents,
+    HDF5GraphLoadError,
+    NodeFeatureSlice,
+    validate_node_feature_slices,
+)
 from gnn_siamese.data.pairing import PairingKey
 
 
@@ -122,6 +127,36 @@ def _validate_mask_keys(
     return reference
 
 
+def _validate_node_feature_slices(
+    graphs: Sequence[HDF5GraphComponents],
+    *,
+    graph_role: str,
+) -> tuple[NodeFeatureSlice, ...]:
+    reference = graphs[0].node_feature_slices
+    for index, graph in enumerate(graphs):
+        try:
+            validated = validate_node_feature_slices(
+                graph.node_feature_slices,
+                width=int(graph.x.shape[1]),
+            )
+        except HDF5GraphLoadError as exc:
+            raise MutWtPairCollateError(
+                f"Invalid node_feature_slices in {graph_role} graph at batch "
+                f"index {index}: {exc}"
+            ) from exc
+        if tuple(item.name for item in validated) != graph.node_feature_names:
+            raise MutWtPairCollateError(
+                f"node_feature_slices names in {graph_role} graph at batch index "
+                f"{index} do not match node_feature_names."
+            )
+        if validated != reference:
+            raise MutWtPairCollateError(
+                f"Incompatible node_feature_slices in {graph_role} graph at batch "
+                f"index {index}: {validated!r} != {reference!r}."
+            )
+    return reference
+
+
 def _validate_mutation_counts(
     graphs: Sequence[HDF5GraphComponents],
     *,
@@ -180,6 +215,8 @@ def _validate_cross_graph_compatibility(
             "Mutant and WT node_availability_masks keys must match: "
             f"{mut_mask_keys!r} != {wt_mask_keys!r}."
         )
+    _validate_node_feature_slices(graph_mut, graph_role="mutant")
+    _validate_node_feature_slices(graph_wt, graph_role="WT")
     return mut_node_names, mut_edge_names, mut_mask_keys
 
 
@@ -256,6 +293,7 @@ def _collate_graphs(
 
     batch = batch_cls.from_data_list(data_list)
     batch.node_feature_names = graphs[0].node_feature_names
+    batch.node_feature_slices = graphs[0].node_feature_slices
     batch.edge_feature_names = graphs[0].edge_feature_names
     batch.node_availability_masks = {
         mask_key: torch.as_tensor(np.concatenate(parts, axis=0).astype(np.float32, copy=False))

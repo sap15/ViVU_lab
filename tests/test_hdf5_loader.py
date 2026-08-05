@@ -8,9 +8,13 @@ import pytest
 
 from gnn_siamese.data.hdf5_loader import (
     HDF5GraphLoadError,
+    HDF5GraphComponents,
+    NodeFeatureSlice,
     build_is_mutation_channel,
     load_hdf5_graph_components,
     normalize_edge_index,
+    validate_graph_components,
+    validate_node_feature_slices,
 )
 
 
@@ -41,6 +45,9 @@ def _create_graph(
             bsa[1] = np.nan
         node_group.create_dataset("bsa", data=bsa)
         node_group.create_dataset("res_mass", data=np.linspace(10.0, 40.0, num_nodes))
+        node_group.create_dataset(
+            "hse", data=np.arange(num_nodes * 3, dtype=np.float32).reshape(num_nodes, 3)
+        )
         node_group.create_dataset("diff_mass", data=diff_values)
         node_group.create_dataset("diff_charge", data=np.zeros(num_nodes))
         node_group.create_dataset("diff_pI", data=np.zeros(num_nodes))
@@ -88,6 +95,157 @@ def test_load_hdf5_graph_components_builds_float32_arrays(tmp_path: Path) -> Non
     assert components.x.shape == (3, 3)
     assert components.edge_attr.shape == (2, 2)
     assert components.node_feature_names == ("bsa", "res_mass", "is_mutation")
+    assert components.node_feature_slices == (
+        NodeFeatureSlice("bsa", 0, 1),
+        NodeFeatureSlice("res_mass", 1, 2),
+        NodeFeatureSlice("is_mutation", 2, 3),
+    )
+
+
+def test_loader_records_hse_runtime_width_as_one_group(tmp_path: Path) -> None:
+    path = tmp_path / "proc_hse.hdf5"
+    graph_key = "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D"
+    _create_graph(path, graph_key, diff_values=[0.0, 1.0, 0.0], edge_index=[[0, 1], [1, 2]])
+    components = load_hdf5_graph_components(
+        path,
+        graph_key,
+        node_feature_names=["bsa", "hse", "res_mass"],
+        edge_feature_names=["distance"],
+    )
+    assert components.x.shape == (3, 6)
+    assert components.node_feature_slices == (
+        NodeFeatureSlice("bsa", 0, 1),
+        NodeFeatureSlice("hse", 1, 4),
+        NodeFeatureSlice("res_mass", 4, 5),
+        NodeFeatureSlice("is_mutation", 5, 6),
+    )
+
+
+@pytest.mark.parametrize(
+    ("slices", "width", "message"),
+    [
+        ((NodeFeatureSlice("", 0, 1),), 1, "non-empty"),
+        (
+            (NodeFeatureSlice("a", 0, 1), NodeFeatureSlice("a", 1, 2)),
+            2,
+            "Duplicate",
+        ),
+        ((NodeFeatureSlice("a", -1, 1),), 1, "expected start 0"),
+        ((NodeFeatureSlice("a", 0, 0),), 1, "outside"),
+        ((NodeFeatureSlice("a", 0, -1),), 1, "outside"),
+        ((NodeFeatureSlice("a", 0, 2),), 1, "outside width"),
+        (
+            (NodeFeatureSlice("a", 0, 2), NodeFeatureSlice("b", 1, 3)),
+            3,
+            "overlaps",
+        ),
+        (
+            (NodeFeatureSlice("a", 0, 1), NodeFeatureSlice("b", 2, 3)),
+            3,
+            "gap",
+        ),
+        ((NodeFeatureSlice("a", 0, 1),), 2, "incomplete"),
+        ((NodeFeatureSlice("a", 1, 2),), 2, "expected start 0"),
+        (
+            (NodeFeatureSlice("a", 0, 1), NodeFeatureSlice("a", 1, 3)),
+            3,
+            "Duplicate",
+        ),
+        ((), 2, "non-empty"),
+    ],
+    ids=(
+        "empty-name",
+        "duplicate-name",
+        "negative-start",
+        "stop-equals-start",
+        "stop-before-start",
+        "stop-outside-x",
+        "overlap",
+        "gap",
+        "incomplete-tail",
+        "first-not-zero",
+        "duplicate-different-bounds",
+        "empty-metadata-with-columns",
+    ),
+)
+def test_validate_node_feature_slices_rejects_each_invalid_layout(
+    slices: tuple[NodeFeatureSlice, ...],
+    width: int,
+    message: str,
+) -> None:
+    with pytest.raises(HDF5GraphLoadError, match=message):
+        validate_node_feature_slices(slices, width=width)
+
+
+@pytest.mark.parametrize(
+    ("slices", "width"),
+    [
+        ((NodeFeatureSlice("scalar", 0, 1),), 1),
+        (
+            (
+                NodeFeatureSlice("a", 0, 1),
+                NodeFeatureSlice("b", 1, 2),
+                NodeFeatureSlice("c", 2, 3),
+            ),
+            3,
+        ),
+        ((NodeFeatureSlice("vector", 0, 3),), 3),
+        (
+            (
+                NodeFeatureSlice("left", 0, 1),
+                NodeFeatureSlice("vector", 1, 4),
+                NodeFeatureSlice("right", 4, 5),
+            ),
+            5,
+        ),
+    ],
+    ids=("one-scalar", "several-scalars", "one-vector", "scalar-vector-scalar"),
+)
+def test_validate_node_feature_slices_accepts_exact_complete_layouts(
+    slices: tuple[NodeFeatureSlice, ...],
+    width: int,
+) -> None:
+    assert validate_node_feature_slices(slices, width=width) == slices
+
+
+def _minimal_components(
+    *,
+    names: tuple[str, ...],
+    slices: tuple[NodeFeatureSlice, ...],
+) -> HDF5GraphComponents:
+    return HDF5GraphComponents(
+        x=np.zeros((2, 2), dtype=np.float32),
+        edge_index=np.empty((2, 0), dtype=np.int64),
+        edge_attr=np.empty((0, 1), dtype=np.float32),
+        metadata={},
+        node_feature_names=names,
+        node_feature_slices=slices,
+        edge_feature_names=("distance",),
+        node_availability_masks={},
+        mutation_node_index=None,
+        is_mutation=np.zeros(2, dtype=np.float32),
+    )
+
+
+@pytest.mark.parametrize(
+    ("names", "message"),
+    [
+        (("b", "a"), "exactly match"),
+        (("a",), "exactly match"),
+        (("a", "b", "extra"), "exactly match"),
+    ],
+    ids=("incompatible-order", "too-few-names", "too-many-names"),
+)
+def test_graph_component_validation_rejects_names_incompatible_with_slices(
+    names: tuple[str, ...],
+    message: str,
+) -> None:
+    components = _minimal_components(
+        names=names,
+        slices=(NodeFeatureSlice("a", 0, 1), NodeFeatureSlice("b", 1, 2)),
+    )
+    with pytest.raises(HDF5GraphLoadError, match=message):
+        validate_graph_components(components)
 
 
 def test_loader_rejects_nan_or_inf(tmp_path: Path) -> None:

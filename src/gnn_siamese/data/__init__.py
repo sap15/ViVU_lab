@@ -21,6 +21,15 @@ from gnn_siamese.data.collate import (
     MutWtPairCollateError,
     collate_mut_wt_pairs,
 )
+from gnn_siamese.data.model_a_pair_augmentations import (
+    DEFAULT_MODEL_A_ALLOWED_FEATURE_NAMES,
+    ModelAAugmentationExampleMetadata,
+    ModelAPairAugmentationConfig,
+    ModelAPairAugmentationError,
+    ModelAPairAugmenter,
+    ModelAPairView,
+    stable_seed,
+)
 from gnn_siamese.data.dataset import MutWtPairDataset, MutWtPairDatasetError, MutWtPairSample
 from gnn_siamese.data.smoke_data import (
     SmokeDataArtifacts,
@@ -32,10 +41,12 @@ from gnn_siamese.data.smoke_data import (
 from gnn_siamese.data.hdf5_loader import (
     HDF5GraphComponents,
     HDF5GraphLoadError,
+    NodeFeatureSlice,
     build_is_mutation_channel,
     extract_variant_metadata,
     load_hdf5_graph_components,
     normalize_edge_index,
+    validate_node_feature_slices,
     validate_graph_components,
 )
 from gnn_siamese.data.node_pair_alignment import (
@@ -100,9 +111,16 @@ __all__ = [
     "MutWtPairDataset",
     "MutWtPairDatasetError",
     "MutWtPairSample",
+    "ModelAAugmentationExampleMetadata",
+    "ModelAPairAugmentationConfig",
+    "ModelAPairAugmentationError",
+    "ModelAPairAugmenter",
+    "ModelAPairView",
+    "DEFAULT_MODEL_A_ALLOWED_FEATURE_NAMES",
     "NodePairAlignment",
     "NodePairAlignmentError",
     "NodePresence",
+    "NodeFeatureSlice",
     "LocalAlignmentView",
     "DuplicateResidueKeyError",
     "PairingError",
@@ -136,6 +154,8 @@ __all__ = [
     "resolve_node_feature_names",
     "resolve_wt_companion",
     "split_encoder_inputs_and_auxiliary_features",
+    "stable_seed",
     "validate_graph_components",
+    "validate_node_feature_slices",
     "write_smoke_schema_json",
 ]

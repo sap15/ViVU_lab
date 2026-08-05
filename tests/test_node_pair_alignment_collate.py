@@ -5,7 +5,7 @@ import torch
 
 from gnn_siamese.data.collate import collate_mut_wt_pairs
 from gnn_siamese.data.dataset import MutWtPairSample
-from gnn_siamese.data.hdf5_loader import HDF5GraphComponents
+from gnn_siamese.data.hdf5_loader import HDF5GraphComponents, NodeFeatureSlice
 from gnn_siamese.data.node_pair_alignment import align_node_pair
 from gnn_siamese.data.pairing import PairingKey
 
@@ -20,6 +20,10 @@ def _graph(name: str, size: int, *, mutant: bool) -> HDF5GraphComponents:
         edge_attr=np.empty((0, 1), dtype=np.float32),
         metadata={"variant_id": name},
         node_feature_names=("value", "is_mutation"),
+        node_feature_slices=(
+            NodeFeatureSlice("value", 0, 1),
+            NodeFeatureSlice("is_mutation", 1, 2),
+        ),
         edge_feature_names=("distance",),
         node_availability_masks={},
         mutation_node_index=0 if mutant else None,
