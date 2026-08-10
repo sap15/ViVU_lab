@@ -28,6 +28,10 @@ from gnn_siamese.training.checkpointing import (
     save_checkpoint,
 )
 from gnn_siamese.training.gradient_audit import create_gradient_audit, finalize_gradient_audit
+from gnn_siamese.training.model_a_contrastive import (
+    ModelAContrastive,
+    ModelAContrastiveOutput,
+)
 from gnn_siamese.training.step import training_step
 
 __all__ = [
@@ -36,6 +40,8 @@ __all__ = [
     "TotalLossOutput",
     "BaselineEpochOutput",
     "ModelBTrainingOutput",
+    "ModelAContrastive",
+    "ModelAContrastiveOutput",
     "OperationalRunContext",
     "TrainingLoopConfig",
     "TrainingLoopOutput",
