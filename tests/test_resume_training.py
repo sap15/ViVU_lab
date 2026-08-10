@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -11,6 +12,9 @@ pytest.importorskip("torch_geometric")
 
 from gnn_siamese.builders import build_training_pipeline
 from gnn_siamese.training import load_checkpoint, train_model_b_pipeline
+from gnn_siamese.training import loop as training_loop
+from gnn_siamese.training.checkpointing import CheckpointSelectionConfig
+from gnn_siamese.utils import atomic_io
 from tests.model_b_test_utils import build_model_b_config, create_multi_pair_hdf5, write_schema_json
 
 
@@ -61,6 +65,30 @@ def _make_deterministic_config(
     )
     config["__config_path__"] = str(tmp_path / f"{root_name}.yaml")
     return config
+
+
+def _assert_payload_equal(expected, actual) -> None:
+    if isinstance(expected, torch.Tensor):
+        assert isinstance(actual, torch.Tensor)
+        assert torch.equal(expected, actual)
+        return
+    if isinstance(expected, np.ndarray):
+        assert isinstance(actual, np.ndarray)
+        assert np.array_equal(expected, actual)
+        return
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert expected.keys() == actual.keys()
+        for key in expected:
+            _assert_payload_equal(expected[key], actual[key])
+        return
+    if isinstance(expected, (list, tuple)):
+        assert isinstance(actual, type(expected))
+        assert len(expected) == len(actual)
+        for expected_item, actual_item in zip(expected, actual, strict=True):
+            _assert_payload_equal(expected_item, actual_item)
+        return
+    assert expected == actual
 
 
 def test_continuous_training_matches_interrupted_and_resumed_training(tmp_path: Path) -> None:
@@ -152,3 +180,114 @@ def test_continuous_training_matches_interrupted_and_resumed_training(tmp_path: 
     assert resumed_manifest["training"]["epochs_run_this_invocation"] == 1
     assert resumed_manifest["training"]["global_step"] == resumed_last["global_step"]
     assert resumed_manifest["training"]["best_metric"] == pytest.approx(resumed_last["best_metric"], rel=0.0, abs=1.0e-8)
+
+
+def test_resume_reconstructs_best_checkpoint_from_exact_source_payload(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first_config = _make_deterministic_config(
+        tmp_path,
+        epochs=1,
+        root_name="atomic_resume_source",
+    )
+    first_pipeline = build_training_pipeline(first_config)
+    first_output = train_model_b_pipeline(
+        first_pipeline,
+        config_path=first_config["__config_path__"],
+    )
+    source_payload = load_checkpoint(first_output.last_checkpoint_path)
+
+    resumed_config = _make_deterministic_config(
+        tmp_path,
+        epochs=2,
+        root_name="atomic_resume_target",
+        mutant_path=Path(first_config["paths"]["mutants_hdf5"]),
+        wt_path=Path(first_config["paths"]["wt_companion_hdf5"]),
+        schema_path=Path(first_config["paths"]["sample_schema"]),
+        split_path=Path(first_config["split"]["persist_path"]),
+    )
+    resumed_pipeline = build_training_pipeline(resumed_config)
+    monkeypatch.setattr(
+        CheckpointSelectionConfig,
+        "is_improved",
+        lambda self, candidate, best_so_far: False,
+    )
+
+    resumed_output = train_model_b_pipeline(
+        resumed_pipeline,
+        config_path=resumed_config["__config_path__"],
+        resume_from=first_output.last_checkpoint_path,
+    )
+    reconstructed_best = load_checkpoint(resumed_output.best_checkpoint_path)
+
+    _assert_payload_equal(source_payload, reconstructed_best)
+    assert reconstructed_best["format_version"] == 1
+    assert reconstructed_best["epoch_completed"] == source_payload["epoch_completed"]
+    assert reconstructed_best["global_step"] == source_payload["global_step"]
+    assert reconstructed_best["best_metric"] == source_payload["best_metric"]
+
+
+def test_resume_best_reconstruction_failure_preserves_existing_best_and_propagates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first_config = _make_deterministic_config(
+        tmp_path,
+        epochs=1,
+        root_name="atomic_resume_failure_source",
+    )
+    first_pipeline = build_training_pipeline(first_config)
+    first_output = train_model_b_pipeline(
+        first_pipeline,
+        config_path=first_config["__config_path__"],
+    )
+
+    resumed_config = _make_deterministic_config(
+        tmp_path,
+        epochs=2,
+        root_name="atomic_resume_failure_target",
+        mutant_path=Path(first_config["paths"]["mutants_hdf5"]),
+        wt_path=Path(first_config["paths"]["wt_companion_hdf5"]),
+        schema_path=Path(first_config["paths"]["sample_schema"]),
+        split_path=Path(first_config["split"]["persist_path"]),
+    )
+    resumed_pipeline = build_training_pipeline(resumed_config)
+    real_save_payload = training_loop.save_checkpoint_payload_atomic
+    observed: dict[str, Path | bytes] = {}
+
+    def fail_after_establishing_existing_best(payload, path) -> None:
+        destination = Path(path)
+        real_save_payload(payload, destination)
+        observed["path"] = destination
+        observed["bytes"] = destination.read_bytes()
+        real_replace = atomic_io.os.replace
+
+        def fail_replace(source: str | Path, target: str | Path) -> None:
+            raise OSError("simulated resume best publication failure")
+
+        atomic_io.os.replace = fail_replace
+        try:
+            real_save_payload(payload, destination)
+        finally:
+            atomic_io.os.replace = real_replace
+
+    monkeypatch.setattr(
+        training_loop,
+        "save_checkpoint_payload_atomic",
+        fail_after_establishing_existing_best,
+    )
+
+    with pytest.raises(OSError, match="simulated resume best publication failure"):
+        train_model_b_pipeline(
+            resumed_pipeline,
+            config_path=resumed_config["__config_path__"],
+            resume_from=first_output.last_checkpoint_path,
+        )
+
+    best_path = observed["path"]
+    assert isinstance(best_path, Path)
+    assert best_path.read_bytes() == observed["bytes"]
+    assert list(best_path.parent.glob(f".{best_path.name}.*.tmp")) == []
+    failed_manifest = json.loads(
+        (best_path.parent.parent / "run_manifest.json").read_text(encoding="utf-8")
+    )
+    assert failed_manifest["status"] == "failed"

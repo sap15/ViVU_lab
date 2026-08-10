@@ -193,7 +193,14 @@ def test_resume_rejects_non_increasing_total_epochs(tmp_path: Path, requested_ep
             config_path=tmp_path / "resume.yaml",
             resume_from=first_output.last_checkpoint_path,
         )
-    assert not (tmp_path / "runs" / f"resume-{requested_epochs}").exists()
+    manifests = list(
+        (tmp_path / "runs" / f"resume-{requested_epochs}").glob("run_*/run_manifest.json")
+    )
+    assert len(manifests) == 1
+    manifest = json.loads(manifests[0].read_text(encoding="utf-8"))
+    assert manifest["status"] == "failed"
+    assert manifest["lifecycle"]["stage"] == "resuming"
+    assert manifest["error"]["type"] == "ValueError"
 
 
 def test_resume_with_greater_total_epochs_runs_additional_epoch(tmp_path: Path) -> None:

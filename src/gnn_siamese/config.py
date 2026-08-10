@@ -171,9 +171,10 @@ def validate_c1_config(config: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def save_config(config: Mapping[str, Any], path: str | Path) -> None:
+    from gnn_siamese.utils.atomic_io import atomic_write_text
+
     target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(yaml.safe_dump(dict(config), sort_keys=False), encoding="utf-8")
+    atomic_write_text(target, yaml.safe_dump(dict(config), sort_keys=False), encoding="utf-8")
 
 
 def load_schema(schema_path: str | Path) -> dict[str, Any]:

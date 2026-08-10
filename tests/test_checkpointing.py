@@ -7,13 +7,16 @@ import pytest
 
 torch = pytest.importorskip("torch")
 
+from gnn_siamese.training import checkpointing
 from gnn_siamese.training.checkpointing import (
     _json_safe,
     build_resume_compatibility_payload,
     load_checkpoint,
     resume_from_checkpoint,
     save_checkpoint,
+    save_checkpoint_payload_atomic,
 )
+from gnn_siamese.utils import atomic_io
 
 
 class TinyModel(torch.nn.Module):
@@ -62,6 +65,39 @@ class DummySplit:
 
 class DummySplitBundle:
     split = DummySplit()
+
+
+def _own_temporaries(destination: Path) -> list[Path]:
+    return list(destination.parent.glob(f".{destination.name}.*.tmp"))
+
+
+def _write_checkpoint_fixture(path: Path) -> dict:
+    model = TinyModel()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
+    generator = torch.Generator(device="cpu")
+    generator.manual_seed(4321)
+    save_checkpoint(
+        path,
+        model=model,
+        optimizer=optimizer,
+        scheduler=None,
+        epoch_completed=2,
+        global_step=7,
+        best_metric=0.25,
+        train_metrics={"loss": 1.0},
+        validation_metrics={"loss": 0.5},
+        resolved_config={"training": {"epochs": 4}},
+        seed=123,
+        split_id="split.json",
+        split_fingerprint="split-1",
+        dataset_fingerprint="dataset-1",
+        dataset_id={"mutants_hdf5": "mutants.h5", "wt_companion_hdf5": "wt.h5"},
+        compatibility=_compatibility(scheduler_name="none", scheduler=None),
+        run_id="run_test",
+        augmenter_state={"generator_state": generator.get_state()},
+        data_loader_state={"train_generator_state": generator.get_state()},
+    )
+    return load_checkpoint(path)
 
 
 def _compatibility(*, temperature: float = 0.2, scheduler_name: str = "cosine", scheduler: object | None = None) -> dict:
@@ -463,3 +499,142 @@ def test_checkpoint_preserves_binary_torch_generator_state_exactly(tmp_path: Pat
     restored_state = payload["data_loader_state"]["train_generator_state"]
     assert isinstance(restored_state, torch.Tensor)
     assert torch.equal(restored_state, generator_state)
+
+
+@pytest.mark.parametrize("checkpoint_name", ["last.pt", "best.pt"])
+def test_atomic_checkpoint_save_failure_preserves_existing_checkpoint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    checkpoint_name: str,
+) -> None:
+    checkpoint_path = tmp_path / checkpoint_name
+    payload = _write_checkpoint_fixture(checkpoint_path)
+    original_bytes = checkpoint_path.read_bytes()
+
+    def fail_before_completion(payload_to_save, handle) -> None:
+        raise RuntimeError("simulated torch.save failure")
+
+    monkeypatch.setattr(checkpointing.torch, "save", fail_before_completion)
+
+    with pytest.raises(RuntimeError, match="simulated torch.save failure"):
+        save_checkpoint_payload_atomic(payload, checkpoint_path)
+
+    assert checkpoint_path.read_bytes() == original_bytes
+    assert _own_temporaries(checkpoint_path) == []
+
+
+def test_partial_torch_save_failure_preserves_checkpoint_and_foreign_temporary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkpoint_path = tmp_path / "last.pt"
+    payload = _write_checkpoint_fixture(checkpoint_path)
+    original_bytes = checkpoint_path.read_bytes()
+    foreign = tmp_path / ".last.pt.foreign.tmp"
+    foreign.write_bytes(b"foreign")
+
+    def write_partially_then_fail(payload_to_save, handle) -> None:
+        handle.write(b"partial torch checkpoint")
+        raise RuntimeError("simulated partial torch.save failure")
+
+    monkeypatch.setattr(checkpointing.torch, "save", write_partially_then_fail)
+
+    with pytest.raises(RuntimeError, match="simulated partial torch.save failure"):
+        save_checkpoint_payload_atomic(payload, checkpoint_path)
+
+    assert checkpoint_path.read_bytes() == original_bytes
+    assert _own_temporaries(checkpoint_path) == [foreign]
+    assert foreign.read_bytes() == b"foreign"
+
+
+def test_checkpoint_validator_failure_preserves_existing_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkpoint_path = tmp_path / "last.pt"
+    payload = _write_checkpoint_fixture(checkpoint_path)
+    original_bytes = checkpoint_path.read_bytes()
+
+    def fail_validation(*args, **kwargs):
+        raise ValueError("simulated checkpoint validation failure")
+
+    monkeypatch.setattr(checkpointing.torch, "load", fail_validation)
+
+    with pytest.raises(ValueError, match="simulated checkpoint validation failure"):
+        save_checkpoint_payload_atomic(payload, checkpoint_path)
+
+    assert checkpoint_path.read_bytes() == original_bytes
+    assert _own_temporaries(checkpoint_path) == []
+
+
+def test_checkpoint_replace_failure_preserves_existing_checkpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkpoint_path = tmp_path / "best.pt"
+    payload = _write_checkpoint_fixture(checkpoint_path)
+    original_bytes = checkpoint_path.read_bytes()
+
+    def fail_replace(source: str | Path, target: str | Path) -> None:
+        raise OSError("simulated checkpoint replace failure")
+
+    monkeypatch.setattr(atomic_io.os, "replace", fail_replace)
+
+    with pytest.raises(OSError, match="simulated checkpoint replace failure"):
+        save_checkpoint_payload_atomic(payload, checkpoint_path)
+
+    assert checkpoint_path.read_bytes() == original_bytes
+    assert _own_temporaries(checkpoint_path) == []
+
+
+def test_checkpoint_is_loaded_from_closed_temporary_before_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    checkpoint_path = tmp_path / "last.pt"
+    source_path = tmp_path / "source.pt"
+    payload = _write_checkpoint_fixture(source_path)
+    events: list[tuple[str, Path]] = []
+    real_load = checkpointing.torch.load
+    real_replace = atomic_io.os.replace
+
+    def record_load(path, *args, **kwargs):
+        temporary_path = Path(path)
+        events.append(("validate", temporary_path))
+        assert temporary_path.parent == checkpoint_path.parent
+        assert temporary_path.name.startswith(f".{checkpoint_path.name}.")
+        return real_load(path, *args, **kwargs)
+
+    def record_replace(source: str | Path, target: str | Path) -> None:
+        source_path_seen = Path(source)
+        assert events == [("validate", source_path_seen)]
+        events.append(("replace", source_path_seen))
+        real_replace(source, target)
+
+    monkeypatch.setattr(checkpointing.torch, "load", record_load)
+    monkeypatch.setattr(atomic_io.os, "replace", record_replace)
+
+    save_checkpoint_payload_atomic(payload, checkpoint_path)
+
+    assert [event for event, _ in events] == ["validate", "replace"]
+    loaded = real_load(checkpoint_path, map_location="cpu", weights_only=False)
+    assert loaded.keys() == payload.keys()
+    assert loaded["format_version"] == 1
+    assert loaded["epoch_completed"] == payload["epoch_completed"]
+    assert loaded["global_step"] == payload["global_step"]
+    assert loaded["best_metric"] == payload["best_metric"]
+    assert torch.equal(
+        loaded["model_state_dict"]["linear.weight"],
+        payload["model_state_dict"]["linear.weight"],
+    )
+    assert loaded["optimizer_state_dict"] == payload["optimizer_state_dict"]
+    assert loaded["scheduler_state_dict"] == payload["scheduler_state_dict"]
+    assert torch.equal(
+        loaded["rng_state"]["torch_cpu_rng_state"],
+        payload["rng_state"]["torch_cpu_rng_state"],
+    )
+    assert torch.equal(
+        loaded["augmenter_state"]["generator_state"],
+        payload["augmenter_state"]["generator_state"],
+    )
+    assert torch.equal(
+        loaded["data_loader_state"]["train_generator_state"],
+        payload["data_loader_state"]["train_generator_state"],
+    )
+    assert _own_temporaries(checkpoint_path) == []
