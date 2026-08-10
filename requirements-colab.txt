@@ -5,49 +5,49 @@
 #
 # IMPORTANTE:
 # - PyTorch no se fija aquí porque Google Colab ya suele incluir una versión.
-# - PyTorch Geometric debe instalarse después de comprobar la versión real de
-#   Python, PyTorch y CUDA disponible en la sesión.
-# - No añadir versiones arbitrarias de torch, torch-geometric, torch-scatter,
+# - PyTorch Geometric se instala únicamente después de comprobar la versión
+#   real de Python, PyTorch y CUDA disponible en la sesión.
+# - No añadir versiones arbitrarias de torch, torch-scatter,
 #   torch-sparse, torch-cluster o torch-spline-conv sin verificar primero su
 #   compatibilidad con el entorno.
-# - El notebook 00_validar_entorno.ipynb deberá registrar las versiones
-#   utilizadas en cada ejecución y en run_manifest.json.
+# - El notebook maestro registra las versiones utilizadas en cada ejecución;
+#   el trainer registra Python, PyTorch y PyG en run_manifest.json.
 
 # Cálculo científico y manipulación de datos
-numpy
-pandas
-scipy
+numpy>=1.24,<3
+pandas>=2,<3
+scipy>=1.10,<2
 
 # Machine learning clásico, métricas y baselines
-scikit-learn
+scikit-learn>=1.3,<2
 
 # Visualización
-matplotlib
+matplotlib>=3.7,<4
 
 # Lectura y escritura de grafos HDF5
-h5py
+h5py>=3.9,<4
 
 # Configuración YAML
-PyYAML
+PyYAML>=6,<7
 
 # Barras de progreso
-tqdm
+tqdm>=4.65,<5
 
 # Grafos, vecindarios y análisis de red
-networkx
+networkx>=3,<4
 
 # Reducción dimensional para visualización
-umap-learn
+umap-learn>=0.5,<1
 
 # Tests
-pytest
+pytest>=7,<10
 
 # Utilidades recomendadas para configuración, validación y CLI
-typing-extensions
-packaging
+typing-extensions>=4.8,<5
+packaging>=23,<26
 
 # Registro y monitorización del entrenamiento
-tensorboard
+tensorboard>=2.14,<3
 
 # Dependencias opcionales del proyecto.
 # Descomentar únicamente cuando el módulo correspondiente se implemente y pruebe.
@@ -65,7 +65,10 @@ tensorboard
 # ---------------------------------------------------------------------------
 # PyTorch y PyTorch Geometric
 # ---------------------------------------------------------------------------
-# No incluir aquí hasta validar la sesión de Colab.
+# PyTorch se conserva desde el runtime de Colab y se valida antes de instalar.
+# PyG se obtiene de PyPI dentro de un rango mayor compatible; no se seleccionan
+# manualmente wheels CUDA ni extensiones compiladas no verificadas.
+torch-geometric>=2.5,<3
 #
 # Comprobación mínima:
 #
@@ -77,12 +80,8 @@ tensorboard
 #   print("CUDA de PyTorch:", torch.version.cuda)
 #   print("CUDA disponible:", torch.cuda.is_available())
 #
-# Después debe instalarse una versión compatible de PyTorch Geometric siguiendo
-# la documentación oficial correspondiente a la versión detectada.
-#
-# Paquetes que pueden ser necesarios según la combinación elegida:
-#
-# torch-geometric
+# Extensiones opcionales que pueden ser necesarias para futuras operaciones
+# PyG, pero que el pipeline productivo actual no requiere directamente:
 # torch-scatter
 # torch-sparse
 # torch-cluster
@@ -90,7 +89,7 @@ tensorboard
 #
 # La instalación final validada deberá registrarse en:
 #
-# - notebooks/00_validar_entorno.ipynb
+# - notebooks/model_b_colab_master.ipynb
 # - README.md
 # - run_manifest.json
 # - environment.json
