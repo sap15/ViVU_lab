@@ -287,6 +287,9 @@ def save_checkpoint(
     payload = {
         "format_version": 1,
         "run_id": run_id,
+        "architecture": str(
+            dict(resolved_config).get("model", {}).get("architecture", "model_b")
+        ),
         "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
         "scheduler_state_dict": None if scheduler is None else scheduler.state_dict(),

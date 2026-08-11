@@ -12,7 +12,11 @@ from gnn_siamese.data.model_a_pair_augmentations import (
     ModelAPairAugmenter,
 )
 from gnn_siamese.models.delta_block import NodeDeltaBlock
-from gnn_siamese.models.multiscale_pooling_a import ModelAMultiscalePooling
+from gnn_siamese.models.multiscale_pooling_a import (
+    ModelAMultiscalePooling,
+    aligned_selection_mask,
+    indices_to_mask,
+)
 from gnn_siamese.models.multiscale_relational_a import ModelAMultiscaleRelational
 
 
@@ -278,4 +282,132 @@ class ModelATwoView(nn.Module):
             z_delta_pair_view2=output2.z_delta_pair,
             augmentation_metadata_view1=view1.augmentation_metadata,
             augmentation_metadata_view2=view2.augmentation_metadata,
+        )
+
+
+@dataclass(frozen=True)
+class ModelANodalMultiscalePairOutput:
+    """Stable trainer-facing output of the complete Model A route."""
+
+    h_pair_delta_view1: Tensor
+    h_pair_delta_view2: Tensor
+    z_delta_pair_view1: Tensor
+    z_delta_pair_view2: Tensor
+    z_instance_pair_view1: Tensor
+    z_instance_pair_view2: Tensor
+    z_delta_local_view1: Tensor | None
+    z_delta_local_view2: Tensor | None
+    active_scales: tuple[str, ...]
+    scale_order: tuple[str, ...]
+    loss: Tensor
+    valid_negative_counts: Tensor
+    two_view_output: ModelATwoViewOutput
+
+    @property
+    def h_pair_delta(self) -> Tensor:
+        return self.h_pair_delta_view1
+
+    @property
+    def z_delta_pair(self) -> Tensor:
+        return self.z_delta_pair_view1
+
+    @property
+    def z_instance_pair(self) -> Tensor:
+        return self.z_instance_pair_view1
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "h_pair_delta": self.h_pair_delta,
+            "z_delta_pair": self.z_delta_pair,
+            "z_instance_pair": self.z_instance_pair,
+            "h_pair_delta_view1": self.h_pair_delta_view1,
+            "h_pair_delta_view2": self.h_pair_delta_view2,
+            "z_delta_pair_view1": self.z_delta_pair_view1,
+            "z_delta_pair_view2": self.z_delta_pair_view2,
+            "z_instance_pair_view1": self.z_instance_pair_view1,
+            "z_instance_pair_view2": self.z_instance_pair_view2,
+            "active_scales": self.active_scales,
+            "scale_order": self.scale_order,
+            "loss": self.loss,
+            "valid_negative_counts": self.valid_negative_counts,
+        }
+        if self.z_delta_local_view1 is not None:
+            payload["z_delta_local_view1"] = self.z_delta_local_view1
+            payload["z_delta_local_view2"] = self.z_delta_local_view2
+        return payload
+
+
+class ModelANodalMultiscalePair(nn.Module):
+    """Final Model A architecture, kept independent from Model B."""
+
+    architecture_name = "model_a_nodal_multiscale_pair"
+
+    def __init__(self, *, two_view_model: ModelATwoView, contrastive: nn.Module) -> None:
+        super().__init__()
+        self.two_view_model = two_view_model
+        self.contrastive = contrastive
+
+    @property
+    def pair_fusion(self) -> nn.Module:
+        return self.two_view_model.one_view_model.multiscale_relational.pair_fusion
+
+    @property
+    def projection_pair_a(self) -> nn.Module:
+        return self.contrastive.projection_head
+
+    def forward(self, pair_batch: object, *, run_seed: int, epoch: int) -> ModelANodalMultiscalePairOutput:
+        mutation_mut = pair_batch.graph_mut.is_mutation.bool()
+        mutation_delta = mutation_mut[pair_batch.mut_aligned_index]
+        mutation_wt = mutation_mut.new_zeros(pair_batch.graph_wt.num_nodes)
+        mutation_wt[pair_batch.wt_aligned_index[mutation_delta]] = True
+        masks: dict[str, Tensor] = {
+            "mutation_mask_MUT": mutation_mut,
+            "mutation_mask_WT": mutation_wt,
+            "mutation_mask_delta": mutation_delta,
+        }
+        active_scales = self.two_view_model.one_view_model.multiscale_pooling.enabled_scales
+        if "local" in active_scales:
+            masks.update(
+                {
+                    "local_mask_MUT": indices_to_mask(
+                        pair_batch.local_mut_aligned_index,
+                        row_count=pair_batch.graph_mut.num_nodes,
+                        name="local_mut_aligned_index",
+                    ),
+                    "local_mask_WT": indices_to_mask(
+                        pair_batch.local_wt_aligned_index,
+                        row_count=pair_batch.graph_wt.num_nodes,
+                        name="local_wt_aligned_index",
+                    ),
+                    "local_mask_delta": aligned_selection_mask(
+                        pair_batch.mut_aligned_index,
+                        pair_batch.alignment_ptr,
+                        pair_batch.local_mut_aligned_index,
+                        pair_batch.local_alignment_ptr,
+                        num_pairs=pair_batch.batch_size,
+                    ),
+                }
+            )
+        two_view = self.two_view_model(
+            pair_batch,
+            run_seed=run_seed,
+            epoch=epoch,
+            **masks,
+        )
+        positions = [int(item.position) for item in pair_batch.pair_keys]
+        contrastive = self.contrastive(two_view, positions=positions)
+        return ModelANodalMultiscalePairOutput(
+            h_pair_delta_view1=two_view.h_pair_delta_view1,
+            h_pair_delta_view2=two_view.h_pair_delta_view2,
+            z_delta_pair_view1=two_view.z_delta_pair_view1,
+            z_delta_pair_view2=two_view.z_delta_pair_view2,
+            z_instance_pair_view1=contrastive.z_instance_pair_view1,
+            z_instance_pair_view2=contrastive.z_instance_pair_view2,
+            z_delta_local_view1=two_view.view1.z_delta_local,
+            z_delta_local_view2=two_view.view2.z_delta_local,
+            active_scales=two_view.view1.active_scales,
+            scale_order=two_view.view1.scale_order,
+            loss=contrastive.loss,
+            valid_negative_counts=contrastive.valid_negative_counts,
+            two_view_output=two_view,
         )

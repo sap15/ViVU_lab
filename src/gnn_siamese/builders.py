@@ -26,6 +26,10 @@ from gnn_siamese.data.augmentations import (
     GraphViewAugmenter,
     resolve_graph_augmentation_config,
 )
+from gnn_siamese.data.model_a_pair_augmentations import (
+    ModelAPairAugmentationConfig,
+    ModelAPairAugmenter,
+)
 from gnn_siamese.models import (
     EdgeAwareGraphEncoder,
     InstanceProjectionHead,
@@ -34,9 +38,16 @@ from gnn_siamese.models import (
     ProjectionHeadConfig,
     RelationalRepresentation,
     SharedSiameseEncoderModel,
+    ModelANodalMultiscalePair,
+    ModelAOneView,
+    ModelATwoView,
+    ModelAMultiscalePooling,
+    ModelAMultiscaleRelational,
+    ModelAProjectionHead,
+    NodeDeltaBlock,
 )
 from gnn_siamese.losses import NTXentLoss
-from gnn_siamese.training import TotalLossAssembler
+from gnn_siamese.training import ModelAContrastive, TotalLossAssembler
 
 
 class BuilderError(ValueError):
@@ -79,12 +90,12 @@ class TrainingPipeline:
     schema: dict[str, Any]
     split_bundle: SplitBundle
     dataloaders: DataLoadersBundle
-    model: ModelBContrastiveBaseline
+    model: torch.nn.Module
     loss_fn: NTXentLoss
     total_loss_assembler: TotalLossAssembler
     optimizer: torch.optim.Optimizer
     scheduler: Any | None
-    augmenter: GraphViewAugmenter
+    augmenter: GraphViewAugmenter | ModelAPairAugmenter
     device: torch.device
     smoke_data: SmokeDataArtifacts | None = None
     smoke_selection: dict[str, Any] | None = None
@@ -330,11 +341,8 @@ def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, spli
     )
 
 
-def build_model(config: Mapping[str, Any], dataset: MutWtPairDataset) -> ModelBContrastiveBaseline:
+def _build_model_b(config: Mapping[str, Any], dataset: MutWtPairDataset) -> ModelBContrastiveBaseline:
     model_cfg = _require_mapping(config.get("model"), field_name="config.model")
-    architecture = str(model_cfg.get("architecture", "model_b"))
-    if architecture not in {"model_b", "siamese_shared_encoder"}:
-        raise BuilderError(f"Unsupported model.architecture {architecture!r}.")
 
     graph_dim = int(model_cfg.get("graph_dim", 128))
     encoder = EdgeAwareGraphEncoder(
@@ -406,14 +414,116 @@ def build_model(config: Mapping[str, Any], dataset: MutWtPairDataset) -> ModelBC
     return ModelBContrastiveBaseline(siamese)
 
 
-def _validate_model_input_dim(dataset: MutWtPairDataset, model: ModelBContrastiveBaseline) -> None:
+def _build_model_a(config: Mapping[str, Any], dataset: MutWtPairDataset) -> ModelANodalMultiscalePair:
+    model_cfg = _require_mapping(config.get("model"), field_name="config.model")
+    hidden_dim = int(model_cfg.get("hidden_dim", 128))
+    encoder_cfg = _require_mapping(model_cfg.get("encoder_a", {}), field_name="config.model.encoder_a")
+    delta_cfg = _require_mapping(model_cfg.get("node_delta", {}), field_name="config.model.node_delta")
+    scales = tuple(
+        str(value)
+        for value in model_cfg.get("active_scales", ("mutation", "local", "global"))
+    )
+    unsupported_masks = set(scales).difference({"mutation", "local", "global"})
+    if unsupported_masks:
+        raise BuilderError(
+            "Model A cannot enable scales without real batch annotations; "
+            f"no compatible annotation/mask is available for {sorted(unsupported_masks)!r}. "
+            "In particular, domain must remain disabled until a real domain mask is provided."
+        )
+    delta_dim = int(delta_cfg.get("output_dim", hidden_dim))
+    pair_cfg = _require_mapping(model_cfg.get("pair_fusion"), field_name="config.model.pair_fusion")
+    projection_cfg = _require_mapping(
+        model_cfg.get("projection_pair_a"), field_name="config.model.projection_pair_a"
+    )
+    if not bool(pair_cfg.get("enabled", True)):
+        raise BuilderError("Model A final architecture requires model.pair_fusion.enabled=true.")
+    if not bool(projection_cfg.get("enabled", True)):
+        raise BuilderError("Model A contrastive route requires model.projection_pair_a.enabled=true.")
+    if str(pair_cfg.get("input", "h_pair_delta")) != "h_pair_delta":
+        raise BuilderError("Model A pair_fusion input must be 'h_pair_delta'.")
+    if str(projection_cfg.get("input", "z_delta_pair")) != "z_delta_pair":
+        raise BuilderError("Model A projection_pair_a input must be 'z_delta_pair'.")
+    if str(projection_cfg.get("class_name", "ModelAProjectionHead")) != "ModelAProjectionHead":
+        raise BuilderError("Model A projection_pair_a class_name must be 'ModelAProjectionHead'.")
+    pair_output_dim = int(pair_cfg.get("output_dim", 128))
+    one_view = ModelAOneView(
+        shared_encoder=EdgeAwareGraphEncoder(
+            node_input_dim=int(dataset.node_input_dim),
+            edge_input_dim=int(dataset.edge_input_dim),
+            hidden_dim=hidden_dim,
+            num_layers=int(model_cfg.get("num_layers", 3)),
+            edge_mlp_hidden_dim=int(encoder_cfg.get("edge_mlp_hidden_dim", hidden_dim)),
+            fusion_hidden_dim=int(encoder_cfg.get("fusion_hidden_dim", hidden_dim)),
+            graph_output_dim=int(model_cfg.get("graph_dim", hidden_dim)),
+            dropout=float(model_cfg.get("dropout", 0.1)),
+        ),
+        node_delta_block=NodeDeltaBlock(
+            input_dim=hidden_dim,
+            hidden_dim=int(delta_cfg.get("hidden_dim", 2 * hidden_dim)),
+            output_dim=delta_dim,
+            activation=str(delta_cfg.get("activation", "relu")),
+            dropout=float(delta_cfg.get("dropout", 0.0)),
+        ),
+        multiscale_pooling=ModelAMultiscalePooling(enabled_scales=scales),
+        multiscale_relational=ModelAMultiscaleRelational(
+            embedding_dim=delta_dim,
+            active_scales=scales,
+            pair_fusion_enabled=True,
+            pair_fusion_hidden_dim=int(pair_cfg.get("hidden_dim", 256)),
+            pair_fusion_output_dim=pair_output_dim,
+            pair_fusion_activation=str(pair_cfg.get("activation", "relu")),
+            pair_fusion_dropout=float(pair_cfg.get("dropout", 0.1)),
+        ),
+    )
+    augmentation_cfg = _require_mapping(
+        config.get("augmentation_pair_a", {}), field_name="config.augmentation_pair_a"
+    )
+    augmenter = ModelAPairAugmenter(ModelAPairAugmentationConfig(
+        enabled=bool(augmentation_cfg.get("enabled", True)),
+        feature_mask_probability=float(augmentation_cfg.get("feature_mask_probability", 0.1)),
+        allowed_feature_names=tuple(augmentation_cfg.get("allowed_feature_names", ("bsa",))),
+        masked_value=float(augmentation_cfg.get("masked_value", 0.0)),
+    ))
+    loss = build_nt_xent_loss(config)
+    return ModelANodalMultiscalePair(
+        two_view_model=ModelATwoView(one_view_model=one_view, pair_augmenter=augmenter),
+        contrastive=ModelAContrastive(
+            projection_head=ModelAProjectionHead(
+                z_delta_pair_dim=pair_output_dim,
+                hidden_dim=int(projection_cfg.get("hidden_dim", pair_output_dim)),
+                projection_dim=int(projection_cfg.get("output_dim", 64)),
+            ),
+            nt_xent=loss,
+        ),
+    )
+
+
+def build_model(config: Mapping[str, Any], dataset: MutWtPairDataset) -> torch.nn.Module:
+    model_cfg = _require_mapping(config.get("model"), field_name="config.model")
+    architecture = str(model_cfg.get("architecture", "model_b"))
+    if architecture in {"model_b", "siamese_shared_encoder", "model_b_graph_level_relational"}:
+        return _build_model_b(config, dataset)
+    if architecture == "model_a_nodal_multiscale_pair":
+        return _build_model_a(config, dataset)
+    supported = "model_a_nodal_multiscale_pair, model_b_graph_level_relational"
+    raise BuilderError(
+        f"Unsupported model.architecture {architecture!r}; supported architectures: {supported}."
+    )
+
+
+def _validate_model_input_dim(dataset: MutWtPairDataset, model: torch.nn.Module) -> None:
     if not dataset.pairs:
         raise BuilderError("Cannot validate model input dimensions because the dataset has no pairs.")
 
     graph_mut, graph_wt = dataset._load_pair_graphs(dataset.pairs[0])
     mut_dim = int(graph_mut.x.shape[1])
     wt_dim = int(graph_wt.x.shape[1])
-    configured_dim = int(model.siamese_model.shared_encoder.input_projection.in_features)
+    encoder = (
+        model.siamese_model.shared_encoder
+        if isinstance(model, ModelBContrastiveBaseline)
+        else model.two_view_model.one_view_model.shared_encoder
+    )
+    configured_dim = int(encoder.input_projection.in_features)
     if mut_dim != wt_dim:
         raise BuilderError(
             "Mutant and WT node feature dimensions differ during Model B pipeline construction: "
@@ -435,11 +545,11 @@ def _validate_model_input_dim(dataset: MutWtPairDataset, model: ModelBContrastiv
 def build_nt_xent_loss(config: Mapping[str, Any]) -> NTXentLoss:
     loss_cfg = _require_mapping(config.get("loss"), field_name="config.loss")
     if str(loss_cfg.get("main", "nt_xent")) != "nt_xent":
-        raise BuilderError("Model B baseline currently supports only loss.main == 'nt_xent'.")
+        raise BuilderError("The integrated Model A/Model B pipeline supports only loss.main == 'nt_xent'.")
     if str(loss_cfg.get("positive_pair", "same_mutant_augmentations")) != "same_mutant_augmentations":
-        raise BuilderError("Model B baseline requires loss.positive_pair == 'same_mutant_augmentations'.")
+        raise BuilderError("The integrated pipeline requires same-pair augmentations as positives.")
     if bool(loss_cfg.get("use_wt_as_strong_positive", False)):
-        raise BuilderError("Model B baseline forbids WT as a strong positive in NT-Xent.")
+        raise BuilderError("The integrated pipeline forbids WT as a strong positive in NT-Xent.")
     return NTXentLoss(temperature=float(loss_cfg.get("temperature", 0.2)))
 
 
@@ -552,6 +662,12 @@ def build_augmenter(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Gra
         raise BuilderError(str(exc)) from exc
 
 
+def build_training_augmenter(config: Mapping[str, Any], dataset: MutWtPairDataset, model: torch.nn.Module):
+    if isinstance(model, ModelANodalMultiscalePair):
+        return model.two_view_model.pair_augmenter
+    return build_augmenter(config, dataset)
+
+
 def build_training_pipeline(
     config: Mapping[str, Any],
     *,
@@ -587,7 +703,7 @@ def build_training_pipeline(
         stage("building_scheduler")
         scheduler = build_scheduler(config, optimizer)
         stage("building_augmenter")
-        augmenter = build_augmenter(config, dataset_bundle.dataset)
+        augmenter = build_training_augmenter(config, dataset_bundle.dataset, model)
         return TrainingPipeline(
             config=dict(config),
             dataset=dataset_bundle.dataset,
