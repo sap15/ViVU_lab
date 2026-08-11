@@ -45,8 +45,14 @@ def checkout_git_revision(
     revision: str,
     *,
     expected_remote_url: str,
+    fresh_clone: bool = False,
 ) -> dict[str, str]:
-    """Fetch and detach at an unambiguous SHA, tag, or remote branch."""
+    """Fetch and detach at an unambiguous SHA, tag, or remote branch.
+
+    A fresh ``git clone --no-checkout`` has index deletions until its first
+    checkout, so only reused clones are checked for dirtiness before fetch.
+    Every clone is required to be clean after the detached checkout.
+    """
 
     root = Path(repo_root).resolve()
     origin = _git(root, "remote", "get-url", "origin").stdout.strip()
@@ -54,7 +60,7 @@ def checkout_git_revision(
         raise ColabPreflightError(
             f"Unexpected origin URL for controlled clone: expected {expected_remote_url!r}, got {origin!r}."
         )
-    if _git(root, "status", "--porcelain").stdout.strip():
+    if not fresh_clone and _git(root, "status", "--porcelain").stdout.strip():
         raise ColabPreflightError(f"Controlled Colab clone is dirty: {root}")
 
     _git(root, "fetch", "--tags", "--prune", "origin")
@@ -101,6 +107,8 @@ def checkout_git_revision(
         raise ColabPreflightError(
             f"Checked-out commit {commit} does not match resolved revision {expected_commit}."
         )
+    if _git(root, "status", "--porcelain").stdout.strip():
+        raise ColabPreflightError(f"Controlled Colab clone is dirty after checkout: {root}")
     return {
         "requested_revision": requested,
         "revision_type": revision_type,
