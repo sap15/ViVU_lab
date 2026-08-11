@@ -158,6 +158,52 @@ def _git_fixture(tmp_path: Path) -> tuple[Path, Path, Path, str]:
     return remote, seed, clone, first
 
 
+def test_fresh_no_checkout_clone_reaches_clean_expected_commit(tmp_path: Path) -> None:
+    remote, _seed, _clone, expected = _git_fixture(tmp_path)
+    fresh = tmp_path / "fresh-no-checkout"
+    _run_git("clone", "--no-checkout", str(remote), str(fresh))
+    assert _run_git("status", "--porcelain", cwd=fresh).startswith("D ")
+
+    result = checkout_git_revision(
+        fresh,
+        "main",
+        expected_remote_url=str(remote),
+        fresh_clone=True,
+    )
+
+    assert result["commit"] == expected
+    assert _run_git("rev-parse", "HEAD", cwd=fresh) == expected
+    assert _run_git("status", "--porcelain", cwd=fresh) == ""
+
+
+def test_reused_clean_clone_reaches_expected_commit(tmp_path: Path) -> None:
+    remote, _seed, clone, expected = _git_fixture(tmp_path)
+
+    result = checkout_git_revision(clone, "main", expected_remote_url=str(remote))
+
+    assert result["commit"] == expected
+    assert _run_git("rev-parse", "HEAD", cwd=clone) == expected
+    assert _run_git("status", "--porcelain", cwd=clone) == ""
+
+
+def test_reused_dirty_clone_is_rejected_without_replacing_modification(tmp_path: Path) -> None:
+    remote, seed, clone, expected = _git_fixture(tmp_path)
+    changed = clone / "tracked.txt"
+    changed.write_text("user modification\n", encoding="utf-8")
+    (seed / "tracked.txt").write_text("remote advance\n", encoding="utf-8")
+    _run_git("add", "tracked.txt", cwd=seed)
+    _run_git("commit", "-m", "remote advances", cwd=seed)
+    _run_git("push", "origin", "main", cwd=seed)
+
+    with pytest.raises(ColabPreflightError, match="dirty"):
+        checkout_git_revision(clone, "main", expected_remote_url=str(remote))
+
+    assert _run_git("rev-parse", "HEAD", cwd=clone) == expected
+    assert _run_git("rev-parse", "refs/remotes/origin/main", cwd=clone) == expected
+    assert changed.read_text(encoding="utf-8") == "user modification\n"
+    assert _run_git("status", "--porcelain", cwd=clone) == "M tracked.txt"
+
+
 def test_remote_branch_checkout_ignores_stale_local_branch(tmp_path: Path) -> None:
     remote, seed, clone, first = _git_fixture(tmp_path)
     checkout_git_revision(clone, "main", expected_remote_url=str(remote))
