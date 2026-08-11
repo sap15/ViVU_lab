@@ -1,0 +1,84 @@
+extends: base.yaml
+
+project:
+  seed: 123
+
+paths:
+  mutants_hdf5: null
+  wt_companion_hdf5: null
+
+model:
+  architecture: model_a_nodal_multiscale_pair
+  hidden_dim: 128
+  graph_dim: 128
+  num_layers: 3
+  dropout: 0.1
+  active_scales:
+    - mutation
+    - local
+    # domain queda desactivada: no existe todavía una máscara de dominio real.
+    - global
+  encoder_a:
+    edge_mlp_hidden_dim: 128
+    fusion_hidden_dim: 128
+  node_delta:
+    hidden_dim: 256
+    output_dim: 128
+    activation: relu
+    dropout: 0.0
+  pair_fusion:
+    enabled: true
+    input: h_pair_delta
+    hidden_dim: 256
+    output_dim: 128
+    activation: relu
+    dropout: 0.1
+  projection_pair_a:
+    enabled: true
+    class_name: ModelAProjectionHead
+    input: z_delta_pair
+    hidden_dim: 128
+    output_dim: 64
+
+augmentation_pair_a:
+  enabled: true
+  feature_mask_probability: 0.1
+  allowed_feature_names:
+    - bsa
+    - hse
+    - hydrophobicity
+    - res_charge
+    - res_depth
+    - res_mass
+    - res_pI
+    - rsa
+    - sasa
+  masked_value: 0.0
+
+training:
+  device: cpu
+  epochs: 3
+  batch_size: 4
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  scheduler: none
+  num_workers: 0
+
+loss:
+  main: nt_xent
+  positive_pair: same_mutant_augmentations
+  use_wt_as_strong_positive: false
+  temperature: 0.2
+  lambda_wt: 0.0
+  lambda_delta: 0.0
+
+split:
+  type: leave_position_out
+  validation_fraction: 0.25
+  test_fraction: 0.25
+  persist_path: runs/model_a_multiscale/split_leave_position_out.json
+  allow_create: true
+
+outputs:
+  model_name: model_a_nodal_multiscale_pair

@@ -33,6 +33,7 @@ from gnn_siamese.training.model_a_contrastive import (
     ModelAContrastiveOutput,
 )
 from gnn_siamese.training.step import training_step
+from gnn_siamese.training.architecture import ContrastiveBatchOutput, forward_contrastive_batch
 
 __all__ = [
     "TotalLossAssembler",
@@ -61,4 +62,6 @@ __all__ = [
     "save_checkpoint",
     "train_model_b_pipeline",
     "training_step",
+    "ContrastiveBatchOutput",
+    "forward_contrastive_batch",
 ]

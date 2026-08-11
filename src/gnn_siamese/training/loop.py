@@ -139,12 +139,29 @@ def bootstrap_operational_run(
     """Create the run and its readable initializing manifest before pipeline construction."""
 
     outputs_cfg = dict(config.get("outputs", {}))
+    model_cfg = dict(config.get("model", {}))
+    architecture = str(model_cfg.get("architecture", "model_b"))
+    architecture_details = None
+    if architecture == "model_a_nodal_multiscale_pair":
+        pair_fusion = dict(model_cfg.get("pair_fusion", {}))
+        projection_pair_a = dict(model_cfg.get("projection_pair_a", {}))
+        architecture_details = {
+            "pair_fusion": pair_fusion,
+            "pair_fusion_semantics": {"input": "h_pair_delta", "output": "z_delta_pair"},
+            "z_delta_pair_dim": pair_fusion.get("output_dim"),
+            "projection_pair_a": projection_pair_a,
+            "projection_pair_a_class": "ModelAProjectionHead",
+            "projection_pair_a_semantics": {"input": "z_delta_pair", "output": "z_instance_pair"},
+            "z_instance_pair_dim": projection_pair_a.get("output_dim"),
+        }
     layout = _create_unique_run_layout(outputs_cfg)
     layout.checkpoints_dir.mkdir(parents=True, exist_ok=False)
     writer = RunManifestWriter(layout.manifest_path, resolved_config_path=layout.resolved_config_path)
     writer.initialize(
         {
             "run_id": layout.run_id,
+            "architecture": architecture,
+            **({"architecture_details": architecture_details} if architecture_details is not None else {}),
             "status": "initializing",
             "lifecycle": {"stage": "bootstrap"},
             "model_name": str(outputs_cfg.get("model_name", "model_b_graph_level_relational")),
@@ -1015,12 +1032,30 @@ def _train_model_b_pipeline_impl(
                 "augmentations": dict(config.get("augmentation", {})),
                 "pooling": dict(model_cfg.get("pooling", {})),
                 "model": {
+                    "architecture": model_cfg.get("architecture", "model_b"),
                     "hidden_dim": model_cfg.get("hidden_dim"),
                     "graph_dim": model_cfg.get("graph_dim"),
                     "num_layers": model_cfg.get("num_layers"),
                     "projection_instance_enabled": model_cfg.get("projection_instance", {}).get("enabled"),
                     "projection_pair_enabled": model_cfg.get("projection_pair", {}).get("enabled"),
                     "mlp_delta_enabled": model_cfg.get("mlp_delta", {}).get("enabled"),
+                    "pair_fusion": dict(model_cfg.get("pair_fusion", {})),
+                    "pair_fusion_semantics": (
+                        {"input": "h_pair_delta", "output": "z_delta_pair"}
+                        if model_cfg.get("architecture") == "model_a_nodal_multiscale_pair"
+                        else None
+                    ),
+                    "projection_pair_a": dict(model_cfg.get("projection_pair_a", {})),
+                    "projection_pair_a_class": (
+                        "ModelAProjectionHead"
+                        if model_cfg.get("architecture") == "model_a_nodal_multiscale_pair"
+                        else None
+                    ),
+                    "projection_pair_a_semantics": (
+                        {"input": "z_delta_pair", "output": "z_instance_pair"}
+                        if model_cfg.get("architecture") == "model_a_nodal_multiscale_pair"
+                        else None
+                    ),
                 },
             },
             "training": {

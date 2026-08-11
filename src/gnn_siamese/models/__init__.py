@@ -13,6 +13,8 @@ from gnn_siamese.models.model import (
     SharedSiameseEncoderOutput,
 )
 from gnn_siamese.models.model_a import (
+    ModelANodalMultiscalePair,
+    ModelANodalMultiscalePairOutput,
     ModelAOneView,
     ModelAOneViewOutput,
     ModelATwoView,
@@ -49,6 +51,8 @@ __all__ = [
     "InstanceProjectionHead",
     "MLPDelta",
     "MLPPairFusion",
+    "ModelANodalMultiscalePair",
+    "ModelANodalMultiscalePairOutput",
     "ModelAOneView",
     "ModelAOneViewOutput",
     "ModelATwoView",
