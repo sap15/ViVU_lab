@@ -416,6 +416,17 @@ def _build_model_b(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Mode
 
 def _build_model_a(config: Mapping[str, Any], dataset: MutWtPairDataset) -> ModelANodalMultiscalePair:
     model_cfg = _require_mapping(config.get("model"), field_name="config.model")
+    loss_cfg = _require_mapping(config.get("loss", {}), field_name="config.loss")
+    if float(loss_cfg.get("lambda_wt", 0.0)) > 0.0:
+        raise BuilderError(
+            "Model A currently supports only its contrastive loss; "
+            "loss.lambda_wt must be 0 until an explicit Model A Relative-WT route is implemented."
+        )
+    if float(loss_cfg.get("lambda_delta", 0.0)) > 0.0:
+        raise BuilderError(
+            "Model A currently supports only its contrastive loss; "
+            "loss.lambda_delta must be 0 until an explicit Model A Delta-loss route is implemented."
+        )
     hidden_dim = int(model_cfg.get("hidden_dim", 128))
     encoder_cfg = _require_mapping(model_cfg.get("encoder_a", {}), field_name="config.model.encoder_a")
     delta_cfg = _require_mapping(model_cfg.get("node_delta", {}), field_name="config.model.node_delta")
@@ -446,17 +457,28 @@ def _build_model_a(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Mode
     if str(projection_cfg.get("class_name", "ModelAProjectionHead")) != "ModelAProjectionHead":
         raise BuilderError("Model A projection_pair_a class_name must be 'ModelAProjectionHead'.")
     pair_output_dim = int(pair_cfg.get("output_dim", 128))
+    shared_encoder = EdgeAwareGraphEncoder(
+        node_input_dim=int(dataset.node_input_dim),
+        edge_input_dim=int(dataset.edge_input_dim),
+        hidden_dim=hidden_dim,
+        num_layers=int(model_cfg.get("num_layers", 3)),
+        edge_mlp_hidden_dim=int(encoder_cfg.get("edge_mlp_hidden_dim", hidden_dim)),
+        fusion_hidden_dim=int(encoder_cfg.get("fusion_hidden_dim", hidden_dim)),
+        graph_output_dim=int(model_cfg.get("graph_dim", hidden_dim)),
+        dropout=float(model_cfg.get("dropout", 0.1)),
+    )
+    # Model A consumes the shared encoder's nodal output and performs its own
+    # multiscale pooling/fusion.  The graph-level fusion submodules are not on
+    # its forward path, so they must not remain nominally trainable.
+    for module in (
+        shared_encoder.pre_fusion_norm,
+        shared_encoder.mlp_fusion,
+        shared_encoder.post_fusion_norm,
+    ):
+        for parameter in module.parameters():
+            parameter.requires_grad_(False)
     one_view = ModelAOneView(
-        shared_encoder=EdgeAwareGraphEncoder(
-            node_input_dim=int(dataset.node_input_dim),
-            edge_input_dim=int(dataset.edge_input_dim),
-            hidden_dim=hidden_dim,
-            num_layers=int(model_cfg.get("num_layers", 3)),
-            edge_mlp_hidden_dim=int(encoder_cfg.get("edge_mlp_hidden_dim", hidden_dim)),
-            fusion_hidden_dim=int(encoder_cfg.get("fusion_hidden_dim", hidden_dim)),
-            graph_output_dim=int(model_cfg.get("graph_dim", hidden_dim)),
-            dropout=float(model_cfg.get("dropout", 0.1)),
-        ),
+        shared_encoder=shared_encoder,
         node_delta_block=NodeDeltaBlock(
             input_dim=hidden_dim,
             hidden_dim=int(delta_cfg.get("hidden_dim", 2 * hidden_dim)),

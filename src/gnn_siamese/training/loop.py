@@ -28,6 +28,7 @@ from gnn_siamese.training.checkpointing import (
     save_checkpoint_payload_atomic,
 )
 from gnn_siamese.training.gradient_audit import create_gradient_audit, finalize_gradient_audit
+from gnn_siamese.training.architecture import forward_contrastive_batch
 from gnn_siamese.training.losses import TotalLossAssembler
 from gnn_siamese.training.step import training_step
 from gnn_siamese.utils.manifest import (
@@ -84,7 +85,7 @@ class _PreparedBatch:
 
 @dataclass(frozen=True)
 class BaselineEpochOutput:
-    """One train or validation epoch summary for the integrated Model B baseline."""
+    """One train or validation epoch summary for the shared A/B pipeline."""
 
     phase: str
     mean_loss: float
@@ -101,7 +102,7 @@ class BaselineEpochOutput:
 
 @dataclass(frozen=True)
 class ModelBTrainingOutput:
-    """Structured output for the baseline end-to-end Model B training loop."""
+    """Structured output retained under its historical public name."""
 
     train_history: list[BaselineEpochOutput]
     validation_history: list[BaselineEpochOutput]
@@ -154,7 +155,7 @@ def bootstrap_operational_run(
             "projection_pair_a_semantics": {"input": "z_delta_pair", "output": "z_instance_pair"},
             "z_instance_pair_dim": projection_pair_a.get("output_dim"),
         }
-    layout = _create_unique_run_layout(outputs_cfg)
+    layout = _create_unique_run_layout(outputs_cfg, architecture=architecture)
     layout.checkpoints_dir.mkdir(parents=True, exist_ok=False)
     writer = RunManifestWriter(layout.manifest_path, resolved_config_path=layout.resolved_config_path)
     writer.initialize(
@@ -164,7 +165,7 @@ def bootstrap_operational_run(
             **({"architecture_details": architecture_details} if architecture_details is not None else {}),
             "status": "initializing",
             "lifecycle": {"stage": "bootstrap"},
-            "model_name": str(outputs_cfg.get("model_name", "model_b_graph_level_relational")),
+            "model_name": _resolve_model_name(outputs_cfg, architecture=architecture),
             "configuration": {
                 "config_path_provenance": str(Path(config_path).resolve()),
                 "resolved_config": {key: value for key, value in config.items() if not str(key).startswith("__")},
@@ -244,6 +245,8 @@ def _resolve_device(requested: str | torch.device | None) -> torch.device:
 
 def _move_to_device(value: Any, device: torch.device) -> Any:
     if isinstance(value, Tensor):
+        return value.to(device)
+    if hasattr(value, "to") and callable(value.to):
         return value.to(device)
     if isinstance(value, Mapping):
         return {key: _move_to_device(item, device) for key, item in value.items()}
@@ -502,8 +505,15 @@ def run_model_b_epoch(
     gradient_trackers: Mapping[str, Any] | None = None,
     gradient_clip_norm: float | None = None,
     stop_requested: Callable[[], None] | None = None,
+    run_seed: int = 0,
+    epoch: int = 0,
+    contrastive_loss_fn: NTXentLoss | None = None,
 ) -> BaselineEpochOutput:
-    """Run one train or validation epoch for the integrated Model B baseline."""
+    """Run one train or validation epoch through the shared A/B adapter.
+
+    The historical name remains public for Model B compatibility.  New code
+    should use :func:`run_contrastive_epoch`.
+    """
 
     runtime_device = _resolve_device(device)
     is_training = optimizer is not None
@@ -536,11 +546,34 @@ def run_model_b_epoch(
                     f"{phase} batch is contrastively degenerate: batch_size={batch_size}, expected >= 2."
                 )
 
-            model_inputs = _prepare_model_b_views(batch, augmenter=augmenter, device=runtime_device)
+            batch = _move_to_device(batch, runtime_device)
             if is_training:
                 optimizer.zero_grad(set_to_none=True)
-            output = model(**model_inputs)
-            if isinstance(loss_fn, TotalLossAssembler):
+            adapter_output = forward_contrastive_batch(
+                model,
+                batch,
+                augmenter=augmenter,
+                loss_fn=(
+                    contrastive_loss_fn
+                    or (loss_fn.nt_xent if isinstance(loss_fn, TotalLossAssembler) else loss_fn)
+                ),
+                run_seed=int(run_seed),
+                epoch=int(epoch),
+            )
+            output = adapter_output.model_output
+            if adapter_output.architecture == "model_a_nodal_multiscale_pair":
+                if adapter_output.loss is None:
+                    raise RuntimeError("Model A dispatcher did not return its contrastive loss.")
+                loss = adapter_output.loss
+                component_totals["nt_xent"] += float(loss.detach().cpu().item()) * batch_size
+                active_components_seen.add("nt_xent")
+                inactive_components_seen.update({"relative_wt", "delta"})
+                valid_counts = getattr(output, "valid_negative_counts", None)
+                if isinstance(valid_counts, Tensor) and valid_counts.numel() > 0:
+                    metric_values["valid_negatives_mean"].append(
+                        float(valid_counts.detach().float().mean().cpu().item())
+                    )
+            elif isinstance(loss_fn, TotalLossAssembler):
                 assembled = loss_fn(**_build_model_b_loss_inputs(batch, output, loss_assembler=loss_fn, device=runtime_device))
                 loss = assembled.loss
                 for name, component in assembled.components.items():
@@ -601,6 +634,12 @@ def run_model_b_epoch(
         inactive_components=sorted(inactive_components_seen),
         skipped_components=sorted(skipped_components_seen),
     )
+
+
+def run_contrastive_epoch(*args: Any, **kwargs: Any) -> BaselineEpochOutput:
+    """Architecture-neutral entrypoint preserving the historical patch seam."""
+
+    return run_model_b_epoch(*args, **kwargs)
 
 
 def fit_model_b_baseline(
@@ -894,7 +933,7 @@ def fit(
     )
 
 
-def _train_model_b_pipeline_impl(
+def _train_contrastive_pipeline_impl(
     pipeline: Any,
     *,
     config_path: str | Path,
@@ -940,10 +979,11 @@ def _train_model_b_pipeline_impl(
 
     metrics_writer = MetricsJsonlWriter(layout.metrics_path)
 
+    architecture = str(model_cfg.get("architecture", "model_b"))
     active_loss_components = ["nt_xent"]
-    if float(loss_cfg.get("lambda_wt", 0.0)) > 0.0:
+    if architecture != "model_a_nodal_multiscale_pair" and float(loss_cfg.get("lambda_wt", 0.0)) > 0.0:
         active_loss_components.append("relative_wt")
-    if float(loss_cfg.get("lambda_delta", 0.0)) > 0.0:
+    if architecture != "model_a_nodal_multiscale_pair" and float(loss_cfg.get("lambda_delta", 0.0)) > 0.0:
         active_loss_components.append("delta")
     manifest_writer.set_stage("fingerprinting_hdf5")
     hdf5_content_fingerprint = fingerprint_hdf5_inputs(
@@ -977,7 +1017,7 @@ def _train_model_b_pipeline_impl(
         {
             "run_id": run_id,
             "architecture": str(model_cfg.get("architecture", "model_b")),
-            "model_name": str(outputs_cfg.get("model_name", "model_b_graph_level_relational")),
+            "model_name": _resolve_model_name(outputs_cfg, architecture=architecture),
             "code": collect_git_metadata(),
             "environment": collect_environment_metadata(str(pipeline.device)),
             "data": {
@@ -1029,13 +1069,26 @@ def _train_model_b_pipeline_impl(
                 "node_feature_names": list(pipeline.dataset.node_feature_names),
                 "edge_feature_names": list(pipeline.dataset.edge_feature_names),
                 "graph_feature_names": list(getattr(pipeline.dataset, "graph_feature_names", [])),
-                "augmentations": dict(config.get("augmentation", {})),
+                "augmentations": dict(
+                    config.get("augmentation_pair_a", {})
+                    if architecture == "model_a_nodal_multiscale_pair"
+                    else config.get("augmentation", {})
+                ),
                 "pooling": dict(model_cfg.get("pooling", {})),
                 "model": {
                     "architecture": model_cfg.get("architecture", "model_b"),
                     "hidden_dim": model_cfg.get("hidden_dim"),
                     "graph_dim": model_cfg.get("graph_dim"),
                     "num_layers": model_cfg.get("num_layers"),
+                    **(
+                        {
+                            "active_scales": list(model_cfg.get("active_scales", [])),
+                            "encoder_a": dict(model_cfg.get("encoder_a", {})),
+                            "node_delta": dict(model_cfg.get("node_delta", {})),
+                        }
+                        if architecture == "model_a_nodal_multiscale_pair"
+                        else {}
+                    ),
                     "projection_instance_enabled": model_cfg.get("projection_instance", {}).get("enabled"),
                     "projection_pair_enabled": model_cfg.get("projection_pair", {}).get("enabled"),
                     "mlp_delta_enabled": model_cfg.get("mlp_delta", {}).get("enabled"),
@@ -1180,7 +1233,7 @@ def _train_model_b_pipeline_impl(
         epochs = int(training_cfg.get("epochs", 1))
         manifest_writer.set_stage("training")
         for epoch in range(start_epoch, epochs + 1):
-            train_epoch = run_model_b_epoch(
+            train_epoch = run_contrastive_epoch(
                 pipeline.model,
                 pipeline.dataloaders.train_loader,
                 pipeline.total_loss_assembler,
@@ -1190,10 +1243,13 @@ def _train_model_b_pipeline_impl(
                 gradient_trackers=gradient_trackers,
                 gradient_clip_norm=training_cfg.get("gradient_clip_norm"),
                 stop_requested=None if interruption_controller is None else interruption_controller.raise_if_requested,
+                run_seed=int(project_cfg.get("seed", 0)),
+                epoch=epoch,
+                contrastive_loss_fn=pipeline.loss_fn,
             )
             train_history.append(train_epoch)
 
-            validation_epoch = run_model_b_epoch(
+            validation_epoch = run_contrastive_epoch(
                 pipeline.model,
                 pipeline.dataloaders.validation_loader,
                 pipeline.total_loss_assembler,
@@ -1201,6 +1257,9 @@ def _train_model_b_pipeline_impl(
                 device=pipeline.device,
                 augmenter=pipeline.augmenter,
                 stop_requested=None if interruption_controller is None else interruption_controller.raise_if_requested,
+                run_seed=int(project_cfg.get("seed", 0)),
+                epoch=epoch,
+                contrastive_loss_fn=pipeline.loss_fn,
             )
             validation_history.append(validation_epoch)
             global_step += train_epoch.num_batches
@@ -1358,7 +1417,7 @@ def _train_model_b_pipeline_impl(
     )
 
 
-def train_model_b_pipeline(
+def train_contrastive_pipeline(
     pipeline: Any,
     *,
     config_path: str | Path,
@@ -1367,14 +1426,14 @@ def train_model_b_pipeline(
     interruption_controller: InterruptionController | None = None,
     defer_completion: bool = False,
 ) -> ModelBTrainingOutput:
-    """Run Model B with one lifecycle guard covering every post-bootstrap operation."""
+    """Run either final architecture with one shared operational lifecycle."""
 
     context = run_context or bootstrap_operational_run(
         dict(pipeline.config),
         config_path=config_path,
     )
     try:
-        return _train_model_b_pipeline_impl(
+        return _train_contrastive_pipeline_impl(
             pipeline,
             config_path=config_path,
             resume_from=resume_from,
@@ -1397,6 +1456,10 @@ def train_model_b_pipeline(
     except BaseException as exc:
         record_run_failure(context, exc)
         raise
+
+
+# Backwards-compatible API for existing Model B integrations.
+train_model_b_pipeline = train_contrastive_pipeline
 
 
 def _epoch_output_to_dict(epoch: BaselineEpochOutput) -> dict[str, Any]:
@@ -1431,9 +1494,20 @@ def _select_monitor_value(
     raise KeyError(f"Configured checkpoint monitor {monitor!r} is unavailable.")
 
 
-def _create_unique_run_layout(outputs_cfg: Mapping[str, Any]) -> RunArtifactsLayout:
+def _resolve_model_name(outputs_cfg: Mapping[str, Any], *, architecture: str) -> str:
+    configured = outputs_cfg.get("model_name")
+    if configured not in (None, ""):
+        return str(configured)
+    if architecture == "model_a_nodal_multiscale_pair":
+        return "model_a_nodal_multiscale_pair"
+    return "model_b_graph_level_relational"
+
+
+def _create_unique_run_layout(
+    outputs_cfg: Mapping[str, Any], *, architecture: str
+) -> RunArtifactsLayout:
     root_dir = outputs_cfg.get("root_dir", "runs")
-    model_name = str(outputs_cfg.get("model_name", "model_b_graph_level_relational"))
+    model_name = _resolve_model_name(outputs_cfg, architecture=architecture)
     manifest_filename = str(outputs_cfg.get("manifest_filename", "run_manifest.json"))
     resolved_config_filename = str(outputs_cfg.get("resolved_config_filename", "config_resolved.yaml"))
     gradient_audit_filename = str(outputs_cfg.get("gradient_audit_filename", "gradient_audit.json"))

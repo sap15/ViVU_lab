@@ -1,4 +1,4 @@
-"""Run the minimal end-to-end Model B baseline from YAML configuration."""
+"""Run the shared end-to-end Model A/B pipeline from YAML configuration."""
 
 from __future__ import annotations
 
@@ -26,6 +26,12 @@ from gnn_siamese.training import (
     train_model_b_pipeline,
 )
 from gnn_siamese.utils.interruptions import InterruptionController
+
+
+def train_contrastive_pipeline(*args: object, **kwargs: object) -> object:
+    """Neutral CLI seam delegating to the backwards-compatible public API."""
+
+    return train_model_b_pipeline(*args, **kwargs)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -188,20 +194,35 @@ def _verify_run_artifacts(
             f"{label} HDF5 content fingerprint mismatch.",
         )
 
+    architecture = str(pipeline.config.get("model", {}).get("architecture", "model_b"))
     encoder_audit = gradient_audit.get("encoder", {})
-    projection_audit = gradient_audit.get("projection_instance", {})
+    projection_name = (
+        "projection_pair_a"
+        if architecture == "model_a_nodal_multiscale_pair"
+        else "projection_instance"
+    )
+    projection_audit = gradient_audit.get(projection_name, {})
     _require(encoder_audit.get("optimizer_group") is not None, "Encoder is not registered in the optimizer.")
-    _require(projection_audit.get("optimizer_group") is not None, "projection_instance is not registered in the optimizer.")
+    _require(projection_audit.get("optimizer_group") is not None, f"{projection_name} is not registered in the optimizer.")
     _require(encoder_audit.get("mean_gradient_norm", 0.0) > 0.0, "Encoder did not receive non-zero gradients.")
-    _require(projection_audit.get("mean_gradient_norm", 0.0) > 0.0, "projection_instance did not receive non-zero gradients.")
+    _require(projection_audit.get("mean_gradient_norm", 0.0) > 0.0, f"{projection_name} did not receive non-zero gradients.")
     _require(not encoder_audit.get("has_nan_or_inf", False), "Encoder gradients contain NaN/Inf.")
-    _require(not projection_audit.get("has_nan_or_inf", False), "projection_instance gradients contain NaN/Inf.")
+    _require(not projection_audit.get("has_nan_or_inf", False), f"{projection_name} gradients contain NaN/Inf.")
     _require(encoder_audit.get("relative_weight_change", 0.0) > 0.0, "Encoder weights did not change.")
-    _require(projection_audit.get("relative_weight_change", 0.0) > 0.0, "projection_instance weights did not change.")
+    _require(projection_audit.get("relative_weight_change", 0.0) > 0.0, f"{projection_name} weights did not change.")
+
+    if architecture == "model_a_nodal_multiscale_pair":
+        for module_name in ("encoder", "node_delta_block", "pair_fusion", "projection_pair_a"):
+            module_audit = gradient_audit.get(module_name, {})
+            _require(module_audit.get("optimizer_group") is not None, f"{module_name} is not registered in the optimizer.")
+            _require(module_audit.get("none_gradient_fraction") == 0.0, f"{module_name} has missing gradients.")
+            _require(module_audit.get("mean_gradient_norm", 0.0) > 0.0, f"{module_name} did not receive non-zero gradients.")
+            _require(not module_audit.get("has_nan_or_inf", False), f"{module_name} gradients contain NaN/Inf.")
+            _require(module_audit.get("relative_weight_change", 0.0) > 0.0, f"{module_name} weights did not change.")
 
     mlp_delta_status = gradient_audit.get("mlp_delta", {}).get("status")
     lambda_delta = float(pipeline.config.get("loss", {}).get("lambda_delta", 0.0))
-    if lambda_delta <= 0.0:
+    if architecture != "model_a_nodal_multiscale_pair" and lambda_delta <= 0.0:
         _require(mlp_delta_status in {"inactive", "not_applicable"}, f"mlp_delta should not be trained when lambda_delta=0, got {mlp_delta_status!r}.")
         _require(manifest.get("z_delta_learned") is False, "z_delta_learned must be false when lambda_delta=0.")
 
@@ -272,7 +293,7 @@ def _run_smoke_end_to_end(
     shared_smoke_data = pipeline.smoke_data
     try:
         try:
-            output = train_model_b_pipeline(
+            output = train_contrastive_pipeline(
                 pipeline,
                 config_path=config_path,
                 resume_from=None,
@@ -314,7 +335,7 @@ def _run_smoke_end_to_end(
         )
         try:
             try:
-                resumed_output = train_model_b_pipeline(
+                resumed_output = train_contrastive_pipeline(
                     resumed_pipeline,
                     config_path=config_path,
                     resume_from=output.last_checkpoint_path,
@@ -401,8 +422,11 @@ def _run_smoke_end_to_end(
     print(f"train_positions={','.join(str(value) for value in initial_checks['train_positions'])}")
     print(f"validation_positions={','.join(str(value) for value in initial_checks['validation_positions'])}")
     print(f"encoder_status={initial_checks['gradient_audit']['encoder']['status']}")
-    print(f"projection_instance_status={initial_checks['gradient_audit']['projection_instance']['status']}")
-    print(f"mlp_delta_status={initial_checks['gradient_audit']['mlp_delta']['status']}")
+    smoke_architecture = str(pipeline.config.get("model", {}).get("architecture", "model_b"))
+    smoke_projection = "projection_pair_a" if smoke_architecture == "model_a_nodal_multiscale_pair" else "projection_instance"
+    print(f"{smoke_projection}_status={initial_checks['gradient_audit'][smoke_projection]['status']}")
+    if smoke_architecture != "model_a_nodal_multiscale_pair":
+        print(f"mlp_delta_status={initial_checks['gradient_audit']['mlp_delta']['status']}")
     print(f"z_delta_learned={str(initial_checks['manifest']['z_delta_learned']).lower()}")
     print(f"manifest_status={initial_checks['manifest']['status']}")
     print(f"resume_manifest_status={resumed_checks['manifest']['status']}")
@@ -441,7 +465,7 @@ def main() -> int:
             controller=controller,
         )
         try:
-            output = train_model_b_pipeline(
+            output = train_contrastive_pipeline(
                 pipeline,
                 config_path=args.config,
                 resume_from=args.resume_from,
