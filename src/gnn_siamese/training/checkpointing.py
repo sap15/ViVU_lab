@@ -205,6 +205,15 @@ def build_resume_compatibility_payload(
         "split_fingerprint": fingerprint_split_definition(split_bundle.split),
         "split_type": str(split_bundle.split.split_type),
     }
+    if str(model_cfg.get("architecture", "model_b")) == "model_a_nodal_multiscale_pair":
+        payload["architecture"]["model_a"] = {
+            "active_scales": _json_safe(list(model_cfg.get("active_scales", []))),
+            "encoder_a": _json_safe(dict(model_cfg.get("encoder_a", {}))),
+            "node_delta": _json_safe(dict(model_cfg.get("node_delta", {}))),
+            "pair_fusion": _json_safe(dict(model_cfg.get("pair_fusion", {}))),
+            "projection_pair_a": _json_safe(dict(model_cfg.get("projection_pair_a", {}))),
+        }
+        payload["augmentations"] = _json_safe(dict(config.get("augmentation_pair_a", {})))
     if hdf5_content_fingerprint is not None:
         payload["hdf5_content_fingerprint"] = _json_safe(dict(hdf5_content_fingerprint))
     return payload

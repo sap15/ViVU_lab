@@ -17,8 +17,10 @@ from gnn_siamese.training.loop import (
     fit,
     fit_model_b_baseline,
     run_model_b_epoch,
+    run_contrastive_epoch,
     record_run_failure,
     train_model_b_pipeline,
+    train_contrastive_pipeline,
 )
 from gnn_siamese.training.checkpointing import (
     build_legacy_resume_compatibility_payload,
@@ -57,10 +59,12 @@ __all__ = [
     "load_checkpoint",
     "move_optimizer_state_to_device",
     "run_model_b_epoch",
+    "run_contrastive_epoch",
     "record_run_failure",
     "resume_from_checkpoint",
     "save_checkpoint",
     "train_model_b_pipeline",
+    "train_contrastive_pipeline",
     "training_step",
     "ContrastiveBatchOutput",
     "forward_contrastive_batch",

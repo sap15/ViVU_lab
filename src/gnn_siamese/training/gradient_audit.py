@@ -36,6 +36,7 @@ class ModuleAuditTracker:
     connected_losses: list[str]
     optimizer_group: str | None
     status_hint: str
+    require_complete_gradients: bool = False
     parameters: list[tuple[str, torch.nn.Parameter]] = field(init=False)
     initial_weight_vector: torch.Tensor = field(init=False)
     gradient_norms: list[float] = field(default_factory=list)
@@ -99,6 +100,7 @@ class ModuleAuditTracker:
             "connected_losses": list(self.connected_losses),
             "mean_gradient_norm": float(sum(gradient_norms) / len(gradient_norms)) if gradient_norms else 0.0,
             "median_gradient_norm": _median(gradient_norms),
+            "min_gradient_norm": min(gradient_norms) if gradient_norms else 0.0,
             "max_gradient_norm": max(gradient_norms) if gradient_norms else 0.0,
             "none_gradient_fraction": self.none_grad_steps / max(self.total_steps, 1),
             "zero_gradient_fraction": self.zero_grad_steps / max(self.total_steps, 1),
@@ -118,6 +120,8 @@ class ModuleAuditTracker:
             return "failed" if self.status_hint == "active" else "inactive"
         if self.has_nan_or_inf:
             return "failed"
+        if self.require_complete_gradients and self.none_grad_steps > 0:
+            return "failed"
         if not self.gradient_norms:
             return "failed"
         if max(self.gradient_norms) <= 0.0:
@@ -128,6 +132,30 @@ class ModuleAuditTracker:
 
 
 def build_module_registry(model: torch.nn.Module, loss_weights: Mapping[str, float]) -> dict[str, dict[str, Any]]:
+    if getattr(model, "architecture_name", None) == "model_a_nodal_multiscale_pair":
+        one_view = model.two_view_model.one_view_model
+        return {
+            "encoder": {
+                "module": one_view.shared_encoder,
+                "connected_losses": _connected_losses(["nt_xent"], loss_weights),
+                "status_hint": "active",
+            },
+            "node_delta_block": {
+                "module": one_view.node_delta_block,
+                "connected_losses": _connected_losses(["nt_xent"], loss_weights),
+                "status_hint": "active",
+            },
+            "pair_fusion": {
+                "module": model.pair_fusion,
+                "connected_losses": _connected_losses(["nt_xent"], loss_weights),
+                "status_hint": "active",
+            },
+            "projection_pair_a": {
+                "module": model.projection_pair_a,
+                "connected_losses": _connected_losses(["nt_xent"], loss_weights),
+                "status_hint": "active",
+            },
+        }
     siamese_model = getattr(model, "siamese_model", None)
     shared_encoder = getattr(siamese_model, "shared_encoder", None)
     projection_instance = getattr(siamese_model, "projection_instance", None)
@@ -195,6 +223,28 @@ def create_gradient_audit(
             optimizer_group_by_param_id[id(parameter)] = f"group_{group_index}"
 
     registry = build_module_registry(model, loss_weights)
+    is_model_a = getattr(model, "architecture_name", None) == "model_a_nodal_multiscale_pair"
+    if is_model_a:
+        model_trainable_ids = {id(parameter) for parameter in model.parameters() if parameter.requires_grad}
+        audited_trainable_ids = {
+            id(parameter)
+            for metadata in registry.values()
+            for parameter in metadata["module"].parameters()
+            if parameter.requires_grad
+        }
+        if audited_trainable_ids != model_trainable_ids:
+            missing = len(model_trainable_ids - audited_trainable_ids)
+            extra = len(audited_trainable_ids - model_trainable_ids)
+            raise ValueError(
+                "Model A gradient audit registry must cover every trainable parameter exactly; "
+                f"missing_parameter_objects={missing}, extra_parameter_objects={extra}."
+            )
+        optimizer_parameter_ids = set(optimizer_group_by_param_id)
+        if not model_trainable_ids.issubset(optimizer_parameter_ids):
+            raise ValueError(
+                "Model A optimizer must contain every trainable parameter before gradient auditing; "
+                f"missing_parameter_objects={len(model_trainable_ids - optimizer_parameter_ids)}."
+            )
     trackers: dict[str, ModuleAuditTracker] = {}
     for name, metadata in registry.items():
         module = metadata["module"]
@@ -205,6 +255,7 @@ def create_gradient_audit(
             connected_losses=list(metadata["connected_losses"]),
             optimizer_group=optimizer_group,
             status_hint=str(metadata["status_hint"]),
+            require_complete_gradients=is_model_a,
         )
     return trackers
 

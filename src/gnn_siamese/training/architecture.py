@@ -14,7 +14,7 @@ from gnn_siamese.models import ModelANodalMultiscalePair, ModelBContrastiveBasel
 @dataclass(frozen=True)
 class ContrastiveBatchOutput:
     architecture: str
-    loss: Tensor
+    loss: Tensor | None
     model_output: Any
 
     def to_dict(self) -> dict[str, Any]:
@@ -48,9 +48,8 @@ def forward_contrastive_batch(
             view2_graph_mut=view2_mut,
             view2_graph_wt=batch.graph_wt,
         )
-        loss = loss_fn(output.z1, output.z2).loss
         return ContrastiveBatchOutput(
-            "model_b_graph_level_relational", loss, output
+            "model_b_graph_level_relational", None, output
         )
     raise TypeError(
         "Unsupported final model type for shared contrastive trainer interface: "
