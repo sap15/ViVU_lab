@@ -1053,3 +1053,47 @@ h_encoder_mut
 `r_delta` es el baseline relacional obligatorio.
 
 `z_delta` solo se acepta cuando exista evidencia de entrenamiento efectivo y comparación favorable frente a `r_delta`.
+
+# A8.4 — control WT nativo, inventario y protocolo posterior
+
+La entrada `residue-srv:A:419:Leucine->Leucine:PKP2_WT` procede de la opción
+explícita `--include-wt-graph` del generador HDF5. Se conserva físicamente y se
+clasifica como `native_wt_control`, con rol `evaluation_control`; queda fuera de
+train, validation, test, sus pérdidas y la construcción de splits, pero sigue
+disponible para inferencia y auditoría. El inventario científico queda formado
+por 483 variantes biológicas y un control WT nativo.
+
+El Modelo A operativo de A8 usa exactamente las escalas `mutation`, `local` y
+`global`. La escala `domain` está implementada, pero permanece desactivada de
+forma deliberada porque el batch real todavía no proporciona una máscara de
+dominio validada. A8/A9 no deben describirse como ejecuciones de cuatro escalas.
+
+Después de entrenar un piloto, el sanity control WT se ejecutará con el modelo
+congelado, en `eval()`, sin augmentations estocásticas y fuera de todos los
+splits. Se compararán los deltas explícitos por escala, `H_delta` y sus
+resúmenes, `h_pair_delta`, `z_delta_pair` y `z_instance_pair` contra la
+distribución de las 483 variantes. El criterio no será `z_delta_pair == 0` ni
+norma cero, porque esa representación incluye componentes absolutos y una MLP
+aprendida.
+
+### A8.4 — split completo común A/B congelado
+
+El artefacto único `splits/leave_position_out_seed_42.json` se creó sobre las
+483 variantes biológicas, excluyendo el control WT nativo `PKP2_WT`. Usa
+`leave_position_out`, seed 42 y fracciones objetivo 0.15/0.15 aplicadas a las
+356 posiciones completas. El resultado es 342/78/63 variantes y 250/53/53
+posiciones en train/validation/test, sin intersecciones de posiciones ni de
+IDs. Modelo A y Modelo B deben cargar este mismo archivo con
+`allow_create=false`; no deben regenerarlo ni mantener copias específicas por
+modelo.
+
+Para A8.5 quedan fijados los papeles de las seeds actuales: `split_seed=42`,
+`run_seed=123`, `dataloader_seed_actual=123` y
+`model_initialization_seed=42`. El campo histórico
+`reproducibility.seed_dataloader=42` no refleja el generador que consume hoy el
+builder y no se corrige en esta fase para evitar un cambio compartido A/B.
+
+El JSON conserva el fingerprint legacy dependiente de las rutas físicas, el
+fingerprint lógico del inventario, el fingerprint de contenido HDF5 y el
+fingerprint de la definición del split. La limitación legacy no se corrige ni
+se reinterpreta retroactivamente.

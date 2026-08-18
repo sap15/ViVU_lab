@@ -16,6 +16,7 @@ from gnn_siamese.builders import build_training_pipeline
 from gnn_siamese.training.loop import BaselineEpochOutput
 from gnn_siamese.training import train_model_b_pipeline
 from tests.model_b_test_utils import build_model_b_config, create_multi_pair_hdf5, write_schema_json
+from gnn_siamese.utils.fingerprints import fingerprint_split_definition
 
 
 def test_manifest_writer_creates_and_updates_run_manifest(tmp_path: Path) -> None:
@@ -119,7 +120,25 @@ def test_train_pipeline_writes_resolved_manifest_fields(tmp_path: Path) -> None:
     assert manifest["model_name"] == "manifest_case"
     assert manifest["configuration"]["resolved_config"]["training"]["epochs"] == 1
     assert manifest["data"]["dataset_fingerprint"]
-    assert manifest["data"]["split_fingerprint"]
+    assert manifest["data"]["split_fingerprint"] == fingerprint_split_definition(
+        pipeline.split_bundle.split
+    )
+    assert manifest["data"]["dataset_fingerprint"] == pipeline.split_bundle.split.dataset_fingerprint
+    assert manifest["data"]["inventory"] == {
+        "hdf5_mutant_input_groups": len(pipeline.dataset.pairs),
+        "biological_variants": len(pipeline.dataset.pairs),
+        "native_wt_controls": 0,
+        "trainable_variants": len(pipeline.dataset.pairs),
+        "native_wt_control_ids": [],
+        "native_wt_control_policy": {
+            "role": "evaluation_control",
+            "used_for_split": False,
+            "used_for_training": False,
+            "used_for_validation": False,
+            "used_for_test_loss": False,
+            "available_for_inference": True,
+        },
+    }
     assert manifest["artifacts"]["best_checkpoint"].endswith("best.pt")
     assert manifest["artifacts"]["last_checkpoint"].endswith("last.pt")
     assert Path(manifest["artifacts"]["resolved_config"]).is_file()
@@ -131,6 +150,21 @@ def test_train_pipeline_writes_resolved_manifest_fields(tmp_path: Path) -> None:
     git_metadata = manifest["code"]
     assert "commit" in git_metadata
     assert git_metadata["working_tree_state"] in {"clean", "dirty", "unknown"}
+    assert git_metadata["git_dirty"] in {True, False, None}
+    assert manifest["data"]["split_source_path"] == str(split_path.resolve())
+    assert manifest["configuration"]["seed_bundle"] == {
+        "project": 123,
+        "run": 123,
+        "split": 123,
+        "python": None,
+        "numpy": None,
+        "torch": None,
+        "cuda": None,
+        "model_initialization": None,
+        "dataloader_configured": None,
+        "dataloader_effective": 123,
+    }
+    assert manifest["artifacts"]["run_root"] == str(Path(output.run_dir).parent)
     assert manifest["z_delta_learned"] is False
 
 
@@ -271,4 +305,4 @@ def test_train_pipeline_marks_interrupted_manifest_and_reraises(tmp_path: Path, 
 
 def test_collect_git_metadata_returns_expected_shape() -> None:
     payload = collect_git_metadata()
-    assert set(payload) == {"commit", "branch", "working_tree_state"}
+    assert set(payload) == {"commit", "branch", "working_tree_state", "git_dirty"}

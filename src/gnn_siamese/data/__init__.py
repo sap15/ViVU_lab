@@ -30,7 +30,12 @@ from gnn_siamese.data.model_a_pair_augmentations import (
     ModelAPairView,
     stable_seed,
 )
-from gnn_siamese.data.dataset import MutWtPairDataset, MutWtPairDatasetError, MutWtPairSample
+from gnn_siamese.data.dataset import (
+    MutWtPairDataset,
+    MutWtPairDatasetError,
+    MutWtPairRecord,
+    MutWtPairSample,
+)
 from gnn_siamese.data.smoke_data import (
     SmokeDataArtifacts,
     build_smoke_schema_payload,
@@ -62,6 +67,8 @@ from gnn_siamese.data.node_pair_alignment import (
     align_node_pair,
 )
 from gnn_siamese.data.pairing import (
+    BIOLOGICAL_VARIANT,
+    NATIVE_WT_CONTROL,
     AmbiguousWTCompanionError,
     IncompleteSignatureError,
     MissingWTCompanionError,
@@ -70,6 +77,7 @@ from gnn_siamese.data.pairing import (
     SignatureParseError,
     VariantSignature,
     build_wt_index,
+    classify_variant_record,
     pair_mutants_with_wt,
     parse_variant_signature,
     resolve_wt_companion,
@@ -92,6 +100,7 @@ __all__ = [
     "AlignedRadialState",
     "AugmentationConfigError",
     "BatchedGraphComponents",
+    "BIOLOGICAL_VARIANT",
     "FeatureSelectionError",
     "GraphAugmentationConfig",
     "GraphViewAugmenter",
@@ -110,6 +119,7 @@ __all__ = [
     "MutWtPairCollateError",
     "MutWtPairDataset",
     "MutWtPairDatasetError",
+    "MutWtPairRecord",
     "MutWtPairSample",
     "ModelAAugmentationExampleMetadata",
     "ModelAPairAugmentationConfig",
@@ -120,6 +130,7 @@ __all__ = [
     "NodePairAlignment",
     "NodePairAlignmentError",
     "NodePresence",
+    "NATIVE_WT_CONTROL",
     "NodeFeatureSlice",
     "LocalAlignmentView",
     "DuplicateResidueKeyError",
@@ -133,6 +144,7 @@ __all__ = [
     "VariantSignature",
     "SmokeDataArtifacts",
     "build_wt_index",
+    "classify_variant_record",
     "align_node_pair",
     "build_is_mutation_channel",
     "build_leave_position_out_split",
