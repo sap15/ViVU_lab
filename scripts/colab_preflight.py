@@ -1,4 +1,4 @@
-"""Reusable, offline-testable preflight helpers for the Model B Colab workflow."""
+"""Reusable, offline-testable preflight helpers for Model A/B Colab workflows."""
 
 from __future__ import annotations
 
@@ -326,6 +326,225 @@ def validate_runtime_hdf5(
         "pair_count": len(bundle.dataset.pairs),
         "mutants_hdf5": str(Path(bundle.dataset.mutant_h5_path).resolve()),
         "wt_companion_hdf5": str(Path(bundle.dataset.wt_h5_path).resolve()),
+    }
+
+
+MODEL_A_ARCHITECTURE = "model_a_nodal_multiscale_pair"
+MODEL_A_PILOT_SPLIT = "splits/leave_position_out_seed_42.json"
+MODEL_A_EXPECTED_PARTITIONS = {"train": 342, "validation": 78, "test": 63}
+
+
+def validate_model_a_dataset_identity(
+    actual: Mapping[str, Any],
+    *,
+    frozen_split_path: str | Path,
+) -> dict[str, Any]:
+    """Match HDF5 bytes against the identity frozen with the A8.4 split."""
+
+    split_path = Path(frozen_split_path).resolve()
+    try:
+        split_payload = json.loads(split_path.read_text(encoding="utf-8"))
+        expected = split_payload["audit_metadata"]["hdf5_content_fingerprint"]
+        expected_files = {record["role"]: record for record in expected["files"]}
+        actual_files = {record["role"]: record for record in actual["files"]}
+        expected_combined = expected["combined"]
+        actual_combined = actual["combined"]
+        identity = {
+            "expected_mutant_sha256": expected_files["mutants"]["digest"],
+            "actual_mutant_sha256": actual_files["mutants"]["digest"],
+            "expected_wt_sha256": expected_files["wt_companion"]["digest"],
+            "actual_wt_sha256": actual_files["wt_companion"]["digest"],
+            "expected_combined_fingerprint": expected_combined["digest"],
+            "actual_combined_fingerprint": actual_combined["digest"],
+        }
+    except (KeyError, TypeError, json.JSONDecodeError) as exc:
+        raise ColabPreflightError(
+            f"Frozen Model A split lacks a usable A8.4 HDF5 content identity: {split_path}"
+        ) from exc
+
+    mismatches = {
+        field: value
+        for field, value in (
+            ("mutants", (identity["expected_mutant_sha256"], identity["actual_mutant_sha256"])),
+            ("wt_companion", (identity["expected_wt_sha256"], identity["actual_wt_sha256"])),
+            (
+                "combined",
+                (
+                    identity["expected_combined_fingerprint"],
+                    identity["actual_combined_fingerprint"],
+                ),
+            ),
+        )
+        if value[0] != value[1]
+    }
+    if mismatches:
+        raise ColabPreflightError(
+            f"Model A dataset identity mismatch against frozen A8.4 split: {mismatches}"
+        )
+    return {
+        **identity,
+        "dataset_identity_status": "PASS",
+        "identity_source": str(split_path),
+    }
+
+
+def validate_model_a_preflight(
+    config_path: str | Path,
+    *,
+    repo_root: str | Path = REPO_ROOT,
+    expected_commit: str | None = None,
+    mode: str = "fresh",
+    resume_from: str | Path | None = None,
+) -> dict[str, Any]:
+    """Fail closed unless a resolved config preserves the frozen A8.5 contract."""
+
+    from gnn_siamese.builders import build_dataset_bundle, build_split_bundle
+    from gnn_siamese.config import load_config
+    from gnn_siamese.utils.fingerprints import fingerprint_hdf5_inputs
+
+    if mode not in {"fresh", "resume"}:
+        raise ColabPreflightError(f"Model A mode must be 'fresh' or 'resume', got {mode!r}.")
+    if mode == "fresh" and resume_from is not None:
+        raise ColabPreflightError("Fresh Model A runs must not receive a resume checkpoint.")
+    if mode == "resume" and resume_from is None:
+        raise ColabPreflightError("Model A resume requires an explicit last.pt checkpoint.")
+
+    root = Path(repo_root).resolve()
+    config = load_config(config_path)
+    config["__config_path__"] = str(Path(config_path).resolve())
+    required = {
+        "model.architecture": MODEL_A_ARCHITECTURE,
+        "training.batch_size": 4,
+        "split.type": "leave_position_out",
+        "split.seed": 42,
+        "split.persist_path": MODEL_A_PILOT_SPLIT,
+        "split.allow_create": False,
+        "loss.main": "nt_xent",
+        "loss.lambda_wt": 0.0,
+        "loss.lambda_delta": 0.0,
+    }
+    mismatches = {
+        key: {"expected": expected, "actual": _get_nested(config, key)}
+        for key, expected in required.items()
+        if _get_nested(config, key) != expected
+    }
+    if mismatches:
+        raise ColabPreflightError(f"Model A A8.5 scientific contract mismatch: {mismatches}")
+    epochs = int(_get_nested(config, "training.epochs"))
+    if (mode == "fresh" and epochs != 5) or (mode == "resume" and epochs < 6):
+        raise ColabPreflightError(
+            "Model A requires 5 epochs for the fresh A8.5 pilot and at least 6 total epochs for resume."
+        )
+
+    scales = list(_get_nested(config, "model.active_scales"))
+    if scales != ["mutation", "local", "global"] or "domain" in scales:
+        raise ColabPreflightError(
+            "Model A A8.5 requires active_scales=[mutation, local, global] with domain disabled."
+        )
+    frozen_split = root / MODEL_A_PILOT_SPLIT
+    if not frozen_split.is_file():
+        raise ColabPreflightError(f"Frozen Model A split does not exist: {frozen_split}")
+
+    output_root = Path(str(_get_nested(config, "outputs.root_dir"))).expanduser().resolve()
+    if any(part.lower().startswith("model_b") for part in output_root.parts):
+        raise ColabPreflightError(f"Model A output root overlaps a Model B namespace: {output_root}")
+
+    try:
+        dataset_bundle = build_dataset_bundle(config)
+        split_load_config = deepcopy(config)
+        # Resolve only for the builder call: the serialized runtime config keeps
+        # the repository-relative frozen path as its scientific source of truth.
+        split_load_config["split"]["persist_path"] = str(frozen_split)
+        split_bundle = build_split_bundle(split_load_config, dataset_bundle.dataset)
+    except Exception as exc:
+        raise ColabPreflightError(f"Model A dataset/split validation failed: {exc}") from exc
+    dataset = dataset_bundle.dataset
+    if split_bundle.created:
+        raise ColabPreflightError("Model A preflight unexpectedly created a split.")
+    if Path(split_bundle.split_path).resolve() != frozen_split.resolve():
+        raise ColabPreflightError(
+            f"Model A did not load the frozen repository split: {split_bundle.split_path}"
+        )
+
+    counts = {
+        "train": len(split_bundle.train_indices),
+        "validation": len(split_bundle.validation_indices),
+        "test": len(split_bundle.test_indices),
+    }
+    if counts != MODEL_A_EXPECTED_PARTITIONS:
+        raise ColabPreflightError(
+            f"Model A partition counts mismatch: expected {MODEL_A_EXPECTED_PARTITIONS}, got {counts}."
+        )
+    if len(dataset.pairs) != 483 or len(dataset.native_wt_controls) != 1:
+        raise ColabPreflightError(
+            "Model A requires 483 trainable biological variants and one non-trainable native WT control."
+        )
+    trainable_ids = {pair.variant_id for pair in dataset.pairs}
+    control_ids = {control.variant_id for control in dataset.native_wt_controls}
+    if trainable_ids & control_ids:
+        raise ColabPreflightError("Native WT control leaked into the trainable Model A inventory.")
+
+    assignments = split_bundle.split.assignments_by_partition()
+    variant_sets = {
+        partition: {item.variant_id for item in values}
+        for partition, values in assignments.items()
+    }
+    position_sets = {
+        partition: {int(item.position) for item in values}
+        for partition, values in assignments.items()
+    }
+    partitions = ("train", "validation", "test")
+    for index, left in enumerate(partitions):
+        for right in partitions[index + 1 :]:
+            if variant_sets[left] & variant_sets[right] or position_sets[left] & position_sets[right]:
+                raise ColabPreflightError(f"Model A split leakage detected between {left} and {right}.")
+    if control_ids & set().union(*variant_sets.values()):
+        raise ColabPreflightError("Native WT control appears in a Model A split partition.")
+
+    checkpoint = None
+    if resume_from is not None:
+        checkpoint = Path(resume_from).expanduser().resolve()
+        if checkpoint.name != "last.pt" or not checkpoint.is_file():
+            raise ColabPreflightError(f"Model A resume requires an existing explicit last.pt: {checkpoint}")
+
+    git = git_revision(root, expected_commit) if expected_commit is not None else None
+    fingerprints = fingerprint_hdf5_inputs(
+        mutants_path=dataset.mutant_h5_path,
+        wt_companion_path=dataset.wt_h5_path,
+        dataset_id=str(_get_nested(config, "data.protein_id")),
+    )
+    dataset_identity = validate_model_a_dataset_identity(
+        fingerprints,
+        frozen_split_path=frozen_split,
+    )
+    return {
+        "architecture": MODEL_A_ARCHITECTURE,
+        "config": str(Path(config_path).resolve()),
+        "commit": None if git is None else git["commit"],
+        "device": str(_get_nested(config, "training.device")),
+        "dataset_paths": {
+            "mutants": str(Path(dataset.mutant_h5_path).resolve()),
+            "wt_companion": str(Path(dataset.wt_h5_path).resolve()),
+        },
+        "dataset_fingerprint": fingerprints["combined"],
+        **dataset_identity,
+        "biological_variants": len(dataset.pairs),
+        "native_wt_controls": len(dataset.native_wt_controls),
+        "native_wt_trainable": False,
+        "partitions": counts,
+        "split_seed": 42,
+        "split_allow_create": False,
+        "split_path": str(frozen_split),
+        "split_created": False,
+        "variant_overlaps": 0,
+        "position_overlaps": 0,
+        "active_scales": scales,
+        "domain_enabled": False,
+        "loss": {"main": "nt_xent", "lambda_wt": 0.0, "lambda_delta": 0.0},
+        "run_root": str(output_root),
+        "mode": mode,
+        "epochs": epochs,
+        "resume_checkpoint": None if checkpoint is None else str(checkpoint),
     }
 
 

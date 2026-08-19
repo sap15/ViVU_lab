@@ -332,6 +332,24 @@ def test_staging_copy_failure_cleans_own_temporary(
     assert not list(staging.glob(".*.tmp"))
 
 
+def test_staging_rejects_completed_copy_with_different_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source.hdf5"
+    source.write_bytes(b"source")
+    staging = tmp_path / "staging"
+    destination = staging / "destination.hdf5"
+
+    def corrupted_copy(_source: Path, temporary: Path, *, chunk_size: int) -> None:
+        assert chunk_size > 0
+        temporary.parent.mkdir(parents=True, exist_ok=True)
+        temporary.write_bytes(b"corrupt")
+
+    monkeypatch.setattr("scripts.colab_preflight._stream_copy", corrupted_copy)
+    with pytest.raises(ColabPreflightError, match="does not match its Drive source"):
+        stage_file(source, destination, staging_root=staging, role="mutants")
+
+
 def test_missing_hdf5_has_clear_error(tmp_path: Path) -> None:
     with pytest.raises(ColabPreflightError, match="Missing mutants HDF5"):
         require_hdf5(tmp_path / "missing.hdf5", label="mutants")
