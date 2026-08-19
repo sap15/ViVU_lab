@@ -12,7 +12,13 @@ import h5py
 from gnn_siamese.data.feature_selection import split_encoder_inputs_and_auxiliary_features
 from gnn_siamese.data.hdf5_loader import HDF5GraphComponents, load_hdf5_graph_components
 from gnn_siamese.data.node_pair_alignment import NodePairAlignment, align_node_pair
-from gnn_siamese.data.pairing import PairingKey, pair_mutants_with_wt
+from gnn_siamese.data.pairing import (
+    BIOLOGICAL_VARIANT,
+    NATIVE_WT_CONTROL,
+    PairingKey,
+    classify_variant_record,
+    pair_mutants_with_wt,
+)
 
 
 class MutWtPairDatasetError(ValueError):
@@ -33,6 +39,10 @@ class MutWtPairRecord:
     chain_id: str | None
     mutant_source_h5: str
     wt_source_h5: str
+    record_type: str = BIOLOGICAL_VARIANT
+    role: str = "training_variant"
+    trainable: bool = True
+    available_for_inference: bool = True
 
 
 @dataclass(frozen=True)
@@ -116,7 +126,7 @@ def _build_pair_records(
     wt_h5_path: str | Path,
     mutant_graph_keys: Sequence[str] | None,
     wt_graph_keys: Sequence[str] | None,
-) -> list[MutWtPairRecord]:
+) -> tuple[list[MutWtPairRecord], list[MutWtPairRecord]]:
     mutant_source = str(mutant_h5_path)
     wt_source = str(wt_h5_path)
     mutant_records = [
@@ -127,6 +137,19 @@ def _build_pair_records(
         {"variant_id": key, "graph_id": key, "source_path": wt_source}
         for key in _normalize_graph_keys(wt_h5_path, wt_graph_keys, role="WT")
     ]
+
+    native_control_ids = {
+        str(record["variant_id"])
+        for record in mutant_records
+        if classify_variant_record(record) == NATIVE_WT_CONTROL
+    }
+    # ``PKP2_WT`` is also the stable suffix of every record in the dedicated
+    # WT-companion file.  Exactly one WT->WT query in the mutant-input
+    # inventory identifies the deliberate native control; multiple candidates
+    # indicate a swapped/misdeclared WT-companion role and must not be silently
+    # reclassified as controls.
+    if len(native_control_ids) != 1:
+        native_control_ids = set()
 
     paired = pair_mutants_with_wt(mutant_records, wt_records)
     ordered = sorted(
@@ -140,21 +163,40 @@ def _build_pair_records(
             str(item["wt_companion_id"]),
         ),
     )
-    return [
-        MutWtPairRecord(
-            pair_key=item["pairing_signature"],
-            variant_id=str(item["variant_id"]),
-            mutant_key=str(item["graph_id"]),
-            wt_key=str(item["wt_companion_id"]),
-            position=int(item["position"]),
-            wt_aa=str(item["wt_aa"]),
-            mut_aa=str(item["mut_aa"]),
-            chain_id=None if item["chain_id"] is None else str(item["chain_id"]),
-            mutant_source_h5=mutant_source,
-            wt_source_h5=wt_source,
+    records: list[MutWtPairRecord] = []
+    for item in ordered:
+        record_type = (
+            NATIVE_WT_CONTROL
+            if str(item["variant_id"]) in native_control_ids
+            else BIOLOGICAL_VARIANT
         )
-        for item in ordered
-    ]
+        records.append(
+            MutWtPairRecord(
+                pair_key=item["pairing_signature"],
+                variant_id=str(item["variant_id"]),
+                mutant_key=str(item["graph_id"]),
+                wt_key=str(item["wt_companion_id"]),
+                position=int(item["position"]),
+                wt_aa=str(item["wt_aa"]),
+                mut_aa=str(item["mut_aa"]),
+                chain_id=None
+                if item["chain_id"] is None
+                else str(item["chain_id"]),
+                mutant_source_h5=mutant_source,
+                wt_source_h5=wt_source,
+                record_type=record_type,
+                role=(
+                    "evaluation_control"
+                    if record_type == NATIVE_WT_CONTROL
+                    else "training_variant"
+                ),
+                trainable=record_type == BIOLOGICAL_VARIANT,
+            )
+        )
+    return (
+        [record for record in records if record.record_type == BIOLOGICAL_VARIANT],
+        [record for record in records if record.record_type == NATIVE_WT_CONTROL],
+    )
 
 
 def _validate_pair_compatibility(
@@ -233,11 +275,15 @@ class MutWtPairDataset:
         self.node_feature_names = self.configured_node_feature_names
         self.edge_feature_names = tuple(selection["encoder_edge_features"])
         self.node_availability_masks = dict(selection["node_availability_masks"])
-        self.pairs = _build_pair_records(
+        self.pairs, self.native_wt_controls = _build_pair_records(
             mutant_h5_path=mutant_h5_path,
             wt_h5_path=wt_h5_path,
             mutant_graph_keys=mutant_graph_keys,
             wt_graph_keys=wt_graph_keys,
+        )
+        self.biological_variant_count = len(self.pairs)
+        self.hdf5_mutant_input_group_count = (
+            self.biological_variant_count + len(self.native_wt_controls)
         )
         self.input_spec = self._infer_input_spec()
         self.node_feature_names = self.input_spec.final_node_feature_names
@@ -288,6 +334,21 @@ class MutWtPairDataset:
 
     def __getitem__(self, index: int) -> MutWtPairSample:
         pair = self.pairs[index]
+        return self._load_sample(pair)
+
+    def get_native_wt_control(self, index: int = 0) -> MutWtPairSample:
+        """Load one preserved native-WT control outside every split/loss dataset."""
+
+        try:
+            pair = self.native_wt_controls[index]
+        except IndexError as exc:
+            raise MutWtPairDatasetError(
+                f"Native WT control index {index} is unavailable; "
+                f"inventory contains {len(self.native_wt_controls)} control(s)."
+            ) from exc
+        return self._load_sample(pair)
+
+    def _load_sample(self, pair: MutWtPairRecord) -> MutWtPairSample:
         graph_mut, graph_wt = self._load_pair_graphs(pair)
         node_pair_alignment = _align_pair_nodes(pair)
 
@@ -305,6 +366,14 @@ class MutWtPairDataset:
                 "mutant": pair.mutant_source_h5,
                 "wt": pair.wt_source_h5,
             },
+            "record_type": pair.record_type,
+            "role": pair.role,
+            "trainable": pair.trainable,
+            "used_for_split": pair.trainable,
+            "used_for_training": pair.trainable,
+            "used_for_validation": pair.trainable,
+            "used_for_test_loss": pair.trainable,
+            "available_for_inference": pair.available_for_inference,
         }
         return MutWtPairSample(
             graph_mut=graph_mut,
@@ -330,6 +399,9 @@ class MutWtPairDataset:
         clone.edge_feature_names = self.edge_feature_names
         clone.node_availability_masks = self.node_availability_masks
         clone.pairs = list(pairs)
+        clone.native_wt_controls = list(self.native_wt_controls)
+        clone.biological_variant_count = self.biological_variant_count
+        clone.hdf5_mutant_input_group_count = self.hdf5_mutant_input_group_count
         clone.input_spec = self.input_spec
         clone.node_input_dim = self.node_input_dim
         clone.edge_input_dim = self.edge_input_dim

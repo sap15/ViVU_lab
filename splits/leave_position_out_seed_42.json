@@ -1,0 +1,3364 @@
+{
+  "assignments": [
+    {
+      "partition": "train",
+      "position": 1,
+      "variant_id": "residue-srv:A:1:Methionine->Leucine:pos_1_M_L"
+    },
+    {
+      "partition": "train",
+      "position": 1,
+      "variant_id": "residue-srv:A:1:Methionine->Threonine:pos_1_M_T"
+    },
+    {
+      "partition": "train",
+      "position": 1,
+      "variant_id": "residue-srv:A:1:Methionine->Valine:pos_1_M_V"
+    },
+    {
+      "partition": "train",
+      "position": 3,
+      "variant_id": "residue-srv:A:3:Alanine->Valine:pos_3_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 4,
+      "variant_id": "residue-srv:A:4:Proline->Serine:pos_4_P_S"
+    },
+    {
+      "partition": "train",
+      "position": 5,
+      "variant_id": "residue-srv:A:5:Glycine->Aspartate:pos_5_G_D"
+    },
+    {
+      "partition": "train",
+      "position": 6,
+      "variant_id": "residue-srv:A:6:Alanine->Serine:pos_6_A_S"
+    },
+    {
+      "partition": "train",
+      "position": 6,
+      "variant_id": "residue-srv:A:6:Alanine->Threonine:pos_6_A_T"
+    },
+    {
+      "partition": "train",
+      "position": 7,
+      "variant_id": "residue-srv:A:7:Proline->Glutamine:pos_7_P_Q"
+    },
+    {
+      "partition": "train",
+      "position": 7,
+      "variant_id": "residue-srv:A:7:Proline->Serine:pos_7_P_S"
+    },
+    {
+      "partition": "train",
+      "position": 10,
+      "variant_id": "residue-srv:A:10:Tyrosine->Cysteine:pos_10_Y_C"
+    },
+    {
+      "partition": "train",
+      "position": 10,
+      "variant_id": "residue-srv:A:10:Tyrosine->Histidine:pos_10_Y_H"
+    },
+    {
+      "partition": "train",
+      "position": 11,
+      "variant_id": "residue-srv:A:11:Glycine->Cysteine:pos_11_G_C"
+    },
+    {
+      "partition": "train",
+      "position": 11,
+      "variant_id": "residue-srv:A:11:Glycine->Aspartate:pos_11_G_D"
+    },
+    {
+      "partition": "train",
+      "position": 12,
+      "variant_id": "residue-srv:A:12:Tyrosine->Cysteine:pos_12_Y_C"
+    },
+    {
+      "partition": "validation",
+      "position": 13,
+      "variant_id": "residue-srv:A:13:Isoleucine->Asparagine:pos_13_I_N"
+    },
+    {
+      "partition": "test",
+      "position": 30,
+      "variant_id": "residue-srv:A:30:Leucine->Glutamine:pos_30_L_Q"
+    },
+    {
+      "partition": "test",
+      "position": 30,
+      "variant_id": "residue-srv:A:30:Leucine->Arginine:pos_30_L_R"
+    },
+    {
+      "partition": "validation",
+      "position": 32,
+      "variant_id": "residue-srv:A:32:Leucine->Arginine:pos_32_L_R"
+    },
+    {
+      "partition": "train",
+      "position": 34,
+      "variant_id": "residue-srv:A:34:Serine->Cysteine:pos_34_S_C"
+    },
+    {
+      "partition": "train",
+      "position": 50,
+      "variant_id": "residue-srv:A:50:Threonine->Isoleucine:pos_50_T_I"
+    },
+    {
+      "partition": "train",
+      "position": 50,
+      "variant_id": "residue-srv:A:50:Threonine->Arginine:pos_50_T_R"
+    },
+    {
+      "partition": "train",
+      "position": 52,
+      "variant_id": "residue-srv:A:52:Lysine->Glutamate:pos_52_K_E"
+    },
+    {
+      "partition": "train",
+      "position": 52,
+      "variant_id": "residue-srv:A:52:Lysine->Asparagine:pos_52_K_N"
+    },
+    {
+      "partition": "train",
+      "position": 55,
+      "variant_id": "residue-srv:A:55:Arginine->Leucine:pos_55_R_L"
+    },
+    {
+      "partition": "train",
+      "position": 58,
+      "variant_id": "residue-srv:A:58:Glutamate->Glycine:pos_58_E_G"
+    },
+    {
+      "partition": "train",
+      "position": 58,
+      "variant_id": "residue-srv:A:58:Glutamate->Lysine:pos_58_E_K"
+    },
+    {
+      "partition": "train",
+      "position": 62,
+      "variant_id": "residue-srv:A:62:Glutamine->Lysine:pos_62_Q_K"
+    },
+    {
+      "partition": "train",
+      "position": 63,
+      "variant_id": "residue-srv:A:63:Threonine->Proline:pos_63_T_P"
+    },
+    {
+      "partition": "validation",
+      "position": 65,
+      "variant_id": "residue-srv:A:65:Alanine->Serine:pos_65_A_S"
+    },
+    {
+      "partition": "validation",
+      "position": 65,
+      "variant_id": "residue-srv:A:65:Alanine->Valine:pos_65_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 70,
+      "variant_id": "residue-srv:A:70:Serine->Isoleucine:pos_70_S_I"
+    },
+    {
+      "partition": "train",
+      "position": 73,
+      "variant_id": "residue-srv:A:73:Glycine->Valine:pos_73_G_V"
+    },
+    {
+      "partition": "train",
+      "position": 74,
+      "variant_id": "residue-srv:A:74:Asparagine->Lysine:pos_74_N_K"
+    },
+    {
+      "partition": "train",
+      "position": 75,
+      "variant_id": "residue-srv:A:75:Glycine->Glutamate:pos_75_G_E"
+    },
+    {
+      "partition": "train",
+      "position": 75,
+      "variant_id": "residue-srv:A:75:Glycine->Arginine:pos_75_G_R"
+    },
+    {
+      "partition": "train",
+      "position": 77,
+      "variant_id": "residue-srv:A:77:Leucine->Proline:pos_77_L_P"
+    },
+    {
+      "partition": "test",
+      "position": 78,
+      "variant_id": "residue-srv:A:78:Histidine->Asparagine:pos_78_H_N"
+    },
+    {
+      "partition": "test",
+      "position": 79,
+      "variant_id": "residue-srv:A:79:Arginine->Glutamine:pos_79_R_Q"
+    },
+    {
+      "partition": "train",
+      "position": 83,
+      "variant_id": "residue-srv:A:83:Valine->Isoleucine:pos_83_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 86,
+      "variant_id": "residue-srv:A:86:Tyrosine->Cysteine:pos_86_Y_C"
+    },
+    {
+      "partition": "train",
+      "position": 87,
+      "variant_id": "residue-srv:A:87:Valine->Leucine:pos_87_V_L"
+    },
+    {
+      "partition": "train",
+      "position": 98,
+      "variant_id": "residue-srv:A:98:Valine->Isoleucine:pos_98_V_I"
+    },
+    {
+      "partition": "validation",
+      "position": 99,
+      "variant_id": "residue-srv:A:99:Glycine->Glutamate:pos_99_G_E"
+    },
+    {
+      "partition": "train",
+      "position": 100,
+      "variant_id": "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D"
+    },
+    {
+      "partition": "train",
+      "position": 100,
+      "variant_id": "residue-srv:A:100:Glycine->Serine:pos_100_G_S"
+    },
+    {
+      "partition": "train",
+      "position": 101,
+      "variant_id": "residue-srv:A:101:Arginine->Cysteine:pos_101_R_C"
+    },
+    {
+      "partition": "train",
+      "position": 101,
+      "variant_id": "residue-srv:A:101:Arginine->Histidine:pos_101_R_H"
+    },
+    {
+      "partition": "train",
+      "position": 101,
+      "variant_id": "residue-srv:A:101:Arginine->Leucine:pos_101_R_L"
+    },
+    {
+      "partition": "validation",
+      "position": 102,
+      "variant_id": "residue-srv:A:102:Serine->Phenylalanine:pos_102_S_F"
+    },
+    {
+      "partition": "train",
+      "position": 103,
+      "variant_id": "residue-srv:A:103:Proline->Alanine:pos_103_P_A"
+    },
+    {
+      "partition": "train",
+      "position": 103,
+      "variant_id": "residue-srv:A:103:Proline->Leucine:pos_103_P_L"
+    },
+    {
+      "partition": "train",
+      "position": 103,
+      "variant_id": "residue-srv:A:103:Proline->Threonine:pos_103_P_T"
+    },
+    {
+      "partition": "train",
+      "position": 105,
+      "variant_id": "residue-srv:A:105:Proline->Alanine:pos_105_P_A"
+    },
+    {
+      "partition": "train",
+      "position": 105,
+      "variant_id": "residue-srv:A:105:Proline->Serine:pos_105_P_S"
+    },
+    {
+      "partition": "validation",
+      "position": 107,
+      "variant_id": "residue-srv:A:107:Threonine->Isoleucine:pos_107_T_I"
+    },
+    {
+      "partition": "test",
+      "position": 108,
+      "variant_id": "residue-srv:A:108:Tyrosine->Cysteine:pos_108_Y_C"
+    },
+    {
+      "partition": "test",
+      "position": 108,
+      "variant_id": "residue-srv:A:108:Tyrosine->Histidine:pos_108_Y_H"
+    },
+    {
+      "partition": "train",
+      "position": 109,
+      "variant_id": "residue-srv:A:109:Aspartate->Asparagine:pos_109_D_N"
+    },
+    {
+      "partition": "train",
+      "position": 110,
+      "variant_id": "residue-srv:A:110:Methionine->Isoleucine:pos_110_M_I"
+    },
+    {
+      "partition": "train",
+      "position": 113,
+      "variant_id": "residue-srv:A:113:Alanine->Glycine:pos_113_A_G"
+    },
+    {
+      "partition": "train",
+      "position": 114,
+      "variant_id": "residue-srv:A:114:Glycine->Aspartate:pos_114_G_D"
+    },
+    {
+      "partition": "validation",
+      "position": 115,
+      "variant_id": "residue-srv:A:115:Threonine->Isoleucine:pos_115_T_I"
+    },
+    {
+      "partition": "train",
+      "position": 122,
+      "variant_id": "residue-srv:A:122:Arginine->Cysteine:pos_122_R_C"
+    },
+    {
+      "partition": "train",
+      "position": 122,
+      "variant_id": "residue-srv:A:122:Arginine->Histidine:pos_122_R_H"
+    },
+    {
+      "partition": "train",
+      "position": 122,
+      "variant_id": "residue-srv:A:122:Arginine->Leucine:pos_122_R_L"
+    },
+    {
+      "partition": "train",
+      "position": 123,
+      "variant_id": "residue-srv:A:123:Tryptophan->Serine:pos_123_W_S"
+    },
+    {
+      "partition": "test",
+      "position": 125,
+      "variant_id": "residue-srv:A:125:Arginine->Lysine:pos_125_R_K"
+    },
+    {
+      "partition": "train",
+      "position": 128,
+      "variant_id": "residue-srv:A:128:Alanine->Threonine:pos_128_A_T"
+    },
+    {
+      "partition": "validation",
+      "position": 129,
+      "variant_id": "residue-srv:A:129:Glutamine->Leucine:pos_129_Q_L"
+    },
+    {
+      "partition": "train",
+      "position": 131,
+      "variant_id": "residue-srv:A:131:Serine->Glycine:pos_131_S_G"
+    },
+    {
+      "partition": "train",
+      "position": 132,
+      "variant_id": "residue-srv:A:132:Serine->Threonine:pos_132_S_T"
+    },
+    {
+      "partition": "train",
+      "position": 135,
+      "variant_id": "residue-srv:A:135:Serine->Phenylalanine:pos_135_S_F"
+    },
+    {
+      "partition": "train",
+      "position": 136,
+      "variant_id": "residue-srv:A:136:Valine->Methionine:pos_136_V_M"
+    },
+    {
+      "partition": "test",
+      "position": 137,
+      "variant_id": "residue-srv:A:137:Glutamate->Lysine:pos_137_E_K"
+    },
+    {
+      "partition": "train",
+      "position": 140,
+      "variant_id": "residue-srv:A:140:Serine->Threonine:pos_140_S_T"
+    },
+    {
+      "partition": "train",
+      "position": 149,
+      "variant_id": "residue-srv:A:149:Glutamate->Aspartate:pos_149_E_D"
+    },
+    {
+      "partition": "train",
+      "position": 154,
+      "variant_id": "residue-srv:A:154:Serine->Glycine:pos_154_S_G"
+    },
+    {
+      "partition": "train",
+      "position": 154,
+      "variant_id": "residue-srv:A:154:Serine->Arginine:pos_154_S_R"
+    },
+    {
+      "partition": "train",
+      "position": 155,
+      "variant_id": "residue-srv:A:155:Serine->Threonine:pos_155_S_T"
+    },
+    {
+      "partition": "train",
+      "position": 162,
+      "variant_id": "residue-srv:A:162:Threonine->Alanine:pos_162_T_A"
+    },
+    {
+      "partition": "train",
+      "position": 163,
+      "variant_id": "residue-srv:A:163:Histidine->Asparagine:pos_163_H_N"
+    },
+    {
+      "partition": "train",
+      "position": 163,
+      "variant_id": "residue-srv:A:163:Histidine->Glutamine:pos_163_H_Q"
+    },
+    {
+      "partition": "train",
+      "position": 165,
+      "variant_id": "residue-srv:A:165:Aspartate->Glycine:pos_165_D_G"
+    },
+    {
+      "partition": "train",
+      "position": 168,
+      "variant_id": "residue-srv:A:168:Tyrosine->Cysteine:pos_168_Y_C"
+    },
+    {
+      "partition": "train",
+      "position": 168,
+      "variant_id": "residue-srv:A:168:Tyrosine->Histidine:pos_168_Y_H"
+    },
+    {
+      "partition": "train",
+      "position": 176,
+      "variant_id": "residue-srv:A:176:Histidine->Arginine:pos_176_H_R"
+    },
+    {
+      "partition": "train",
+      "position": 188,
+      "variant_id": "residue-srv:A:188:Leucine->Phenylalanine:pos_188_L_F"
+    },
+    {
+      "partition": "train",
+      "position": 190,
+      "variant_id": "residue-srv:A:190:Valine->Leucine:pos_190_V_L"
+    },
+    {
+      "partition": "train",
+      "position": 190,
+      "variant_id": "residue-srv:A:190:Valine->Methionine:pos_190_V_M"
+    },
+    {
+      "partition": "test",
+      "position": 198,
+      "variant_id": "residue-srv:A:198:Glutamate->Lysine:pos_198_E_K"
+    },
+    {
+      "partition": "test",
+      "position": 200,
+      "variant_id": "residue-srv:A:200:Valine->Methionine:pos_200_V_M"
+    },
+    {
+      "partition": "train",
+      "position": 201,
+      "variant_id": "residue-srv:A:201:Glycine->Glutamate:pos_201_G_E"
+    },
+    {
+      "partition": "train",
+      "position": 207,
+      "variant_id": "residue-srv:A:207:Threonine->Serine:pos_207_T_S"
+    },
+    {
+      "partition": "validation",
+      "position": 219,
+      "variant_id": "residue-srv:A:219:Arginine->Lysine:pos_219_R_K"
+    },
+    {
+      "partition": "validation",
+      "position": 224,
+      "variant_id": "residue-srv:A:224:Glycine->Aspartate:pos_224_G_D"
+    },
+    {
+      "partition": "validation",
+      "position": 224,
+      "variant_id": "residue-srv:A:224:Glycine->Valine:pos_224_G_V"
+    },
+    {
+      "partition": "train",
+      "position": 247,
+      "variant_id": "residue-srv:A:247:Glycine->Arginine:pos_247_G_R"
+    },
+    {
+      "partition": "test",
+      "position": 250,
+      "variant_id": "residue-srv:A:250:Arginine->Serine:pos_250_R_S"
+    },
+    {
+      "partition": "train",
+      "position": 262,
+      "variant_id": "residue-srv:A:262:Leucine->Methionine:pos_262_L_M"
+    },
+    {
+      "partition": "test",
+      "position": 271,
+      "variant_id": "residue-srv:A:271:Valine->Phenylalanine:pos_271_V_F"
+    },
+    {
+      "partition": "train",
+      "position": 284,
+      "variant_id": "residue-srv:A:284:Arginine->Glycine:pos_284_R_G"
+    },
+    {
+      "partition": "train",
+      "position": 287,
+      "variant_id": "residue-srv:A:287:Arginine->Glycine:pos_287_R_G"
+    },
+    {
+      "partition": "validation",
+      "position": 296,
+      "variant_id": "residue-srv:A:296:Histidine->Asparagine:pos_296_H_N"
+    },
+    {
+      "partition": "validation",
+      "position": 296,
+      "variant_id": "residue-srv:A:296:Histidine->Proline:pos_296_H_P"
+    },
+    {
+      "partition": "train",
+      "position": 300,
+      "variant_id": "residue-srv:A:300:Threonine->Lysine:pos_300_T_K"
+    },
+    {
+      "partition": "train",
+      "position": 300,
+      "variant_id": "residue-srv:A:300:Threonine->Methionine:pos_300_T_M"
+    },
+    {
+      "partition": "train",
+      "position": 305,
+      "variant_id": "residue-srv:A:305:Glycine->Glutamate:pos_305_G_E"
+    },
+    {
+      "partition": "test",
+      "position": 309,
+      "variant_id": "residue-srv:A:309:Alanine->Threonine:pos_309_A_T"
+    },
+    {
+      "partition": "train",
+      "position": 310,
+      "variant_id": "residue-srv:A:310:Valine->Leucine:pos_310_V_L"
+    },
+    {
+      "partition": "train",
+      "position": 310,
+      "variant_id": "residue-srv:A:310:Valine->Methionine:pos_310_V_M"
+    },
+    {
+      "partition": "train",
+      "position": 311,
+      "variant_id": "residue-srv:A:311:Aspartate->Histidine:pos_311_D_H"
+    },
+    {
+      "partition": "train",
+      "position": 312,
+      "variant_id": "residue-srv:A:312:Serine->Alanine:pos_312_S_A"
+    },
+    {
+      "partition": "train",
+      "position": 312,
+      "variant_id": "residue-srv:A:312:Serine->Proline:pos_312_S_P"
+    },
+    {
+      "partition": "train",
+      "position": 314,
+      "variant_id": "residue-srv:A:314:Glycine->Glutamate:pos_314_G_E"
+    },
+    {
+      "partition": "train",
+      "position": 314,
+      "variant_id": "residue-srv:A:314:Glycine->Arginine:pos_314_G_R"
+    },
+    {
+      "partition": "test",
+      "position": 316,
+      "variant_id": "residue-srv:A:316:Arginine->Lysine:pos_316_R_K"
+    },
+    {
+      "partition": "train",
+      "position": 318,
+      "variant_id": "residue-srv:A:318:Histidine->Proline:pos_318_H_P"
+    },
+    {
+      "partition": "train",
+      "position": 320,
+      "variant_id": "residue-srv:A:320:Threonine->Alanine:pos_320_T_A"
+    },
+    {
+      "partition": "test",
+      "position": 322,
+      "variant_id": "residue-srv:A:322:Glycine->Serine:pos_322_G_S"
+    },
+    {
+      "partition": "test",
+      "position": 323,
+      "variant_id": "residue-srv:A:323:Glutamine->Histidine:pos_323_Q_H"
+    },
+    {
+      "partition": "test",
+      "position": 323,
+      "variant_id": "residue-srv:A:323:Glutamine->Arginine:pos_323_Q_R"
+    },
+    {
+      "partition": "test",
+      "position": 325,
+      "variant_id": "residue-srv:A:325:Alanine->Valine:pos_325_A_V"
+    },
+    {
+      "partition": "validation",
+      "position": 326,
+      "variant_id": "residue-srv:A:326:Alanine->Glutamate:pos_326_A_E"
+    },
+    {
+      "partition": "validation",
+      "position": 326,
+      "variant_id": "residue-srv:A:326:Alanine->Serine:pos_326_A_S"
+    },
+    {
+      "partition": "validation",
+      "position": 326,
+      "variant_id": "residue-srv:A:326:Alanine->Threonine:pos_326_A_T"
+    },
+    {
+      "partition": "train",
+      "position": 327,
+      "variant_id": "residue-srv:A:327:Glycine->Alanine:pos_327_G_A"
+    },
+    {
+      "partition": "train",
+      "position": 327,
+      "variant_id": "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E"
+    },
+    {
+      "partition": "train",
+      "position": 327,
+      "variant_id": "residue-srv:A:327:Glycine->Valine:pos_327_G_V"
+    },
+    {
+      "partition": "train",
+      "position": 327,
+      "variant_id": "residue-srv:A:327:Glycine->Tryptophan:pos_327_G_W"
+    },
+    {
+      "partition": "train",
+      "position": 328,
+      "variant_id": "residue-srv:A:328:Glycine->Alanine:pos_328_G_A"
+    },
+    {
+      "partition": "train",
+      "position": 328,
+      "variant_id": "residue-srv:A:328:Glycine->Arginine:pos_328_G_R"
+    },
+    {
+      "partition": "train",
+      "position": 328,
+      "variant_id": "residue-srv:A:328:Glycine->Valine:pos_328_G_V"
+    },
+    {
+      "partition": "validation",
+      "position": 329,
+      "variant_id": "residue-srv:A:329:Serine->Cysteine:pos_329_S_C"
+    },
+    {
+      "partition": "validation",
+      "position": 329,
+      "variant_id": "residue-srv:A:329:Serine->Glycine:pos_329_S_G"
+    },
+    {
+      "partition": "validation",
+      "position": 329,
+      "variant_id": "residue-srv:A:329:Serine->Arginine:pos_329_S_R"
+    },
+    {
+      "partition": "train",
+      "position": 330,
+      "variant_id": "residue-srv:A:330:Glycine->Glutamate:pos_330_G_E"
+    },
+    {
+      "partition": "validation",
+      "position": 337,
+      "variant_id": "residue-srv:A:337:Serine->Asparagine:pos_337_S_N"
+    },
+    {
+      "partition": "train",
+      "position": 338,
+      "variant_id": "residue-srv:A:338:Threonine->Alanine:pos_338_T_A"
+    },
+    {
+      "partition": "train",
+      "position": 340,
+      "variant_id": "residue-srv:A:340:Threonine->Isoleucine:pos_340_T_I"
+    },
+    {
+      "partition": "validation",
+      "position": 342,
+      "variant_id": "residue-srv:A:342:Serine->Phenylalanine:pos_342_S_F"
+    },
+    {
+      "partition": "validation",
+      "position": 342,
+      "variant_id": "residue-srv:A:342:Serine->Proline:pos_342_S_P"
+    },
+    {
+      "partition": "train",
+      "position": 343,
+      "variant_id": "residue-srv:A:343:Glutamine->Arginine:pos_343_Q_R"
+    },
+    {
+      "partition": "train",
+      "position": 345,
+      "variant_id": "residue-srv:A:345:Glycine->Arginine:pos_345_G_R"
+    },
+    {
+      "partition": "train",
+      "position": 349,
+      "variant_id": "residue-srv:A:349:Methionine->Valine:pos_349_M_V"
+    },
+    {
+      "partition": "train",
+      "position": 350,
+      "variant_id": "residue-srv:A:350:Glutamate->Lysine:pos_350_E_K"
+    },
+    {
+      "partition": "test",
+      "position": 353,
+      "variant_id": "residue-srv:A:353:Leucine->Proline:pos_353_L_P"
+    },
+    {
+      "partition": "test",
+      "position": 353,
+      "variant_id": "residue-srv:A:353:Leucine->Valine:pos_353_L_V"
+    },
+    {
+      "partition": "validation",
+      "position": 356,
+      "variant_id": "residue-srv:A:356:Alanine->Glutamate:pos_356_A_E"
+    },
+    {
+      "partition": "validation",
+      "position": 356,
+      "variant_id": "residue-srv:A:356:Alanine->Proline:pos_356_A_P"
+    },
+    {
+      "partition": "validation",
+      "position": 357,
+      "variant_id": "residue-srv:A:357:Valine->Methionine:pos_357_V_M"
+    },
+    {
+      "partition": "train",
+      "position": 358,
+      "variant_id": "residue-srv:A:358:Serine->Asparagine:pos_358_S_N"
+    },
+    {
+      "partition": "train",
+      "position": 359,
+      "variant_id": "residue-srv:A:359:Methionine->Valine:pos_359_M_V"
+    },
+    {
+      "partition": "train",
+      "position": 360,
+      "variant_id": "residue-srv:A:360:Leucine->Proline:pos_360_L_P"
+    },
+    {
+      "partition": "train",
+      "position": 361,
+      "variant_id": "residue-srv:A:361:Glutamate->Lysine:pos_361_E_K"
+    },
+    {
+      "partition": "train",
+      "position": 363,
+      "variant_id": "residue-srv:A:363:Aspartate->Asparagine:pos_363_D_N"
+    },
+    {
+      "partition": "train",
+      "position": 363,
+      "variant_id": "residue-srv:A:363:Aspartate->Tyrosine:pos_363_D_Y"
+    },
+    {
+      "partition": "train",
+      "position": 364,
+      "variant_id": "residue-srv:A:364:Histidine->Leucine:pos_364_H_L"
+    },
+    {
+      "partition": "validation",
+      "position": 365,
+      "variant_id": "residue-srv:A:365:Methionine->Isoleucine:pos_365_M_I"
+    },
+    {
+      "partition": "validation",
+      "position": 365,
+      "variant_id": "residue-srv:A:365:Methionine->Valine:pos_365_M_V"
+    },
+    {
+      "partition": "train",
+      "position": 366,
+      "variant_id": "residue-srv:A:366:Leucine->Proline:pos_366_L_P"
+    },
+    {
+      "partition": "train",
+      "position": 369,
+      "variant_id": "residue-srv:A:369:Arginine->Lysine:pos_369_R_K"
+    },
+    {
+      "partition": "train",
+      "position": 372,
+      "variant_id": "residue-srv:A:372:Alanine->Proline:pos_372_A_P"
+    },
+    {
+      "partition": "train",
+      "position": 372,
+      "variant_id": "residue-srv:A:372:Alanine->Threonine:pos_372_A_T"
+    },
+    {
+      "partition": "train",
+      "position": 374,
+      "variant_id": "residue-srv:A:374:Alanine->Serine:pos_374_A_S"
+    },
+    {
+      "partition": "test",
+      "position": 376,
+      "variant_id": "residue-srv:A:376:Phenylalanine->Serine:pos_376_F_S"
+    },
+    {
+      "partition": "train",
+      "position": 377,
+      "variant_id": "residue-srv:A:377:Isoleucine->Threonine:pos_377_I_T"
+    },
+    {
+      "partition": "train",
+      "position": 377,
+      "variant_id": "residue-srv:A:377:Isoleucine->Valine:pos_377_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 378,
+      "variant_id": "residue-srv:A:378:Glutamine->Arginine:pos_378_Q_R"
+    },
+    {
+      "partition": "train",
+      "position": 380,
+      "variant_id": "residue-srv:A:380:Glutamate->Lysine:pos_380_E_K"
+    },
+    {
+      "partition": "validation",
+      "position": 381,
+      "variant_id": "residue-srv:A:381:Cysteine->Tyrosine:pos_381_C_Y"
+    },
+    {
+      "partition": "train",
+      "position": 382,
+      "variant_id": "residue-srv:A:382:Phenylalanine->Leucine:pos_382_F_L"
+    },
+    {
+      "partition": "train",
+      "position": 385,
+      "variant_id": "residue-srv:A:385:Serine->Cysteine:pos_385_S_C"
+    },
+    {
+      "partition": "train",
+      "position": 385,
+      "variant_id": "residue-srv:A:385:Serine->Proline:pos_385_S_P"
+    },
+    {
+      "partition": "train",
+      "position": 388,
+      "variant_id": "residue-srv:A:388:Arginine->Glycine:pos_388_R_G"
+    },
+    {
+      "partition": "train",
+      "position": 388,
+      "variant_id": "residue-srv:A:388:Arginine->Proline:pos_388_R_P"
+    },
+    {
+      "partition": "train",
+      "position": 388,
+      "variant_id": "residue-srv:A:388:Arginine->Glutamine:pos_388_R_Q"
+    },
+    {
+      "partition": "train",
+      "position": 388,
+      "variant_id": "residue-srv:A:388:Arginine->Tryptophan:pos_388_R_W"
+    },
+    {
+      "partition": "train",
+      "position": 391,
+      "variant_id": "residue-srv:A:391:Valine->Isoleucine:pos_391_V_I"
+    },
+    {
+      "partition": "validation",
+      "position": 394,
+      "variant_id": "residue-srv:A:394:Leucine->Phenylalanine:pos_394_L_F"
+    },
+    {
+      "partition": "validation",
+      "position": 394,
+      "variant_id": "residue-srv:A:394:Leucine->Histidine:pos_394_L_H"
+    },
+    {
+      "partition": "train",
+      "position": 395,
+      "variant_id": "residue-srv:A:395:Arginine->Histidine:pos_395_R_H"
+    },
+    {
+      "partition": "train",
+      "position": 395,
+      "variant_id": "residue-srv:A:395:Arginine->Proline:pos_395_R_P"
+    },
+    {
+      "partition": "train",
+      "position": 395,
+      "variant_id": "residue-srv:A:395:Arginine->Serine:pos_395_R_S"
+    },
+    {
+      "partition": "train",
+      "position": 397,
+      "variant_id": "residue-srv:A:397:Isoleucine->Asparagine:pos_397_I_N"
+    },
+    {
+      "partition": "train",
+      "position": 397,
+      "variant_id": "residue-srv:A:397:Isoleucine->Valine:pos_397_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 401,
+      "variant_id": "residue-srv:A:401:Leucine->Glutamine:pos_401_L_Q"
+    },
+    {
+      "partition": "train",
+      "position": 411,
+      "variant_id": "residue-srv:A:411:Valine->Isoleucine:pos_411_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 413,
+      "variant_id": "residue-srv:A:413:Arginine->Glutamine:pos_413_R_Q"
+    },
+    {
+      "partition": "train",
+      "position": 415,
+      "variant_id": "residue-srv:A:415:Valine->Glycine:pos_415_V_G"
+    },
+    {
+      "partition": "train",
+      "position": 417,
+      "variant_id": "residue-srv:A:417:Glycine->Arginine:pos_417_G_R"
+    },
+    {
+      "partition": "train",
+      "position": 419,
+      "variant_id": "residue-srv:A:419:Leucine->Serine:pos_419_L_S"
+    },
+    {
+      "partition": "train",
+      "position": 424,
+      "variant_id": "residue-srv:A:424:Phenylalanine->Isoleucine:pos_424_F_I"
+    },
+    {
+      "partition": "train",
+      "position": 424,
+      "variant_id": "residue-srv:A:424:Phenylalanine->Leucine:pos_424_F_L"
+    },
+    {
+      "partition": "train",
+      "position": 424,
+      "variant_id": "residue-srv:A:424:Phenylalanine->Serine:pos_424_F_S"
+    },
+    {
+      "partition": "train",
+      "position": 426,
+      "variant_id": "residue-srv:A:426:Aspartate->Histidine:pos_426_D_H"
+    },
+    {
+      "partition": "train",
+      "position": 427,
+      "variant_id": "residue-srv:A:427:Asparagine->Histidine:pos_427_N_H"
+    },
+    {
+      "partition": "train",
+      "position": 427,
+      "variant_id": "residue-srv:A:427:Asparagine->Serine:pos_427_N_S"
+    },
+    {
+      "partition": "validation",
+      "position": 430,
+      "variant_id": "residue-srv:A:430:Lysine->Glutamate:pos_430_K_E"
+    },
+    {
+      "partition": "train",
+      "position": 431,
+      "variant_id": "residue-srv:A:431:Leucine->Serine:pos_431_L_S"
+    },
+    {
+      "partition": "train",
+      "position": 432,
+      "variant_id": "residue-srv:A:432:Glutamate->Glutamine:pos_432_E_Q"
+    },
+    {
+      "partition": "train",
+      "position": 433,
+      "variant_id": "residue-srv:A:433:Valine->Alanine:pos_433_V_A"
+    },
+    {
+      "partition": "validation",
+      "position": 435,
+      "variant_id": "residue-srv:A:435:Glutamate->Lysine:pos_435_E_K"
+    },
+    {
+      "partition": "train",
+      "position": 437,
+      "variant_id": "residue-srv:A:437:Asparagine->Tyrosine:pos_437_N_Y"
+    },
+    {
+      "partition": "train",
+      "position": 438,
+      "variant_id": "residue-srv:A:438:Glycine->Arginine:pos_438_G_R"
+    },
+    {
+      "partition": "test",
+      "position": 439,
+      "variant_id": "residue-srv:A:439:Valine->Glycine:pos_439_V_G"
+    },
+    {
+      "partition": "test",
+      "position": 439,
+      "variant_id": "residue-srv:A:439:Valine->Isoleucine:pos_439_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 440,
+      "variant_id": "residue-srv:A:440:Proline->Leucine:pos_440_P_L"
+    },
+    {
+      "partition": "train",
+      "position": 441,
+      "variant_id": "residue-srv:A:441:Arginine->Proline:pos_441_R_P"
+    },
+    {
+      "partition": "train",
+      "position": 441,
+      "variant_id": "residue-srv:A:441:Arginine->Tryptophan:pos_441_R_W"
+    },
+    {
+      "partition": "train",
+      "position": 443,
+      "variant_id": "residue-srv:A:443:Leucine->Proline:pos_443_L_P"
+    },
+    {
+      "partition": "train",
+      "position": 444,
+      "variant_id": "residue-srv:A:444:Glutamine->Histidine:pos_444_Q_H"
+    },
+    {
+      "partition": "validation",
+      "position": 456,
+      "variant_id": "residue-srv:A:456:Lysine->Glutamine:pos_456_K_Q"
+    },
+    {
+      "partition": "validation",
+      "position": 456,
+      "variant_id": "residue-srv:A:456:Lysine->Arginine:pos_456_K_R"
+    },
+    {
+      "partition": "validation",
+      "position": 456,
+      "variant_id": "residue-srv:A:456:Lysine->Threonine:pos_456_K_T"
+    },
+    {
+      "partition": "train",
+      "position": 458,
+      "variant_id": "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K"
+    },
+    {
+      "partition": "train",
+      "position": 458,
+      "variant_id": "residue-srv:A:458:Isoleucine->Valine:pos_458_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 459,
+      "variant_id": "residue-srv:A:459:Threonine->Isoleucine:pos_459_T_I"
+    },
+    {
+      "partition": "validation",
+      "position": 460,
+      "variant_id": "residue-srv:A:460:Glycine->Aspartate:pos_460_G_D"
+    },
+    {
+      "partition": "validation",
+      "position": 460,
+      "variant_id": "residue-srv:A:460:Glycine->Arginine:pos_460_G_R"
+    },
+    {
+      "partition": "validation",
+      "position": 460,
+      "variant_id": "residue-srv:A:460:Glycine->Serine:pos_460_G_S"
+    },
+    {
+      "partition": "train",
+      "position": 465,
+      "variant_id": "residue-srv:A:465:Leucine->Phenylalanine:pos_465_L_F"
+    },
+    {
+      "partition": "train",
+      "position": 465,
+      "variant_id": "residue-srv:A:465:Leucine->Serine:pos_465_L_S"
+    },
+    {
+      "partition": "validation",
+      "position": 467,
+      "variant_id": "residue-srv:A:467:Serine->Phenylalanine:pos_467_S_F"
+    },
+    {
+      "partition": "validation",
+      "position": 468,
+      "variant_id": "residue-srv:A:468:Asparagine->Lysine:pos_468_N_K"
+    },
+    {
+      "partition": "validation",
+      "position": 469,
+      "variant_id": "residue-srv:A:469:Aspartate->Asparagine:pos_469_D_N"
+    },
+    {
+      "partition": "validation",
+      "position": 471,
+      "variant_id": "residue-srv:A:471:Leucine->Valine:pos_471_L_V"
+    },
+    {
+      "partition": "train",
+      "position": 472,
+      "variant_id": "residue-srv:A:472:Lysine->Arginine:pos_472_K_R"
+    },
+    {
+      "partition": "train",
+      "position": 473,
+      "variant_id": "residue-srv:A:473:Asparagine->Serine:pos_473_N_S"
+    },
+    {
+      "partition": "test",
+      "position": 474,
+      "variant_id": "residue-srv:A:474:Leucine->Valine:pos_474_L_V"
+    },
+    {
+      "partition": "train",
+      "position": 475,
+      "variant_id": "residue-srv:A:475:Methionine->Leucine:pos_475_M_L"
+    },
+    {
+      "partition": "train",
+      "position": 476,
+      "variant_id": "residue-srv:A:476:Isoleucine->Lysine:pos_476_I_K"
+    },
+    {
+      "partition": "train",
+      "position": 476,
+      "variant_id": "residue-srv:A:476:Isoleucine->Valine:pos_476_I_V"
+    },
+    {
+      "partition": "test",
+      "position": 477,
+      "variant_id": "residue-srv:A:477:Threonine->Alanine:pos_477_T_A"
+    },
+    {
+      "partition": "train",
+      "position": 478,
+      "variant_id": "residue-srv:A:478:Glutamate->Lysine:pos_478_E_K"
+    },
+    {
+      "partition": "train",
+      "position": 479,
+      "variant_id": "residue-srv:A:479:Alanine->Serine:pos_479_A_S"
+    },
+    {
+      "partition": "test",
+      "position": 481,
+      "variant_id": "residue-srv:A:481:Leucine->Arginine:pos_481_L_R"
+    },
+    {
+      "partition": "train",
+      "position": 482,
+      "variant_id": "residue-srv:A:482:Threonine->Alanine:pos_482_T_A"
+    },
+    {
+      "partition": "train",
+      "position": 482,
+      "variant_id": "residue-srv:A:482:Threonine->Methionine:pos_482_T_M"
+    },
+    {
+      "partition": "train",
+      "position": 483,
+      "variant_id": "residue-srv:A:483:Leucine->Proline:pos_483_L_P"
+    },
+    {
+      "partition": "train",
+      "position": 483,
+      "variant_id": "residue-srv:A:483:Leucine->Arginine:pos_483_L_R"
+    },
+    {
+      "partition": "train",
+      "position": 484,
+      "variant_id": "residue-srv:A:484:Threonine->Methionine:pos_484_T_M"
+    },
+    {
+      "partition": "train",
+      "position": 486,
+      "variant_id": "residue-srv:A:486:Asparagine->Isoleucine:pos_486_N_I"
+    },
+    {
+      "partition": "validation",
+      "position": 487,
+      "variant_id": "residue-srv:A:487:Isoleucine->Serine:pos_487_I_S"
+    },
+    {
+      "partition": "train",
+      "position": 489,
+      "variant_id": "residue-srv:A:489:Isoleucine->Valine:pos_489_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 493,
+      "variant_id": "residue-srv:A:493:Glycine->Alanine:pos_493_G_A"
+    },
+    {
+      "partition": "train",
+      "position": 495,
+      "variant_id": "residue-srv:A:495:Proline->Alanine:pos_495_P_A"
+    },
+    {
+      "partition": "train",
+      "position": 495,
+      "variant_id": "residue-srv:A:495:Proline->Leucine:pos_495_P_L"
+    },
+    {
+      "partition": "test",
+      "position": 498,
+      "variant_id": "residue-srv:A:498:Aspartate->Asparagine:pos_498_D_N"
+    },
+    {
+      "partition": "train",
+      "position": 502,
+      "variant_id": "residue-srv:A:502:Alanine->Glycine:pos_502_A_G"
+    },
+    {
+      "partition": "train",
+      "position": 502,
+      "variant_id": "residue-srv:A:502:Alanine->Threonine:pos_502_A_T"
+    },
+    {
+      "partition": "test",
+      "position": 504,
+      "variant_id": "residue-srv:A:504:Glycine->Cysteine:pos_504_G_C"
+    },
+    {
+      "partition": "test",
+      "position": 504,
+      "variant_id": "residue-srv:A:504:Glycine->Aspartate:pos_504_G_D"
+    },
+    {
+      "partition": "test",
+      "position": 504,
+      "variant_id": "residue-srv:A:504:Glycine->Valine:pos_504_G_V"
+    },
+    {
+      "partition": "test",
+      "position": 505,
+      "variant_id": "residue-srv:A:505:Leucine->Phenylalanine:pos_505_L_F"
+    },
+    {
+      "partition": "train",
+      "position": 506,
+      "variant_id": "residue-srv:A:506:Leucine->Phenylalanine:pos_506_L_F"
+    },
+    {
+      "partition": "test",
+      "position": 507,
+      "variant_id": "residue-srv:A:507:Aspartate->Glycine:pos_507_D_G"
+    },
+    {
+      "partition": "test",
+      "position": 507,
+      "variant_id": "residue-srv:A:507:Aspartate->Tyrosine:pos_507_D_Y"
+    },
+    {
+      "partition": "train",
+      "position": 508,
+      "variant_id": "residue-srv:A:508:Phenylalanine->Cysteine:pos_508_F_C"
+    },
+    {
+      "partition": "train",
+      "position": 510,
+      "variant_id": "residue-srv:A:510:Isoleucine->Valine:pos_510_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 513,
+      "variant_id": "residue-srv:A:513:Asparagine->Aspartate:pos_513_N_D"
+    },
+    {
+      "partition": "train",
+      "position": 514,
+      "variant_id": "residue-srv:A:514:Valine->Isoleucine:pos_514_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 516,
+      "variant_id": "residue-srv:A:516:Glycine->Alanine:pos_516_G_A"
+    },
+    {
+      "partition": "train",
+      "position": 516,
+      "variant_id": "residue-srv:A:516:Glycine->Valine:pos_516_G_V"
+    },
+    {
+      "partition": "train",
+      "position": 521,
+      "variant_id": "residue-srv:A:521:Methionine->Valine:pos_521_M_V"
+    },
+    {
+      "partition": "train",
+      "position": 522,
+      "variant_id": "residue-srv:A:522:Serine->Isoleucine:pos_522_S_I"
+    },
+    {
+      "partition": "train",
+      "position": 523,
+      "variant_id": "residue-srv:A:523:Serine->Phenylalanine:pos_523_S_F"
+    },
+    {
+      "partition": "train",
+      "position": 523,
+      "variant_id": "residue-srv:A:523:Serine->Threonine:pos_523_S_T"
+    },
+    {
+      "partition": "train",
+      "position": 524,
+      "variant_id": "residue-srv:A:524:Alanine->Valine:pos_524_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 525,
+      "variant_id": "residue-srv:A:525:Glycine->Aspartate:pos_525_G_D"
+    },
+    {
+      "partition": "train",
+      "position": 525,
+      "variant_id": "residue-srv:A:525:Glycine->Serine:pos_525_G_S"
+    },
+    {
+      "partition": "train",
+      "position": 526,
+      "variant_id": "residue-srv:A:526:Alanine->Valine:pos_526_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 527,
+      "variant_id": "residue-srv:A:527:Aspartate->Asparagine:pos_527_D_N"
+    },
+    {
+      "partition": "train",
+      "position": 529,
+      "variant_id": "residue-srv:A:529:Arginine->Lysine:pos_529_R_K"
+    },
+    {
+      "partition": "train",
+      "position": 531,
+      "variant_id": "residue-srv:A:531:Alanine->Valine:pos_531_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 532,
+      "variant_id": "residue-srv:A:532:Methionine->Leucine:pos_532_M_L"
+    },
+    {
+      "partition": "validation",
+      "position": 534,
+      "variant_id": "residue-srv:A:534:Arginine->Glycine:pos_534_R_G"
+    },
+    {
+      "partition": "validation",
+      "position": 534,
+      "variant_id": "residue-srv:A:534:Arginine->Serine:pos_534_R_S"
+    },
+    {
+      "partition": "train",
+      "position": 535,
+      "variant_id": "residue-srv:A:535:Cysteine->Tyrosine:pos_535_C_Y"
+    },
+    {
+      "partition": "train",
+      "position": 537,
+      "variant_id": "residue-srv:A:537:Glycine->Glutamate:pos_537_G_E"
+    },
+    {
+      "partition": "train",
+      "position": 537,
+      "variant_id": "residue-srv:A:537:Glycine->Arginine:pos_537_G_R"
+    },
+    {
+      "partition": "validation",
+      "position": 538,
+      "variant_id": "residue-srv:A:538:Leucine->Phenylalanine:pos_538_L_F"
+    },
+    {
+      "partition": "validation",
+      "position": 538,
+      "variant_id": "residue-srv:A:538:Leucine->Proline:pos_538_L_P"
+    },
+    {
+      "partition": "train",
+      "position": 543,
+      "variant_id": "residue-srv:A:543:Valine->Isoleucine:pos_543_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 543,
+      "variant_id": "residue-srv:A:543:Valine->Leucine:pos_543_V_L"
+    },
+    {
+      "partition": "train",
+      "position": 544,
+      "variant_id": "residue-srv:A:544:Histidine->Arginine:pos_544_H_R"
+    },
+    {
+      "partition": "train",
+      "position": 546,
+      "variant_id": "residue-srv:A:546:Valine->Alanine:pos_546_V_A"
+    },
+    {
+      "partition": "train",
+      "position": 546,
+      "variant_id": "residue-srv:A:546:Valine->Isoleucine:pos_546_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 548,
+      "variant_id": "residue-srv:A:548:Glycine->Arginine:pos_548_G_R"
+    },
+    {
+      "partition": "train",
+      "position": 550,
+      "variant_id": "residue-srv:A:550:Isoleucine->Asparagine:pos_550_I_N"
+    },
+    {
+      "partition": "train",
+      "position": 550,
+      "variant_id": "residue-srv:A:550:Isoleucine->Valine:pos_550_I_V"
+    },
+    {
+      "partition": "validation",
+      "position": 552,
+      "variant_id": "residue-srv:A:552:Aspartate->Glutamate:pos_552_D_E"
+    },
+    {
+      "partition": "test",
+      "position": 555,
+      "variant_id": "residue-srv:A:555:Proline->Threonine:pos_555_P_T"
+    },
+    {
+      "partition": "validation",
+      "position": 556,
+      "variant_id": "residue-srv:A:556:Aspartate->Asparagine:pos_556_D_N"
+    },
+    {
+      "partition": "test",
+      "position": 560,
+      "variant_id": "residue-srv:A:560:Threonine->Methionine:pos_560_T_M"
+    },
+    {
+      "partition": "train",
+      "position": 562,
+      "variant_id": "residue-srv:A:562:Asparagine->Serine:pos_562_N_S"
+    },
+    {
+      "partition": "test",
+      "position": 563,
+      "variant_id": "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W"
+    },
+    {
+      "partition": "test",
+      "position": 564,
+      "variant_id": "residue-srv:A:564:Valine->Methionine:pos_564_V_M"
+    },
+    {
+      "partition": "train",
+      "position": 566,
+      "variant_id": "residue-srv:A:566:Isoleucine->Valine:pos_566_I_V"
+    },
+    {
+      "partition": "validation",
+      "position": 569,
+      "variant_id": "residue-srv:A:569:Asparagine->Lysine:pos_569_N_K"
+    },
+    {
+      "partition": "train",
+      "position": 571,
+      "variant_id": "residue-srv:A:571:Serine->Phenylalanine:pos_571_S_F"
+    },
+    {
+      "partition": "train",
+      "position": 571,
+      "variant_id": "residue-srv:A:571:Serine->Threonine:pos_571_S_T"
+    },
+    {
+      "partition": "test",
+      "position": 573,
+      "variant_id": "residue-srv:A:573:Glutamine->Histidine:pos_573_Q_H"
+    },
+    {
+      "partition": "validation",
+      "position": 580,
+      "variant_id": "residue-srv:A:580:Glutamate->Aspartate:pos_580_E_D"
+    },
+    {
+      "partition": "test",
+      "position": 582,
+      "variant_id": "residue-srv:A:582:Tyrosine->Asparagine:pos_582_Y_N"
+    },
+    {
+      "partition": "train",
+      "position": 583,
+      "variant_id": "residue-srv:A:583:Serine->Cysteine:pos_583_S_C"
+    },
+    {
+      "partition": "train",
+      "position": 583,
+      "variant_id": "residue-srv:A:583:Serine->Phenylalanine:pos_583_S_F"
+    },
+    {
+      "partition": "train",
+      "position": 586,
+      "variant_id": "residue-srv:A:586:Isoleucine->Threonine:pos_586_I_T"
+    },
+    {
+      "partition": "train",
+      "position": 586,
+      "variant_id": "residue-srv:A:586:Isoleucine->Valine:pos_586_I_V"
+    },
+    {
+      "partition": "test",
+      "position": 587,
+      "variant_id": "residue-srv:A:587:Tyrosine->Cysteine:pos_587_Y_C"
+    },
+    {
+      "partition": "train",
+      "position": 588,
+      "variant_id": "residue-srv:A:588:Isoleucine->Valine:pos_588_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 591,
+      "variant_id": "residue-srv:A:591:Arginine->Tryptophan:pos_591_R_W"
+    },
+    {
+      "partition": "test",
+      "position": 592,
+      "variant_id": "residue-srv:A:592:Asparagine->Isoleucine:pos_592_N_I"
+    },
+    {
+      "partition": "train",
+      "position": 595,
+      "variant_id": "residue-srv:A:595:Threonine->Asparagine:pos_595_T_N"
+    },
+    {
+      "partition": "test",
+      "position": 596,
+      "variant_id": "residue-srv:A:596:Aspartate->Asparagine:pos_596_D_N"
+    },
+    {
+      "partition": "validation",
+      "position": 597,
+      "variant_id": "residue-srv:A:597:Asparagine->Lysine:pos_597_N_K"
+    },
+    {
+      "partition": "train",
+      "position": 598,
+      "variant_id": "residue-srv:A:598:Asparagine->Lysine:pos_598_N_K"
+    },
+    {
+      "partition": "test",
+      "position": 599,
+      "variant_id": "residue-srv:A:599:Lysine->Arginine:pos_599_K_R"
+    },
+    {
+      "partition": "train",
+      "position": 603,
+      "variant_id": "residue-srv:A:603:Cysteine->Tryptophan:pos_603_C_W"
+    },
+    {
+      "partition": "train",
+      "position": 605,
+      "variant_id": "residue-srv:A:605:Glycine->Arginine:pos_605_G_R"
+    },
+    {
+      "partition": "train",
+      "position": 607,
+      "variant_id": "residue-srv:A:607:Arginine->Glutamine:pos_607_R_Q"
+    },
+    {
+      "partition": "train",
+      "position": 609,
+      "variant_id": "residue-srv:A:609:Arginine->Glycine:pos_609_R_G"
+    },
+    {
+      "partition": "train",
+      "position": 610,
+      "variant_id": "residue-srv:A:610:Lysine->Glutamine:pos_610_K_Q"
+    },
+    {
+      "partition": "train",
+      "position": 611,
+      "variant_id": "residue-srv:A:611:Valine->Leucine:pos_611_V_L"
+    },
+    {
+      "partition": "train",
+      "position": 614,
+      "variant_id": "residue-srv:A:614:Glutamine->Proline:pos_614_Q_P"
+    },
+    {
+      "partition": "train",
+      "position": 615,
+      "variant_id": "residue-srv:A:615:Tyrosine->Histidine:pos_615_Y_H"
+    },
+    {
+      "partition": "train",
+      "position": 616,
+      "variant_id": "residue-srv:A:616:Glutamine->Histidine:pos_616_Q_H"
+    },
+    {
+      "partition": "train",
+      "position": 618,
+      "variant_id": "residue-srv:A:618:Valine->Methionine:pos_618_V_M"
+    },
+    {
+      "partition": "train",
+      "position": 619,
+      "variant_id": "residue-srv:A:619:Proline->Glutamine:pos_619_P_Q"
+    },
+    {
+      "partition": "train",
+      "position": 619,
+      "variant_id": "residue-srv:A:619:Proline->Serine:pos_619_P_S"
+    },
+    {
+      "partition": "train",
+      "position": 620,
+      "variant_id": "residue-srv:A:620:Methionine->Threonine:pos_620_M_T"
+    },
+    {
+      "partition": "validation",
+      "position": 621,
+      "variant_id": "residue-srv:A:621:Proline->Leucine:pos_621_P_L"
+    },
+    {
+      "partition": "validation",
+      "position": 621,
+      "variant_id": "residue-srv:A:621:Proline->Arginine:pos_621_P_R"
+    },
+    {
+      "partition": "validation",
+      "position": 625,
+      "variant_id": "residue-srv:A:625:Serine->Isoleucine:pos_625_S_I"
+    },
+    {
+      "partition": "validation",
+      "position": 625,
+      "variant_id": "residue-srv:A:625:Serine->Arginine:pos_625_S_R"
+    },
+    {
+      "partition": "validation",
+      "position": 625,
+      "variant_id": "residue-srv:A:625:Serine->Threonine:pos_625_S_T"
+    },
+    {
+      "partition": "train",
+      "position": 626,
+      "variant_id": "residue-srv:A:626:Asparagine->Lysine:pos_626_N_K"
+    },
+    {
+      "partition": "validation",
+      "position": 627,
+      "variant_id": "residue-srv:A:627:Proline->Serine:pos_627_P_S"
+    },
+    {
+      "partition": "train",
+      "position": 628,
+      "variant_id": "residue-srv:A:628:Lysine->Glutamate:pos_628_K_E"
+    },
+    {
+      "partition": "train",
+      "position": 629,
+      "variant_id": "residue-srv:A:629:Glycine->Serine:pos_629_G_S"
+    },
+    {
+      "partition": "train",
+      "position": 629,
+      "variant_id": "residue-srv:A:629:Glycine->Valine:pos_629_G_V"
+    },
+    {
+      "partition": "train",
+      "position": 630,
+      "variant_id": "residue-srv:A:630:Valine->Alanine:pos_630_V_A"
+    },
+    {
+      "partition": "train",
+      "position": 630,
+      "variant_id": "residue-srv:A:630:Valine->Leucine:pos_630_V_L"
+    },
+    {
+      "partition": "validation",
+      "position": 631,
+      "variant_id": "residue-srv:A:631:Glutamate->Aspartate:pos_631_E_D"
+    },
+    {
+      "partition": "test",
+      "position": 632,
+      "variant_id": "residue-srv:A:632:Tryptophan->Cysteine:pos_632_W_C"
+    },
+    {
+      "partition": "validation",
+      "position": 634,
+      "variant_id": "residue-srv:A:634:Tryptophan->Leucine:pos_634_W_L"
+    },
+    {
+      "partition": "train",
+      "position": 635,
+      "variant_id": "residue-srv:A:635:Histidine->Tyrosine:pos_635_H_Y"
+    },
+    {
+      "partition": "test",
+      "position": 639,
+      "variant_id": "residue-srv:A:639:Isoleucine->Methionine:pos_639_I_M"
+    },
+    {
+      "partition": "train",
+      "position": 640,
+      "variant_id": "residue-srv:A:640:Arginine->Serine:pos_640_R_S"
+    },
+    {
+      "partition": "train",
+      "position": 642,
+      "variant_id": "residue-srv:A:642:Tyrosine->Cysteine:pos_642_Y_C"
+    },
+    {
+      "partition": "train",
+      "position": 643,
+      "variant_id": "residue-srv:A:643:Leucine->Arginine:pos_643_L_R"
+    },
+    {
+      "partition": "train",
+      "position": 644,
+      "variant_id": "residue-srv:A:644:Serine->Proline:pos_644_S_P"
+    },
+    {
+      "partition": "test",
+      "position": 647,
+      "variant_id": "residue-srv:A:647:Alanine->Threonine:pos_647_A_T"
+    },
+    {
+      "partition": "train",
+      "position": 648,
+      "variant_id": "residue-srv:A:648:Lysine->Arginine:pos_648_K_R"
+    },
+    {
+      "partition": "train",
+      "position": 649,
+      "variant_id": "residue-srv:A:649:Serine->Glycine:pos_649_S_G"
+    },
+    {
+      "partition": "test",
+      "position": 650,
+      "variant_id": "residue-srv:A:650:Valine->Isoleucine:pos_650_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 651,
+      "variant_id": "residue-srv:A:651:Arginine->Cysteine:pos_651_R_C"
+    },
+    {
+      "partition": "train",
+      "position": 651,
+      "variant_id": "residue-srv:A:651:Arginine->Histidine:pos_651_R_H"
+    },
+    {
+      "partition": "test",
+      "position": 652,
+      "variant_id": "residue-srv:A:652:Asparagine->Serine:pos_652_N_S"
+    },
+    {
+      "partition": "train",
+      "position": 653,
+      "variant_id": "residue-srv:A:653:Tyrosine->Cysteine:pos_653_Y_C"
+    },
+    {
+      "partition": "train",
+      "position": 653,
+      "variant_id": "residue-srv:A:653:Tyrosine->Aspartate:pos_653_Y_D"
+    },
+    {
+      "partition": "train",
+      "position": 654,
+      "variant_id": "residue-srv:A:654:Threonine->Alanine:pos_654_T_A"
+    },
+    {
+      "partition": "train",
+      "position": 654,
+      "variant_id": "residue-srv:A:654:Threonine->Lysine:pos_654_T_K"
+    },
+    {
+      "partition": "train",
+      "position": 656,
+      "variant_id": "residue-srv:A:656:Glutamate->Aspartate:pos_656_E_D"
+    },
+    {
+      "partition": "train",
+      "position": 661,
+      "variant_id": "residue-srv:A:661:Alanine->Threonine:pos_661_A_T"
+    },
+    {
+      "partition": "train",
+      "position": 661,
+      "variant_id": "residue-srv:A:661:Alanine->Valine:pos_661_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 662,
+      "variant_id": "residue-srv:A:662:Leucine->Proline:pos_662_L_P"
+    },
+    {
+      "partition": "train",
+      "position": 663,
+      "variant_id": "residue-srv:A:663:Glutamine->Histidine:pos_663_Q_H"
+    },
+    {
+      "partition": "test",
+      "position": 664,
+      "variant_id": "residue-srv:A:664:Asparagine->Isoleucine:pos_664_N_I"
+    },
+    {
+      "partition": "train",
+      "position": 665,
+      "variant_id": "residue-srv:A:665:Leucine->Phenylalanine:pos_665_L_F"
+    },
+    {
+      "partition": "train",
+      "position": 667,
+      "variant_id": "residue-srv:A:667:Alanine->Proline:pos_667_A_P"
+    },
+    {
+      "partition": "train",
+      "position": 668,
+      "variant_id": "residue-srv:A:668:Glycine->Alanine:pos_668_G_A"
+    },
+    {
+      "partition": "train",
+      "position": 668,
+      "variant_id": "residue-srv:A:668:Glycine->Arginine:pos_668_G_R"
+    },
+    {
+      "partition": "train",
+      "position": 669,
+      "variant_id": "residue-srv:A:669:Serine->Asparagine:pos_669_S_N"
+    },
+    {
+      "partition": "validation",
+      "position": 673,
+      "variant_id": "residue-srv:A:673:Proline->Leucine:pos_673_P_L"
+    },
+    {
+      "partition": "validation",
+      "position": 673,
+      "variant_id": "residue-srv:A:673:Proline->Serine:pos_673_P_S"
+    },
+    {
+      "partition": "train",
+      "position": 674,
+      "variant_id": "residue-srv:A:674:Threonine->Isoleucine:pos_674_T_I"
+    },
+    {
+      "partition": "train",
+      "position": 675,
+      "variant_id": "residue-srv:A:675:Serine->Leucine:pos_675_S_L"
+    },
+    {
+      "partition": "train",
+      "position": 677,
+      "variant_id": "residue-srv:A:677:Alanine->Glycine:pos_677_A_G"
+    },
+    {
+      "partition": "train",
+      "position": 677,
+      "variant_id": "residue-srv:A:677:Alanine->Valine:pos_677_A_V"
+    },
+    {
+      "partition": "test",
+      "position": 679,
+      "variant_id": "residue-srv:A:679:Threonine->Isoleucine:pos_679_T_I"
+    },
+    {
+      "partition": "train",
+      "position": 680,
+      "variant_id": "residue-srv:A:680:Valine->Isoleucine:pos_680_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 681,
+      "variant_id": "residue-srv:A:681:Valine->Aspartate:pos_681_V_D"
+    },
+    {
+      "partition": "train",
+      "position": 683,
+      "variant_id": "residue-srv:A:683:Lysine->Arginine:pos_683_K_R"
+    },
+    {
+      "partition": "validation",
+      "position": 690,
+      "variant_id": "residue-srv:A:690:Threonine->Alanine:pos_690_T_A"
+    },
+    {
+      "partition": "validation",
+      "position": 690,
+      "variant_id": "residue-srv:A:690:Threonine->Isoleucine:pos_690_T_I"
+    },
+    {
+      "partition": "test",
+      "position": 691,
+      "variant_id": "residue-srv:A:691:Arginine->Glycine:pos_691_R_G"
+    },
+    {
+      "partition": "test",
+      "position": 691,
+      "variant_id": "residue-srv:A:691:Arginine->Glutamine:pos_691_R_Q"
+    },
+    {
+      "partition": "test",
+      "position": 692,
+      "variant_id": "residue-srv:A:692:Lysine->Glutamate:pos_692_K_E"
+    },
+    {
+      "partition": "train",
+      "position": 694,
+      "variant_id": "residue-srv:A:694:Leucine->Arginine:pos_694_L_R"
+    },
+    {
+      "partition": "validation",
+      "position": 696,
+      "variant_id": "residue-srv:A:696:Valine->Isoleucine:pos_696_V_I"
+    },
+    {
+      "partition": "train",
+      "position": 697,
+      "variant_id": "residue-srv:A:697:Glycine->Valine:pos_697_G_V"
+    },
+    {
+      "partition": "validation",
+      "position": 701,
+      "variant_id": "residue-srv:A:701:Valine->Leucine:pos_701_V_L"
+    },
+    {
+      "partition": "train",
+      "position": 705,
+      "variant_id": "residue-srv:A:705:Alanine->Isoleucine:pos_705_A_I"
+    },
+    {
+      "partition": "train",
+      "position": 705,
+      "variant_id": "residue-srv:A:705:Alanine->Threonine:pos_705_A_T"
+    },
+    {
+      "partition": "train",
+      "position": 705,
+      "variant_id": "residue-srv:A:705:Alanine->Valine:pos_705_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 706,
+      "variant_id": "residue-srv:A:706:Isoleucine->Valine:pos_706_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 707,
+      "variant_id": "residue-srv:A:707:Serine->Proline:pos_707_S_P"
+    },
+    {
+      "partition": "train",
+      "position": 709,
+      "variant_id": "residue-srv:A:709:Leucine->Glutamine:pos_709_L_Q"
+    },
+    {
+      "partition": "train",
+      "position": 713,
+      "variant_id": "residue-srv:A:713:Serine->Tyrosine:pos_713_S_Y"
+    },
+    {
+      "partition": "train",
+      "position": 714,
+      "variant_id": "residue-srv:A:714:Arginine->Glutamine:pos_714_R_Q"
+    },
+    {
+      "partition": "train",
+      "position": 714,
+      "variant_id": "residue-srv:A:714:Arginine->Tryptophan:pos_714_R_W"
+    },
+    {
+      "partition": "train",
+      "position": 720,
+      "variant_id": "residue-srv:A:720:Asparagine->Histidine:pos_720_N_H"
+    },
+    {
+      "partition": "train",
+      "position": 720,
+      "variant_id": "residue-srv:A:720:Asparagine->Serine:pos_720_N_S"
+    },
+    {
+      "partition": "train",
+      "position": 722,
+      "variant_id": "residue-srv:A:722:Isoleucine->Methionine:pos_722_I_M"
+    },
+    {
+      "partition": "train",
+      "position": 724,
+      "variant_id": "residue-srv:A:724:Lysine->Asparagine:pos_724_K_N"
+    },
+    {
+      "partition": "train",
+      "position": 724,
+      "variant_id": "residue-srv:A:724:Lysine->Threonine:pos_724_K_T"
+    },
+    {
+      "partition": "test",
+      "position": 726,
+      "variant_id": "residue-srv:A:726:Threonine->Serine:pos_726_T_S"
+    },
+    {
+      "partition": "train",
+      "position": 729,
+      "variant_id": "residue-srv:A:729:Aspartate->Alanine:pos_729_D_A"
+    },
+    {
+      "partition": "train",
+      "position": 732,
+      "variant_id": "residue-srv:A:732:Serine->Proline:pos_732_S_P"
+    },
+    {
+      "partition": "validation",
+      "position": 734,
+      "variant_id": "residue-srv:A:734:Isoleucine->Valine:pos_734_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 738,
+      "variant_id": "residue-srv:A:738:Valine->Alanine:pos_738_V_A"
+    },
+    {
+      "partition": "train",
+      "position": 739,
+      "variant_id": "residue-srv:A:739:Proline->Leucine:pos_739_P_L"
+    },
+    {
+      "partition": "train",
+      "position": 739,
+      "variant_id": "residue-srv:A:739:Proline->Glutamine:pos_739_P_Q"
+    },
+    {
+      "partition": "train",
+      "position": 742,
+      "variant_id": "residue-srv:A:742:Aspartate->Asparagine:pos_742_D_N"
+    },
+    {
+      "partition": "train",
+      "position": 743,
+      "variant_id": "residue-srv:A:743:Leucine->Phenylalanine:pos_743_L_F"
+    },
+    {
+      "partition": "train",
+      "position": 743,
+      "variant_id": "residue-srv:A:743:Leucine->Arginine:pos_743_L_R"
+    },
+    {
+      "partition": "train",
+      "position": 745,
+      "variant_id": "residue-srv:A:745:Isoleucine->Asparagine:pos_745_I_N"
+    },
+    {
+      "partition": "train",
+      "position": 745,
+      "variant_id": "residue-srv:A:745:Isoleucine->Valine:pos_745_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 749,
+      "variant_id": "residue-srv:A:749:Alanine->Aspartate:pos_749_A_D"
+    },
+    {
+      "partition": "train",
+      "position": 750,
+      "variant_id": "residue-srv:A:750:Serine->Alanine:pos_750_S_A"
+    },
+    {
+      "partition": "test",
+      "position": 752,
+      "variant_id": "residue-srv:A:752:Cysteine->Arginine:pos_752_C_R"
+    },
+    {
+      "partition": "validation",
+      "position": 754,
+      "variant_id": "residue-srv:A:754:Threonine->Alanine:pos_754_T_A"
+    },
+    {
+      "partition": "validation",
+      "position": 754,
+      "variant_id": "residue-srv:A:754:Threonine->Arginine:pos_754_T_R"
+    },
+    {
+      "partition": "test",
+      "position": 758,
+      "variant_id": "residue-srv:A:758:Isoleucine->Valine:pos_758_I_V"
+    },
+    {
+      "partition": "validation",
+      "position": 759,
+      "variant_id": "residue-srv:A:759:Isoleucine->Methionine:pos_759_I_M"
+    },
+    {
+      "partition": "train",
+      "position": 761,
+      "variant_id": "residue-srv:A:761:Asparagine->Serine:pos_761_N_S"
+    },
+    {
+      "partition": "validation",
+      "position": 764,
+      "variant_id": "residue-srv:A:764:Glutamine->Arginine:pos_764_Q_R"
+    },
+    {
+      "partition": "train",
+      "position": 766,
+      "variant_id": "residue-srv:A:766:Alanine->Valine:pos_766_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 767,
+      "variant_id": "residue-srv:A:767:Arginine->Cysteine:pos_767_R_C"
+    },
+    {
+      "partition": "train",
+      "position": 767,
+      "variant_id": "residue-srv:A:767:Arginine->Histidine:pos_767_R_H"
+    },
+    {
+      "partition": "train",
+      "position": 767,
+      "variant_id": "residue-srv:A:767:Arginine->Proline:pos_767_R_P"
+    },
+    {
+      "partition": "train",
+      "position": 767,
+      "variant_id": "residue-srv:A:767:Arginine->Serine:pos_767_R_S"
+    },
+    {
+      "partition": "train",
+      "position": 773,
+      "variant_id": "residue-srv:A:773:Glycine->Glutamate:pos_773_G_E"
+    },
+    {
+      "partition": "train",
+      "position": 774,
+      "variant_id": "residue-srv:A:774:Glycine->Aspartate:pos_774_G_D"
+    },
+    {
+      "partition": "train",
+      "position": 774,
+      "variant_id": "residue-srv:A:774:Glycine->Serine:pos_774_G_S"
+    },
+    {
+      "partition": "train",
+      "position": 774,
+      "variant_id": "residue-srv:A:774:Glycine->Valine:pos_774_G_V"
+    },
+    {
+      "partition": "train",
+      "position": 778,
+      "variant_id": "residue-srv:A:778:Isoleucine->Phenylalanine:pos_778_I_F"
+    },
+    {
+      "partition": "train",
+      "position": 778,
+      "variant_id": "residue-srv:A:778:Isoleucine->Valine:pos_778_I_V"
+    },
+    {
+      "partition": "train",
+      "position": 780,
+      "variant_id": "residue-srv:A:780:Alanine->Threonine:pos_780_A_T"
+    },
+    {
+      "partition": "test",
+      "position": 784,
+      "variant_id": "residue-srv:A:784:Glycine->Serine:pos_784_G_S"
+    },
+    {
+      "partition": "test",
+      "position": 785,
+      "variant_id": "residue-srv:A:785:Aspartate->Asparagine:pos_785_D_N"
+    },
+    {
+      "partition": "validation",
+      "position": 786,
+      "variant_id": "residue-srv:A:786:Alanine->Aspartate:pos_786_A_D"
+    },
+    {
+      "partition": "validation",
+      "position": 786,
+      "variant_id": "residue-srv:A:786:Alanine->Proline:pos_786_A_P"
+    },
+    {
+      "partition": "train",
+      "position": 787,
+      "variant_id": "residue-srv:A:787:Tyrosine->Cysteine:pos_787_Y_C"
+    },
+    {
+      "partition": "train",
+      "position": 788,
+      "variant_id": "residue-srv:A:788:Alanine->Serine:pos_788_A_S"
+    },
+    {
+      "partition": "train",
+      "position": 788,
+      "variant_id": "residue-srv:A:788:Alanine->Valine:pos_788_A_V"
+    },
+    {
+      "partition": "train",
+      "position": 790,
+      "variant_id": "residue-srv:A:790:Asparagine->Lysine:pos_790_N_K"
+    },
+    {
+      "partition": "train",
+      "position": 790,
+      "variant_id": "residue-srv:A:790:Asparagine->Serine:pos_790_N_S"
+    },
+    {
+      "partition": "train",
+      "position": 791,
+      "variant_id": "residue-srv:A:791:Lysine->Arginine:pos_791_K_R"
+    },
+    {
+      "partition": "test",
+      "position": 792,
+      "variant_id": "residue-srv:A:792:Alanine->Glutamate:pos_792_A_E"
+    },
+    {
+      "partition": "train",
+      "position": 794,
+      "variant_id": "residue-srv:A:794:Lysine->Glutamate:pos_794_K_E"
+    },
+    {
+      "partition": "train",
+      "position": 796,
+      "variant_id": "residue-srv:A:796:Alanine->Valine:pos_796_A_V"
+    },
+    {
+      "partition": "validation",
+      "position": 797,
+      "variant_id": "residue-srv:A:797:Serine->Phenylalanine:pos_797_S_F"
+    },
+    {
+      "partition": "train",
+      "position": 798,
+      "variant_id": "residue-srv:A:798:Valine->Isoleucine:pos_798_V_I"
+    },
+    {
+      "partition": "validation",
+      "position": 800,
+      "variant_id": "residue-srv:A:800:Leucine->Proline:pos_800_L_P"
+    },
+    {
+      "partition": "train",
+      "position": 801,
+      "variant_id": "residue-srv:A:801:Tyrosine->Cysteine:pos_801_Y_C"
+    },
+    {
+      "partition": "train",
+      "position": 801,
+      "variant_id": "residue-srv:A:801:Tyrosine->Phenylalanine:pos_801_Y_F"
+    },
+    {
+      "partition": "train",
+      "position": 802,
+      "variant_id": "residue-srv:A:802:Serine->Alanine:pos_802_S_A"
+    },
+    {
+      "partition": "train",
+      "position": 802,
+      "variant_id": "residue-srv:A:802:Serine->Tyrosine:pos_802_S_Y"
+    },
+    {
+      "partition": "train",
+      "position": 804,
+      "variant_id": "residue-srv:A:804:Tryptophan->Serine:pos_804_W_S"
+    },
+    {
+      "partition": "train",
+      "position": 807,
+      "variant_id": "residue-srv:A:807:Threonine->Methionine:pos_807_T_M"
+    },
+    {
+      "partition": "train",
+      "position": 808,
+      "variant_id": "residue-srv:A:808:Glutamate->Lysine:pos_808_E_K"
+    },
+    {
+      "partition": "train",
+      "position": 810,
+      "variant_id": "residue-srv:A:810:Histidine->Leucine:pos_810_H_L"
+    },
+    {
+      "partition": "train",
+      "position": 810,
+      "variant_id": "residue-srv:A:810:Histidine->Tyrosine:pos_810_H_Y"
+    },
+    {
+      "partition": "train",
+      "position": 813,
+      "variant_id": "residue-srv:A:813:Tyrosine->Phenylalanine:pos_813_Y_F"
+    },
+    {
+      "partition": "train",
+      "position": 816,
+      "variant_id": "residue-srv:A:816:Alanine->Serine:pos_816_A_S"
+    },
+    {
+      "partition": "train",
+      "position": 816,
+      "variant_id": "residue-srv:A:816:Alanine->Threonine:pos_816_A_T"
+    },
+    {
+      "partition": "test",
+      "position": 817,
+      "variant_id": "residue-srv:A:817:Glutamine->Leucine:pos_817_Q_L"
+    },
+    {
+      "partition": "test",
+      "position": 818,
+      "variant_id": "residue-srv:A:818:Phenylalanine->Leucine:pos_818_F_L"
+    },
+    {
+      "partition": "train",
+      "position": 819,
+      "variant_id": "residue-srv:A:819:Lysine->Glutamate:pos_819_K_E"
+    },
+    {
+      "partition": "train",
+      "position": 819,
+      "variant_id": "residue-srv:A:819:Lysine->Glutamine:pos_819_K_Q"
+    },
+    {
+      "partition": "train",
+      "position": 821,
+      "variant_id": "residue-srv:A:821:Threonine->Isoleucine:pos_821_T_I"
+    },
+    {
+      "partition": "train",
+      "position": 824,
+      "variant_id": "residue-srv:A:824:Valine->Aspartate:pos_824_V_D"
+    },
+    {
+      "partition": "train",
+      "position": 825,
+      "variant_id": "residue-srv:A:825:Asparagine->Threonine:pos_825_N_T"
+    },
+    {
+      "partition": "validation",
+      "position": 827,
+      "variant_id": "residue-srv:A:827:Arginine->Glutamine:pos_827_R_Q"
+    },
+    {
+      "partition": "validation",
+      "position": 827,
+      "variant_id": "residue-srv:A:827:Arginine->Tryptophan:pos_827_R_W"
+    },
+    {
+      "partition": "train",
+      "position": 828,
+      "variant_id": "residue-srv:A:828:Threonine->Isoleucine:pos_828_T_I"
+    },
+    {
+      "partition": "train",
+      "position": 829,
+      "variant_id": "residue-srv:A:829:Alanine->Serine:pos_829_A_S"
+    },
+    {
+      "partition": "train",
+      "position": 830,
+      "variant_id": "residue-srv:A:830:Lysine->Arginine:pos_830_K_R"
+    },
+    {
+      "partition": "train",
+      "position": 833,
+      "variant_id": "residue-srv:A:833:Histidine->Glutamine:pos_833_H_Q"
+    },
+    {
+      "partition": "test",
+      "position": 835,
+      "variant_id": "residue-srv:A:835:Leucine->Proline:pos_835_L_P"
+    },
+    {
+      "partition": "test",
+      "position": 835,
+      "variant_id": "residue-srv:A:835:Leucine->Arginine:pos_835_L_R"
+    }
+  ],
+  "audit_metadata": {
+    "a1_inventory": {
+      "exact_match": true,
+      "expected_count": 483,
+      "path": "artifacts/model_a/a1/node_pair_alignment_audit/node_pair_alignment_audit.json"
+    },
+    "artifact_role": "shared_immutable_full_split_model_a_model_b",
+    "biological_variant_count": 483,
+    "canonical_hdf5_paths": {
+      "mutants": "/home/sartesero/deeprank2_repo/scripts/mutantes_output/proc_483p_CON_CSV/proc_483p.hdf5",
+      "wt_companion": "/home/sartesero/deeprank2_repo/scripts/mutantes_output/proc_483p_CON_CSV/wt_companion.hdf5"
+    },
+    "created_from_variant_count": 483,
+    "evaluation_controls": [
+      "residue-srv:A:419:Leucine->Leucine:PKP2_WT"
+    ],
+    "hdf5_content_fingerprint": {
+      "algorithm": "sha256",
+      "combined": {
+        "algorithm": "sha256",
+        "digest": "9a320862a54566d232e1ef2a4eafa468cf900a19186dc0fd7c92aaf0abe06c68",
+        "files": [
+          {
+            "digest": "92eb242f5565db6194a5e29e3469775fbf7d8c07280ed2d8cdfd5ab98b5b5631",
+            "logical_identity": "gnn_siamese_pkp2:mutants",
+            "role": "mutants",
+            "size_bytes": 33580891
+          },
+          {
+            "digest": "29f68e98ae300207511594e0baf7621ba9e67c85d8df12ceee812a1dea3aa91a",
+            "logical_identity": "gnn_siamese_pkp2:wt_companion",
+            "role": "wt_companion",
+            "size_bytes": 22961913
+          }
+        ],
+        "scope": "hdf5_content_set",
+        "version": 1
+      },
+      "files": [
+        {
+          "algorithm": "sha256",
+          "digest": "92eb242f5565db6194a5e29e3469775fbf7d8c07280ed2d8cdfd5ab98b5b5631",
+          "logical_identity": "gnn_siamese_pkp2:mutants",
+          "role": "mutants",
+          "scope": "raw_file_bytes",
+          "size_bytes": 33580891,
+          "version": 1
+        },
+        {
+          "algorithm": "sha256",
+          "digest": "29f68e98ae300207511594e0baf7621ba9e67c85d8df12ceee812a1dea3aa91a",
+          "logical_identity": "gnn_siamese_pkp2:wt_companion",
+          "role": "wt_companion",
+          "scope": "raw_file_bytes",
+          "size_bytes": 22961913,
+          "version": 1
+        }
+      ],
+      "scope": "raw_file_bytes",
+      "version": 1
+    },
+    "immutability_policy": "Do not regenerate or overwrite for A8.5/A9; load with allow_create=false.",
+    "legacy_dataset_fingerprint": "84dfa4fca250f3fd11c1b3d99db22902b22fcde9ff00b4ce93f08541b2bfa5d3",
+    "legacy_fingerprint_limitation": "depends_on_physical_mutant_source_h5_and_wt_source_h5_paths",
+    "native_wt_control_count": 1,
+    "pairing_inventory_fingerprint": "e72bb3ef60762a72f525a3e7f230caa1550abe6ba37a9572ebbe804203b9c009",
+    "seed_roles": {
+      "dataloader_seed_actual": 123,
+      "model_initialization_seed": 42,
+      "run_seed": 123,
+      "split_seed": 42
+    },
+    "split_fingerprint": "8dcc611a6575b95242fda70d2b29e6bf4917a9c781bbeebd851e95e71391d7dd"
+  },
+  "config": {
+    "enforce_no_position_overlap": true,
+    "enforce_no_variant_overlap": true,
+    "group_key": "position",
+    "seed": 42,
+    "shuffle_groups": true,
+    "split_type": "leave_position_out",
+    "test_fraction": 0.15,
+    "validation_fraction": 0.15
+  },
+  "dataset_fingerprint": "84dfa4fca250f3fd11c1b3d99db22902b22fcde9ff00b4ce93f08541b2bfa5d3",
+  "partitions": {
+    "test": {
+      "positions": [
+        30,
+        78,
+        79,
+        108,
+        125,
+        137,
+        198,
+        200,
+        250,
+        271,
+        309,
+        316,
+        322,
+        323,
+        325,
+        353,
+        376,
+        439,
+        474,
+        477,
+        481,
+        498,
+        504,
+        505,
+        507,
+        555,
+        560,
+        563,
+        564,
+        573,
+        582,
+        587,
+        592,
+        596,
+        599,
+        632,
+        639,
+        647,
+        650,
+        652,
+        664,
+        679,
+        691,
+        692,
+        726,
+        752,
+        758,
+        784,
+        785,
+        792,
+        817,
+        818,
+        835
+      ],
+      "variant_ids": [
+        "residue-srv:A:30:Leucine->Glutamine:pos_30_L_Q",
+        "residue-srv:A:30:Leucine->Arginine:pos_30_L_R",
+        "residue-srv:A:78:Histidine->Asparagine:pos_78_H_N",
+        "residue-srv:A:79:Arginine->Glutamine:pos_79_R_Q",
+        "residue-srv:A:108:Tyrosine->Cysteine:pos_108_Y_C",
+        "residue-srv:A:108:Tyrosine->Histidine:pos_108_Y_H",
+        "residue-srv:A:125:Arginine->Lysine:pos_125_R_K",
+        "residue-srv:A:137:Glutamate->Lysine:pos_137_E_K",
+        "residue-srv:A:198:Glutamate->Lysine:pos_198_E_K",
+        "residue-srv:A:200:Valine->Methionine:pos_200_V_M",
+        "residue-srv:A:250:Arginine->Serine:pos_250_R_S",
+        "residue-srv:A:271:Valine->Phenylalanine:pos_271_V_F",
+        "residue-srv:A:309:Alanine->Threonine:pos_309_A_T",
+        "residue-srv:A:316:Arginine->Lysine:pos_316_R_K",
+        "residue-srv:A:322:Glycine->Serine:pos_322_G_S",
+        "residue-srv:A:323:Glutamine->Histidine:pos_323_Q_H",
+        "residue-srv:A:323:Glutamine->Arginine:pos_323_Q_R",
+        "residue-srv:A:325:Alanine->Valine:pos_325_A_V",
+        "residue-srv:A:353:Leucine->Proline:pos_353_L_P",
+        "residue-srv:A:353:Leucine->Valine:pos_353_L_V",
+        "residue-srv:A:376:Phenylalanine->Serine:pos_376_F_S",
+        "residue-srv:A:439:Valine->Glycine:pos_439_V_G",
+        "residue-srv:A:439:Valine->Isoleucine:pos_439_V_I",
+        "residue-srv:A:474:Leucine->Valine:pos_474_L_V",
+        "residue-srv:A:477:Threonine->Alanine:pos_477_T_A",
+        "residue-srv:A:481:Leucine->Arginine:pos_481_L_R",
+        "residue-srv:A:498:Aspartate->Asparagine:pos_498_D_N",
+        "residue-srv:A:504:Glycine->Cysteine:pos_504_G_C",
+        "residue-srv:A:504:Glycine->Aspartate:pos_504_G_D",
+        "residue-srv:A:504:Glycine->Valine:pos_504_G_V",
+        "residue-srv:A:505:Leucine->Phenylalanine:pos_505_L_F",
+        "residue-srv:A:507:Aspartate->Glycine:pos_507_D_G",
+        "residue-srv:A:507:Aspartate->Tyrosine:pos_507_D_Y",
+        "residue-srv:A:555:Proline->Threonine:pos_555_P_T",
+        "residue-srv:A:560:Threonine->Methionine:pos_560_T_M",
+        "residue-srv:A:563:Cysteine->Tryptophan:pos_563_C_W",
+        "residue-srv:A:564:Valine->Methionine:pos_564_V_M",
+        "residue-srv:A:573:Glutamine->Histidine:pos_573_Q_H",
+        "residue-srv:A:582:Tyrosine->Asparagine:pos_582_Y_N",
+        "residue-srv:A:587:Tyrosine->Cysteine:pos_587_Y_C",
+        "residue-srv:A:592:Asparagine->Isoleucine:pos_592_N_I",
+        "residue-srv:A:596:Aspartate->Asparagine:pos_596_D_N",
+        "residue-srv:A:599:Lysine->Arginine:pos_599_K_R",
+        "residue-srv:A:632:Tryptophan->Cysteine:pos_632_W_C",
+        "residue-srv:A:639:Isoleucine->Methionine:pos_639_I_M",
+        "residue-srv:A:647:Alanine->Threonine:pos_647_A_T",
+        "residue-srv:A:650:Valine->Isoleucine:pos_650_V_I",
+        "residue-srv:A:652:Asparagine->Serine:pos_652_N_S",
+        "residue-srv:A:664:Asparagine->Isoleucine:pos_664_N_I",
+        "residue-srv:A:679:Threonine->Isoleucine:pos_679_T_I",
+        "residue-srv:A:691:Arginine->Glycine:pos_691_R_G",
+        "residue-srv:A:691:Arginine->Glutamine:pos_691_R_Q",
+        "residue-srv:A:692:Lysine->Glutamate:pos_692_K_E",
+        "residue-srv:A:726:Threonine->Serine:pos_726_T_S",
+        "residue-srv:A:752:Cysteine->Arginine:pos_752_C_R",
+        "residue-srv:A:758:Isoleucine->Valine:pos_758_I_V",
+        "residue-srv:A:784:Glycine->Serine:pos_784_G_S",
+        "residue-srv:A:785:Aspartate->Asparagine:pos_785_D_N",
+        "residue-srv:A:792:Alanine->Glutamate:pos_792_A_E",
+        "residue-srv:A:817:Glutamine->Leucine:pos_817_Q_L",
+        "residue-srv:A:818:Phenylalanine->Leucine:pos_818_F_L",
+        "residue-srv:A:835:Leucine->Proline:pos_835_L_P",
+        "residue-srv:A:835:Leucine->Arginine:pos_835_L_R"
+      ]
+    },
+    "train": {
+      "positions": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        10,
+        11,
+        12,
+        34,
+        50,
+        52,
+        55,
+        58,
+        62,
+        63,
+        70,
+        73,
+        74,
+        75,
+        77,
+        83,
+        86,
+        87,
+        98,
+        100,
+        101,
+        103,
+        105,
+        109,
+        110,
+        113,
+        114,
+        122,
+        123,
+        128,
+        131,
+        132,
+        135,
+        136,
+        140,
+        149,
+        154,
+        155,
+        162,
+        163,
+        165,
+        168,
+        176,
+        188,
+        190,
+        201,
+        207,
+        247,
+        262,
+        284,
+        287,
+        300,
+        305,
+        310,
+        311,
+        312,
+        314,
+        318,
+        320,
+        327,
+        328,
+        330,
+        338,
+        340,
+        343,
+        345,
+        349,
+        350,
+        358,
+        359,
+        360,
+        361,
+        363,
+        364,
+        366,
+        369,
+        372,
+        374,
+        377,
+        378,
+        380,
+        382,
+        385,
+        388,
+        391,
+        395,
+        397,
+        401,
+        411,
+        413,
+        415,
+        417,
+        419,
+        424,
+        426,
+        427,
+        431,
+        432,
+        433,
+        437,
+        438,
+        440,
+        441,
+        443,
+        444,
+        458,
+        459,
+        465,
+        472,
+        473,
+        475,
+        476,
+        478,
+        479,
+        482,
+        483,
+        484,
+        486,
+        489,
+        493,
+        495,
+        502,
+        506,
+        508,
+        510,
+        513,
+        514,
+        516,
+        521,
+        522,
+        523,
+        524,
+        525,
+        526,
+        527,
+        529,
+        531,
+        532,
+        535,
+        537,
+        543,
+        544,
+        546,
+        548,
+        550,
+        562,
+        566,
+        571,
+        583,
+        586,
+        588,
+        591,
+        595,
+        598,
+        603,
+        605,
+        607,
+        609,
+        610,
+        611,
+        614,
+        615,
+        616,
+        618,
+        619,
+        620,
+        626,
+        628,
+        629,
+        630,
+        635,
+        640,
+        642,
+        643,
+        644,
+        648,
+        649,
+        651,
+        653,
+        654,
+        656,
+        661,
+        662,
+        663,
+        665,
+        667,
+        668,
+        669,
+        674,
+        675,
+        677,
+        680,
+        681,
+        683,
+        694,
+        697,
+        705,
+        706,
+        707,
+        709,
+        713,
+        714,
+        720,
+        722,
+        724,
+        729,
+        732,
+        738,
+        739,
+        742,
+        743,
+        745,
+        749,
+        750,
+        761,
+        766,
+        767,
+        773,
+        774,
+        778,
+        780,
+        787,
+        788,
+        790,
+        791,
+        794,
+        796,
+        798,
+        801,
+        802,
+        804,
+        807,
+        808,
+        810,
+        813,
+        816,
+        819,
+        821,
+        824,
+        825,
+        828,
+        829,
+        830,
+        833
+      ],
+      "variant_ids": [
+        "residue-srv:A:1:Methionine->Leucine:pos_1_M_L",
+        "residue-srv:A:1:Methionine->Threonine:pos_1_M_T",
+        "residue-srv:A:1:Methionine->Valine:pos_1_M_V",
+        "residue-srv:A:3:Alanine->Valine:pos_3_A_V",
+        "residue-srv:A:4:Proline->Serine:pos_4_P_S",
+        "residue-srv:A:5:Glycine->Aspartate:pos_5_G_D",
+        "residue-srv:A:6:Alanine->Serine:pos_6_A_S",
+        "residue-srv:A:6:Alanine->Threonine:pos_6_A_T",
+        "residue-srv:A:7:Proline->Glutamine:pos_7_P_Q",
+        "residue-srv:A:7:Proline->Serine:pos_7_P_S",
+        "residue-srv:A:10:Tyrosine->Cysteine:pos_10_Y_C",
+        "residue-srv:A:10:Tyrosine->Histidine:pos_10_Y_H",
+        "residue-srv:A:11:Glycine->Cysteine:pos_11_G_C",
+        "residue-srv:A:11:Glycine->Aspartate:pos_11_G_D",
+        "residue-srv:A:12:Tyrosine->Cysteine:pos_12_Y_C",
+        "residue-srv:A:34:Serine->Cysteine:pos_34_S_C",
+        "residue-srv:A:50:Threonine->Isoleucine:pos_50_T_I",
+        "residue-srv:A:50:Threonine->Arginine:pos_50_T_R",
+        "residue-srv:A:52:Lysine->Glutamate:pos_52_K_E",
+        "residue-srv:A:52:Lysine->Asparagine:pos_52_K_N",
+        "residue-srv:A:55:Arginine->Leucine:pos_55_R_L",
+        "residue-srv:A:58:Glutamate->Glycine:pos_58_E_G",
+        "residue-srv:A:58:Glutamate->Lysine:pos_58_E_K",
+        "residue-srv:A:62:Glutamine->Lysine:pos_62_Q_K",
+        "residue-srv:A:63:Threonine->Proline:pos_63_T_P",
+        "residue-srv:A:70:Serine->Isoleucine:pos_70_S_I",
+        "residue-srv:A:73:Glycine->Valine:pos_73_G_V",
+        "residue-srv:A:74:Asparagine->Lysine:pos_74_N_K",
+        "residue-srv:A:75:Glycine->Glutamate:pos_75_G_E",
+        "residue-srv:A:75:Glycine->Arginine:pos_75_G_R",
+        "residue-srv:A:77:Leucine->Proline:pos_77_L_P",
+        "residue-srv:A:83:Valine->Isoleucine:pos_83_V_I",
+        "residue-srv:A:86:Tyrosine->Cysteine:pos_86_Y_C",
+        "residue-srv:A:87:Valine->Leucine:pos_87_V_L",
+        "residue-srv:A:98:Valine->Isoleucine:pos_98_V_I",
+        "residue-srv:A:100:Glycine->Aspartate:pos_100_G_D",
+        "residue-srv:A:100:Glycine->Serine:pos_100_G_S",
+        "residue-srv:A:101:Arginine->Cysteine:pos_101_R_C",
+        "residue-srv:A:101:Arginine->Histidine:pos_101_R_H",
+        "residue-srv:A:101:Arginine->Leucine:pos_101_R_L",
+        "residue-srv:A:103:Proline->Alanine:pos_103_P_A",
+        "residue-srv:A:103:Proline->Leucine:pos_103_P_L",
+        "residue-srv:A:103:Proline->Threonine:pos_103_P_T",
+        "residue-srv:A:105:Proline->Alanine:pos_105_P_A",
+        "residue-srv:A:105:Proline->Serine:pos_105_P_S",
+        "residue-srv:A:109:Aspartate->Asparagine:pos_109_D_N",
+        "residue-srv:A:110:Methionine->Isoleucine:pos_110_M_I",
+        "residue-srv:A:113:Alanine->Glycine:pos_113_A_G",
+        "residue-srv:A:114:Glycine->Aspartate:pos_114_G_D",
+        "residue-srv:A:122:Arginine->Cysteine:pos_122_R_C",
+        "residue-srv:A:122:Arginine->Histidine:pos_122_R_H",
+        "residue-srv:A:122:Arginine->Leucine:pos_122_R_L",
+        "residue-srv:A:123:Tryptophan->Serine:pos_123_W_S",
+        "residue-srv:A:128:Alanine->Threonine:pos_128_A_T",
+        "residue-srv:A:131:Serine->Glycine:pos_131_S_G",
+        "residue-srv:A:132:Serine->Threonine:pos_132_S_T",
+        "residue-srv:A:135:Serine->Phenylalanine:pos_135_S_F",
+        "residue-srv:A:136:Valine->Methionine:pos_136_V_M",
+        "residue-srv:A:140:Serine->Threonine:pos_140_S_T",
+        "residue-srv:A:149:Glutamate->Aspartate:pos_149_E_D",
+        "residue-srv:A:154:Serine->Glycine:pos_154_S_G",
+        "residue-srv:A:154:Serine->Arginine:pos_154_S_R",
+        "residue-srv:A:155:Serine->Threonine:pos_155_S_T",
+        "residue-srv:A:162:Threonine->Alanine:pos_162_T_A",
+        "residue-srv:A:163:Histidine->Asparagine:pos_163_H_N",
+        "residue-srv:A:163:Histidine->Glutamine:pos_163_H_Q",
+        "residue-srv:A:165:Aspartate->Glycine:pos_165_D_G",
+        "residue-srv:A:168:Tyrosine->Cysteine:pos_168_Y_C",
+        "residue-srv:A:168:Tyrosine->Histidine:pos_168_Y_H",
+        "residue-srv:A:176:Histidine->Arginine:pos_176_H_R",
+        "residue-srv:A:188:Leucine->Phenylalanine:pos_188_L_F",
+        "residue-srv:A:190:Valine->Leucine:pos_190_V_L",
+        "residue-srv:A:190:Valine->Methionine:pos_190_V_M",
+        "residue-srv:A:201:Glycine->Glutamate:pos_201_G_E",
+        "residue-srv:A:207:Threonine->Serine:pos_207_T_S",
+        "residue-srv:A:247:Glycine->Arginine:pos_247_G_R",
+        "residue-srv:A:262:Leucine->Methionine:pos_262_L_M",
+        "residue-srv:A:284:Arginine->Glycine:pos_284_R_G",
+        "residue-srv:A:287:Arginine->Glycine:pos_287_R_G",
+        "residue-srv:A:300:Threonine->Lysine:pos_300_T_K",
+        "residue-srv:A:300:Threonine->Methionine:pos_300_T_M",
+        "residue-srv:A:305:Glycine->Glutamate:pos_305_G_E",
+        "residue-srv:A:310:Valine->Leucine:pos_310_V_L",
+        "residue-srv:A:310:Valine->Methionine:pos_310_V_M",
+        "residue-srv:A:311:Aspartate->Histidine:pos_311_D_H",
+        "residue-srv:A:312:Serine->Alanine:pos_312_S_A",
+        "residue-srv:A:312:Serine->Proline:pos_312_S_P",
+        "residue-srv:A:314:Glycine->Glutamate:pos_314_G_E",
+        "residue-srv:A:314:Glycine->Arginine:pos_314_G_R",
+        "residue-srv:A:318:Histidine->Proline:pos_318_H_P",
+        "residue-srv:A:320:Threonine->Alanine:pos_320_T_A",
+        "residue-srv:A:327:Glycine->Alanine:pos_327_G_A",
+        "residue-srv:A:327:Glycine->Glutamate:pos_327_G_E",
+        "residue-srv:A:327:Glycine->Valine:pos_327_G_V",
+        "residue-srv:A:327:Glycine->Tryptophan:pos_327_G_W",
+        "residue-srv:A:328:Glycine->Alanine:pos_328_G_A",
+        "residue-srv:A:328:Glycine->Arginine:pos_328_G_R",
+        "residue-srv:A:328:Glycine->Valine:pos_328_G_V",
+        "residue-srv:A:330:Glycine->Glutamate:pos_330_G_E",
+        "residue-srv:A:338:Threonine->Alanine:pos_338_T_A",
+        "residue-srv:A:340:Threonine->Isoleucine:pos_340_T_I",
+        "residue-srv:A:343:Glutamine->Arginine:pos_343_Q_R",
+        "residue-srv:A:345:Glycine->Arginine:pos_345_G_R",
+        "residue-srv:A:349:Methionine->Valine:pos_349_M_V",
+        "residue-srv:A:350:Glutamate->Lysine:pos_350_E_K",
+        "residue-srv:A:358:Serine->Asparagine:pos_358_S_N",
+        "residue-srv:A:359:Methionine->Valine:pos_359_M_V",
+        "residue-srv:A:360:Leucine->Proline:pos_360_L_P",
+        "residue-srv:A:361:Glutamate->Lysine:pos_361_E_K",
+        "residue-srv:A:363:Aspartate->Asparagine:pos_363_D_N",
+        "residue-srv:A:363:Aspartate->Tyrosine:pos_363_D_Y",
+        "residue-srv:A:364:Histidine->Leucine:pos_364_H_L",
+        "residue-srv:A:366:Leucine->Proline:pos_366_L_P",
+        "residue-srv:A:369:Arginine->Lysine:pos_369_R_K",
+        "residue-srv:A:372:Alanine->Proline:pos_372_A_P",
+        "residue-srv:A:372:Alanine->Threonine:pos_372_A_T",
+        "residue-srv:A:374:Alanine->Serine:pos_374_A_S",
+        "residue-srv:A:377:Isoleucine->Threonine:pos_377_I_T",
+        "residue-srv:A:377:Isoleucine->Valine:pos_377_I_V",
+        "residue-srv:A:378:Glutamine->Arginine:pos_378_Q_R",
+        "residue-srv:A:380:Glutamate->Lysine:pos_380_E_K",
+        "residue-srv:A:382:Phenylalanine->Leucine:pos_382_F_L",
+        "residue-srv:A:385:Serine->Cysteine:pos_385_S_C",
+        "residue-srv:A:385:Serine->Proline:pos_385_S_P",
+        "residue-srv:A:388:Arginine->Glycine:pos_388_R_G",
+        "residue-srv:A:388:Arginine->Proline:pos_388_R_P",
+        "residue-srv:A:388:Arginine->Glutamine:pos_388_R_Q",
+        "residue-srv:A:388:Arginine->Tryptophan:pos_388_R_W",
+        "residue-srv:A:391:Valine->Isoleucine:pos_391_V_I",
+        "residue-srv:A:395:Arginine->Histidine:pos_395_R_H",
+        "residue-srv:A:395:Arginine->Proline:pos_395_R_P",
+        "residue-srv:A:395:Arginine->Serine:pos_395_R_S",
+        "residue-srv:A:397:Isoleucine->Asparagine:pos_397_I_N",
+        "residue-srv:A:397:Isoleucine->Valine:pos_397_I_V",
+        "residue-srv:A:401:Leucine->Glutamine:pos_401_L_Q",
+        "residue-srv:A:411:Valine->Isoleucine:pos_411_V_I",
+        "residue-srv:A:413:Arginine->Glutamine:pos_413_R_Q",
+        "residue-srv:A:415:Valine->Glycine:pos_415_V_G",
+        "residue-srv:A:417:Glycine->Arginine:pos_417_G_R",
+        "residue-srv:A:419:Leucine->Serine:pos_419_L_S",
+        "residue-srv:A:424:Phenylalanine->Isoleucine:pos_424_F_I",
+        "residue-srv:A:424:Phenylalanine->Leucine:pos_424_F_L",
+        "residue-srv:A:424:Phenylalanine->Serine:pos_424_F_S",
+        "residue-srv:A:426:Aspartate->Histidine:pos_426_D_H",
+        "residue-srv:A:427:Asparagine->Histidine:pos_427_N_H",
+        "residue-srv:A:427:Asparagine->Serine:pos_427_N_S",
+        "residue-srv:A:431:Leucine->Serine:pos_431_L_S",
+        "residue-srv:A:432:Glutamate->Glutamine:pos_432_E_Q",
+        "residue-srv:A:433:Valine->Alanine:pos_433_V_A",
+        "residue-srv:A:437:Asparagine->Tyrosine:pos_437_N_Y",
+        "residue-srv:A:438:Glycine->Arginine:pos_438_G_R",
+        "residue-srv:A:440:Proline->Leucine:pos_440_P_L",
+        "residue-srv:A:441:Arginine->Proline:pos_441_R_P",
+        "residue-srv:A:441:Arginine->Tryptophan:pos_441_R_W",
+        "residue-srv:A:443:Leucine->Proline:pos_443_L_P",
+        "residue-srv:A:444:Glutamine->Histidine:pos_444_Q_H",
+        "residue-srv:A:458:Isoleucine->Lysine:pos_458_I_K",
+        "residue-srv:A:458:Isoleucine->Valine:pos_458_I_V",
+        "residue-srv:A:459:Threonine->Isoleucine:pos_459_T_I",
+        "residue-srv:A:465:Leucine->Phenylalanine:pos_465_L_F",
+        "residue-srv:A:465:Leucine->Serine:pos_465_L_S",
+        "residue-srv:A:472:Lysine->Arginine:pos_472_K_R",
+        "residue-srv:A:473:Asparagine->Serine:pos_473_N_S",
+        "residue-srv:A:475:Methionine->Leucine:pos_475_M_L",
+        "residue-srv:A:476:Isoleucine->Lysine:pos_476_I_K",
+        "residue-srv:A:476:Isoleucine->Valine:pos_476_I_V",
+        "residue-srv:A:478:Glutamate->Lysine:pos_478_E_K",
+        "residue-srv:A:479:Alanine->Serine:pos_479_A_S",
+        "residue-srv:A:482:Threonine->Alanine:pos_482_T_A",
+        "residue-srv:A:482:Threonine->Methionine:pos_482_T_M",
+        "residue-srv:A:483:Leucine->Proline:pos_483_L_P",
+        "residue-srv:A:483:Leucine->Arginine:pos_483_L_R",
+        "residue-srv:A:484:Threonine->Methionine:pos_484_T_M",
+        "residue-srv:A:486:Asparagine->Isoleucine:pos_486_N_I",
+        "residue-srv:A:489:Isoleucine->Valine:pos_489_I_V",
+        "residue-srv:A:493:Glycine->Alanine:pos_493_G_A",
+        "residue-srv:A:495:Proline->Alanine:pos_495_P_A",
+        "residue-srv:A:495:Proline->Leucine:pos_495_P_L",
+        "residue-srv:A:502:Alanine->Glycine:pos_502_A_G",
+        "residue-srv:A:502:Alanine->Threonine:pos_502_A_T",
+        "residue-srv:A:506:Leucine->Phenylalanine:pos_506_L_F",
+        "residue-srv:A:508:Phenylalanine->Cysteine:pos_508_F_C",
+        "residue-srv:A:510:Isoleucine->Valine:pos_510_I_V",
+        "residue-srv:A:513:Asparagine->Aspartate:pos_513_N_D",
+        "residue-srv:A:514:Valine->Isoleucine:pos_514_V_I",
+        "residue-srv:A:516:Glycine->Alanine:pos_516_G_A",
+        "residue-srv:A:516:Glycine->Valine:pos_516_G_V",
+        "residue-srv:A:521:Methionine->Valine:pos_521_M_V",
+        "residue-srv:A:522:Serine->Isoleucine:pos_522_S_I",
+        "residue-srv:A:523:Serine->Phenylalanine:pos_523_S_F",
+        "residue-srv:A:523:Serine->Threonine:pos_523_S_T",
+        "residue-srv:A:524:Alanine->Valine:pos_524_A_V",
+        "residue-srv:A:525:Glycine->Aspartate:pos_525_G_D",
+        "residue-srv:A:525:Glycine->Serine:pos_525_G_S",
+        "residue-srv:A:526:Alanine->Valine:pos_526_A_V",
+        "residue-srv:A:527:Aspartate->Asparagine:pos_527_D_N",
+        "residue-srv:A:529:Arginine->Lysine:pos_529_R_K",
+        "residue-srv:A:531:Alanine->Valine:pos_531_A_V",
+        "residue-srv:A:532:Methionine->Leucine:pos_532_M_L",
+        "residue-srv:A:535:Cysteine->Tyrosine:pos_535_C_Y",
+        "residue-srv:A:537:Glycine->Glutamate:pos_537_G_E",
+        "residue-srv:A:537:Glycine->Arginine:pos_537_G_R",
+        "residue-srv:A:543:Valine->Isoleucine:pos_543_V_I",
+        "residue-srv:A:543:Valine->Leucine:pos_543_V_L",
+        "residue-srv:A:544:Histidine->Arginine:pos_544_H_R",
+        "residue-srv:A:546:Valine->Alanine:pos_546_V_A",
+        "residue-srv:A:546:Valine->Isoleucine:pos_546_V_I",
+        "residue-srv:A:548:Glycine->Arginine:pos_548_G_R",
+        "residue-srv:A:550:Isoleucine->Asparagine:pos_550_I_N",
+        "residue-srv:A:550:Isoleucine->Valine:pos_550_I_V",
+        "residue-srv:A:562:Asparagine->Serine:pos_562_N_S",
+        "residue-srv:A:566:Isoleucine->Valine:pos_566_I_V",
+        "residue-srv:A:571:Serine->Phenylalanine:pos_571_S_F",
+        "residue-srv:A:571:Serine->Threonine:pos_571_S_T",
+        "residue-srv:A:583:Serine->Cysteine:pos_583_S_C",
+        "residue-srv:A:583:Serine->Phenylalanine:pos_583_S_F",
+        "residue-srv:A:586:Isoleucine->Threonine:pos_586_I_T",
+        "residue-srv:A:586:Isoleucine->Valine:pos_586_I_V",
+        "residue-srv:A:588:Isoleucine->Valine:pos_588_I_V",
+        "residue-srv:A:591:Arginine->Tryptophan:pos_591_R_W",
+        "residue-srv:A:595:Threonine->Asparagine:pos_595_T_N",
+        "residue-srv:A:598:Asparagine->Lysine:pos_598_N_K",
+        "residue-srv:A:603:Cysteine->Tryptophan:pos_603_C_W",
+        "residue-srv:A:605:Glycine->Arginine:pos_605_G_R",
+        "residue-srv:A:607:Arginine->Glutamine:pos_607_R_Q",
+        "residue-srv:A:609:Arginine->Glycine:pos_609_R_G",
+        "residue-srv:A:610:Lysine->Glutamine:pos_610_K_Q",
+        "residue-srv:A:611:Valine->Leucine:pos_611_V_L",
+        "residue-srv:A:614:Glutamine->Proline:pos_614_Q_P",
+        "residue-srv:A:615:Tyrosine->Histidine:pos_615_Y_H",
+        "residue-srv:A:616:Glutamine->Histidine:pos_616_Q_H",
+        "residue-srv:A:618:Valine->Methionine:pos_618_V_M",
+        "residue-srv:A:619:Proline->Glutamine:pos_619_P_Q",
+        "residue-srv:A:619:Proline->Serine:pos_619_P_S",
+        "residue-srv:A:620:Methionine->Threonine:pos_620_M_T",
+        "residue-srv:A:626:Asparagine->Lysine:pos_626_N_K",
+        "residue-srv:A:628:Lysine->Glutamate:pos_628_K_E",
+        "residue-srv:A:629:Glycine->Serine:pos_629_G_S",
+        "residue-srv:A:629:Glycine->Valine:pos_629_G_V",
+        "residue-srv:A:630:Valine->Alanine:pos_630_V_A",
+        "residue-srv:A:630:Valine->Leucine:pos_630_V_L",
+        "residue-srv:A:635:Histidine->Tyrosine:pos_635_H_Y",
+        "residue-srv:A:640:Arginine->Serine:pos_640_R_S",
+        "residue-srv:A:642:Tyrosine->Cysteine:pos_642_Y_C",
+        "residue-srv:A:643:Leucine->Arginine:pos_643_L_R",
+        "residue-srv:A:644:Serine->Proline:pos_644_S_P",
+        "residue-srv:A:648:Lysine->Arginine:pos_648_K_R",
+        "residue-srv:A:649:Serine->Glycine:pos_649_S_G",
+        "residue-srv:A:651:Arginine->Cysteine:pos_651_R_C",
+        "residue-srv:A:651:Arginine->Histidine:pos_651_R_H",
+        "residue-srv:A:653:Tyrosine->Cysteine:pos_653_Y_C",
+        "residue-srv:A:653:Tyrosine->Aspartate:pos_653_Y_D",
+        "residue-srv:A:654:Threonine->Alanine:pos_654_T_A",
+        "residue-srv:A:654:Threonine->Lysine:pos_654_T_K",
+        "residue-srv:A:656:Glutamate->Aspartate:pos_656_E_D",
+        "residue-srv:A:661:Alanine->Threonine:pos_661_A_T",
+        "residue-srv:A:661:Alanine->Valine:pos_661_A_V",
+        "residue-srv:A:662:Leucine->Proline:pos_662_L_P",
+        "residue-srv:A:663:Glutamine->Histidine:pos_663_Q_H",
+        "residue-srv:A:665:Leucine->Phenylalanine:pos_665_L_F",
+        "residue-srv:A:667:Alanine->Proline:pos_667_A_P",
+        "residue-srv:A:668:Glycine->Alanine:pos_668_G_A",
+        "residue-srv:A:668:Glycine->Arginine:pos_668_G_R",
+        "residue-srv:A:669:Serine->Asparagine:pos_669_S_N",
+        "residue-srv:A:674:Threonine->Isoleucine:pos_674_T_I",
+        "residue-srv:A:675:Serine->Leucine:pos_675_S_L",
+        "residue-srv:A:677:Alanine->Glycine:pos_677_A_G",
+        "residue-srv:A:677:Alanine->Valine:pos_677_A_V",
+        "residue-srv:A:680:Valine->Isoleucine:pos_680_V_I",
+        "residue-srv:A:681:Valine->Aspartate:pos_681_V_D",
+        "residue-srv:A:683:Lysine->Arginine:pos_683_K_R",
+        "residue-srv:A:694:Leucine->Arginine:pos_694_L_R",
+        "residue-srv:A:697:Glycine->Valine:pos_697_G_V",
+        "residue-srv:A:705:Alanine->Isoleucine:pos_705_A_I",
+        "residue-srv:A:705:Alanine->Threonine:pos_705_A_T",
+        "residue-srv:A:705:Alanine->Valine:pos_705_A_V",
+        "residue-srv:A:706:Isoleucine->Valine:pos_706_I_V",
+        "residue-srv:A:707:Serine->Proline:pos_707_S_P",
+        "residue-srv:A:709:Leucine->Glutamine:pos_709_L_Q",
+        "residue-srv:A:713:Serine->Tyrosine:pos_713_S_Y",
+        "residue-srv:A:714:Arginine->Glutamine:pos_714_R_Q",
+        "residue-srv:A:714:Arginine->Tryptophan:pos_714_R_W",
+        "residue-srv:A:720:Asparagine->Histidine:pos_720_N_H",
+        "residue-srv:A:720:Asparagine->Serine:pos_720_N_S",
+        "residue-srv:A:722:Isoleucine->Methionine:pos_722_I_M",
+        "residue-srv:A:724:Lysine->Asparagine:pos_724_K_N",
+        "residue-srv:A:724:Lysine->Threonine:pos_724_K_T",
+        "residue-srv:A:729:Aspartate->Alanine:pos_729_D_A",
+        "residue-srv:A:732:Serine->Proline:pos_732_S_P",
+        "residue-srv:A:738:Valine->Alanine:pos_738_V_A",
+        "residue-srv:A:739:Proline->Leucine:pos_739_P_L",
+        "residue-srv:A:739:Proline->Glutamine:pos_739_P_Q",
+        "residue-srv:A:742:Aspartate->Asparagine:pos_742_D_N",
+        "residue-srv:A:743:Leucine->Phenylalanine:pos_743_L_F",
+        "residue-srv:A:743:Leucine->Arginine:pos_743_L_R",
+        "residue-srv:A:745:Isoleucine->Asparagine:pos_745_I_N",
+        "residue-srv:A:745:Isoleucine->Valine:pos_745_I_V",
+        "residue-srv:A:749:Alanine->Aspartate:pos_749_A_D",
+        "residue-srv:A:750:Serine->Alanine:pos_750_S_A",
+        "residue-srv:A:761:Asparagine->Serine:pos_761_N_S",
+        "residue-srv:A:766:Alanine->Valine:pos_766_A_V",
+        "residue-srv:A:767:Arginine->Cysteine:pos_767_R_C",
+        "residue-srv:A:767:Arginine->Histidine:pos_767_R_H",
+        "residue-srv:A:767:Arginine->Proline:pos_767_R_P",
+        "residue-srv:A:767:Arginine->Serine:pos_767_R_S",
+        "residue-srv:A:773:Glycine->Glutamate:pos_773_G_E",
+        "residue-srv:A:774:Glycine->Aspartate:pos_774_G_D",
+        "residue-srv:A:774:Glycine->Serine:pos_774_G_S",
+        "residue-srv:A:774:Glycine->Valine:pos_774_G_V",
+        "residue-srv:A:778:Isoleucine->Phenylalanine:pos_778_I_F",
+        "residue-srv:A:778:Isoleucine->Valine:pos_778_I_V",
+        "residue-srv:A:780:Alanine->Threonine:pos_780_A_T",
+        "residue-srv:A:787:Tyrosine->Cysteine:pos_787_Y_C",
+        "residue-srv:A:788:Alanine->Serine:pos_788_A_S",
+        "residue-srv:A:788:Alanine->Valine:pos_788_A_V",
+        "residue-srv:A:790:Asparagine->Lysine:pos_790_N_K",
+        "residue-srv:A:790:Asparagine->Serine:pos_790_N_S",
+        "residue-srv:A:791:Lysine->Arginine:pos_791_K_R",
+        "residue-srv:A:794:Lysine->Glutamate:pos_794_K_E",
+        "residue-srv:A:796:Alanine->Valine:pos_796_A_V",
+        "residue-srv:A:798:Valine->Isoleucine:pos_798_V_I",
+        "residue-srv:A:801:Tyrosine->Cysteine:pos_801_Y_C",
+        "residue-srv:A:801:Tyrosine->Phenylalanine:pos_801_Y_F",
+        "residue-srv:A:802:Serine->Alanine:pos_802_S_A",
+        "residue-srv:A:802:Serine->Tyrosine:pos_802_S_Y",
+        "residue-srv:A:804:Tryptophan->Serine:pos_804_W_S",
+        "residue-srv:A:807:Threonine->Methionine:pos_807_T_M",
+        "residue-srv:A:808:Glutamate->Lysine:pos_808_E_K",
+        "residue-srv:A:810:Histidine->Leucine:pos_810_H_L",
+        "residue-srv:A:810:Histidine->Tyrosine:pos_810_H_Y",
+        "residue-srv:A:813:Tyrosine->Phenylalanine:pos_813_Y_F",
+        "residue-srv:A:816:Alanine->Serine:pos_816_A_S",
+        "residue-srv:A:816:Alanine->Threonine:pos_816_A_T",
+        "residue-srv:A:819:Lysine->Glutamate:pos_819_K_E",
+        "residue-srv:A:819:Lysine->Glutamine:pos_819_K_Q",
+        "residue-srv:A:821:Threonine->Isoleucine:pos_821_T_I",
+        "residue-srv:A:824:Valine->Aspartate:pos_824_V_D",
+        "residue-srv:A:825:Asparagine->Threonine:pos_825_N_T",
+        "residue-srv:A:828:Threonine->Isoleucine:pos_828_T_I",
+        "residue-srv:A:829:Alanine->Serine:pos_829_A_S",
+        "residue-srv:A:830:Lysine->Arginine:pos_830_K_R",
+        "residue-srv:A:833:Histidine->Glutamine:pos_833_H_Q"
+      ]
+    },
+    "validation": {
+      "positions": [
+        13,
+        32,
+        65,
+        99,
+        102,
+        107,
+        115,
+        129,
+        219,
+        224,
+        296,
+        326,
+        329,
+        337,
+        342,
+        356,
+        357,
+        365,
+        381,
+        394,
+        430,
+        435,
+        456,
+        460,
+        467,
+        468,
+        469,
+        471,
+        487,
+        534,
+        538,
+        552,
+        556,
+        569,
+        580,
+        597,
+        621,
+        625,
+        627,
+        631,
+        634,
+        673,
+        690,
+        696,
+        701,
+        734,
+        754,
+        759,
+        764,
+        786,
+        797,
+        800,
+        827
+      ],
+      "variant_ids": [
+        "residue-srv:A:13:Isoleucine->Asparagine:pos_13_I_N",
+        "residue-srv:A:32:Leucine->Arginine:pos_32_L_R",
+        "residue-srv:A:65:Alanine->Serine:pos_65_A_S",
+        "residue-srv:A:65:Alanine->Valine:pos_65_A_V",
+        "residue-srv:A:99:Glycine->Glutamate:pos_99_G_E",
+        "residue-srv:A:102:Serine->Phenylalanine:pos_102_S_F",
+        "residue-srv:A:107:Threonine->Isoleucine:pos_107_T_I",
+        "residue-srv:A:115:Threonine->Isoleucine:pos_115_T_I",
+        "residue-srv:A:129:Glutamine->Leucine:pos_129_Q_L",
+        "residue-srv:A:219:Arginine->Lysine:pos_219_R_K",
+        "residue-srv:A:224:Glycine->Aspartate:pos_224_G_D",
+        "residue-srv:A:224:Glycine->Valine:pos_224_G_V",
+        "residue-srv:A:296:Histidine->Asparagine:pos_296_H_N",
+        "residue-srv:A:296:Histidine->Proline:pos_296_H_P",
+        "residue-srv:A:326:Alanine->Glutamate:pos_326_A_E",
+        "residue-srv:A:326:Alanine->Serine:pos_326_A_S",
+        "residue-srv:A:326:Alanine->Threonine:pos_326_A_T",
+        "residue-srv:A:329:Serine->Cysteine:pos_329_S_C",
+        "residue-srv:A:329:Serine->Glycine:pos_329_S_G",
+        "residue-srv:A:329:Serine->Arginine:pos_329_S_R",
+        "residue-srv:A:337:Serine->Asparagine:pos_337_S_N",
+        "residue-srv:A:342:Serine->Phenylalanine:pos_342_S_F",
+        "residue-srv:A:342:Serine->Proline:pos_342_S_P",
+        "residue-srv:A:356:Alanine->Glutamate:pos_356_A_E",
+        "residue-srv:A:356:Alanine->Proline:pos_356_A_P",
+        "residue-srv:A:357:Valine->Methionine:pos_357_V_M",
+        "residue-srv:A:365:Methionine->Isoleucine:pos_365_M_I",
+        "residue-srv:A:365:Methionine->Valine:pos_365_M_V",
+        "residue-srv:A:381:Cysteine->Tyrosine:pos_381_C_Y",
+        "residue-srv:A:394:Leucine->Phenylalanine:pos_394_L_F",
+        "residue-srv:A:394:Leucine->Histidine:pos_394_L_H",
+        "residue-srv:A:430:Lysine->Glutamate:pos_430_K_E",
+        "residue-srv:A:435:Glutamate->Lysine:pos_435_E_K",
+        "residue-srv:A:456:Lysine->Glutamine:pos_456_K_Q",
+        "residue-srv:A:456:Lysine->Arginine:pos_456_K_R",
+        "residue-srv:A:456:Lysine->Threonine:pos_456_K_T",
+        "residue-srv:A:460:Glycine->Aspartate:pos_460_G_D",
+        "residue-srv:A:460:Glycine->Arginine:pos_460_G_R",
+        "residue-srv:A:460:Glycine->Serine:pos_460_G_S",
+        "residue-srv:A:467:Serine->Phenylalanine:pos_467_S_F",
+        "residue-srv:A:468:Asparagine->Lysine:pos_468_N_K",
+        "residue-srv:A:469:Aspartate->Asparagine:pos_469_D_N",
+        "residue-srv:A:471:Leucine->Valine:pos_471_L_V",
+        "residue-srv:A:487:Isoleucine->Serine:pos_487_I_S",
+        "residue-srv:A:534:Arginine->Glycine:pos_534_R_G",
+        "residue-srv:A:534:Arginine->Serine:pos_534_R_S",
+        "residue-srv:A:538:Leucine->Phenylalanine:pos_538_L_F",
+        "residue-srv:A:538:Leucine->Proline:pos_538_L_P",
+        "residue-srv:A:552:Aspartate->Glutamate:pos_552_D_E",
+        "residue-srv:A:556:Aspartate->Asparagine:pos_556_D_N",
+        "residue-srv:A:569:Asparagine->Lysine:pos_569_N_K",
+        "residue-srv:A:580:Glutamate->Aspartate:pos_580_E_D",
+        "residue-srv:A:597:Asparagine->Lysine:pos_597_N_K",
+        "residue-srv:A:621:Proline->Leucine:pos_621_P_L",
+        "residue-srv:A:621:Proline->Arginine:pos_621_P_R",
+        "residue-srv:A:625:Serine->Isoleucine:pos_625_S_I",
+        "residue-srv:A:625:Serine->Arginine:pos_625_S_R",
+        "residue-srv:A:625:Serine->Threonine:pos_625_S_T",
+        "residue-srv:A:627:Proline->Serine:pos_627_P_S",
+        "residue-srv:A:631:Glutamate->Aspartate:pos_631_E_D",
+        "residue-srv:A:634:Tryptophan->Leucine:pos_634_W_L",
+        "residue-srv:A:673:Proline->Leucine:pos_673_P_L",
+        "residue-srv:A:673:Proline->Serine:pos_673_P_S",
+        "residue-srv:A:690:Threonine->Alanine:pos_690_T_A",
+        "residue-srv:A:690:Threonine->Isoleucine:pos_690_T_I",
+        "residue-srv:A:696:Valine->Isoleucine:pos_696_V_I",
+        "residue-srv:A:701:Valine->Leucine:pos_701_V_L",
+        "residue-srv:A:734:Isoleucine->Valine:pos_734_I_V",
+        "residue-srv:A:754:Threonine->Alanine:pos_754_T_A",
+        "residue-srv:A:754:Threonine->Arginine:pos_754_T_R",
+        "residue-srv:A:759:Isoleucine->Methionine:pos_759_I_M",
+        "residue-srv:A:764:Glutamine->Arginine:pos_764_Q_R",
+        "residue-srv:A:786:Alanine->Aspartate:pos_786_A_D",
+        "residue-srv:A:786:Alanine->Proline:pos_786_A_P",
+        "residue-srv:A:797:Serine->Phenylalanine:pos_797_S_F",
+        "residue-srv:A:800:Leucine->Proline:pos_800_L_P",
+        "residue-srv:A:827:Arginine->Glutamine:pos_827_R_Q",
+        "residue-srv:A:827:Arginine->Tryptophan:pos_827_R_W"
+      ]
+    }
+  },
+  "split_type": "leave_position_out"
+}

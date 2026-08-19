@@ -1,0 +1,44 @@
+extends: model_a_multiscale.yaml
+
+# Prepared for A8.5. This configuration is intentionally not executed by A8.1-A8.3.
+training:
+  # Seed roles inherited by the current builders:
+  # - split_seed=42 and model_initialization_seed=42;
+  # - run_seed=123 and dataloader_seed_actual=123.
+  # reproducibility.seed_dataloader=42 remains historical metadata and is not
+  # the generator seed currently consumed by build_dataloaders.
+  device: cpu
+  epochs: 5
+  batch_size: 4
+  num_workers: 0
+  smoke_test:
+    enabled: false
+
+model:
+  # Modelo A contrasta el par completo mediante projection_pair_a. La cabeza
+  # individual heredada de base.yaml no forma parte de esta arquitectura.
+  projection_instance:
+    enabled: false
+
+split:
+  # Full immutable A/B split: 483 biological variants, never the 4/2/2 smoke split.
+  type: leave_position_out
+  validation_fraction: 0.15
+  test_fraction: 0.15
+  group_key: position
+  shuffle_groups: true
+  seed: 42
+  persist_path: splits/leave_position_out_seed_42.json
+  # The pilot must reuse the common persisted split; it may never create one.
+  allow_create: false
+
+loss:
+  main: nt_xent
+  positive_pair: same_mutant_augmentations
+  use_wt_as_strong_positive: false
+  lambda_wt: 0.0
+  lambda_delta: 0.0
+
+outputs:
+  root_dir: runs
+  model_name: model_a_nodal_multiscale_pair

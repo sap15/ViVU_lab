@@ -1,0 +1,30 @@
+extends: model_a_multiscale.yaml
+
+training:
+  device: cpu
+  epochs: 1
+  batch_size: 2
+  num_workers: 0
+  scheduler: none
+  smoke_test:
+    enabled: true
+    max_pairs: 8
+    epochs: 1
+    resume_epochs: 1
+    batch_size: 2
+
+split:
+  # Synthetic smoke data supplies its own persisted split. Real-data smoke runs
+  # must point this at the already-persisted common project split.
+  allow_create: true
+
+loss:
+  main: nt_xent
+  positive_pair: same_mutant_augmentations
+  use_wt_as_strong_positive: false
+  lambda_wt: 0.0
+  lambda_delta: 0.0
+
+outputs:
+  root_dir: runs
+  model_name: model_a_nodal_multiscale_pair

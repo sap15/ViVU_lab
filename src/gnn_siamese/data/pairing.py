@@ -7,6 +7,9 @@ from typing import Any
 
 from gnn_siamese.data.validation import parse_case_key
 
+BIOLOGICAL_VARIANT = "biological_variant"
+NATIVE_WT_CONTROL = "native_wt_control"
+
 _AA3_TO_AA1 = {
     "ALA": "A",
     "ARG": "R",
@@ -110,6 +113,28 @@ class VariantSignature:
             position=self.position,
             wt_aa=self.wt_aa,
         )
+
+
+def classify_variant_record(record: str | dict[str, Any]) -> str:
+    """Classify a mutant-input record without conflating WT-like biology with controls.
+
+    The native WT control is created explicitly by the dataset generator's
+    ``--include-wt-graph`` route.  Its stable identity is the final
+    ``PKP2_WT`` token together with a WT->WT amino-acid signature.  Amino-acid
+    equality alone is deliberately insufficient because valid truncation
+    records may use WT-like query amino acids during graph construction.
+    """
+
+    signature = parse_variant_signature(record)
+    identity = signature.graph_id.rsplit(":", 1)[-1]
+    variant_identity = signature.variant_id.rsplit(":", 1)[-1]
+    if (
+        identity == "PKP2_WT"
+        and variant_identity == "PKP2_WT"
+        and signature.wt_aa == signature.mut_aa
+    ):
+        return NATIVE_WT_CONTROL
+    return BIOLOGICAL_VARIANT
 
 
 def _coerce_amino_acid_code(value: Any, *, field_name: str) -> str:

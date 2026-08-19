@@ -38,6 +38,7 @@ def collect_git_metadata() -> dict[str, Any]:
         "commit": None,
         "branch": None,
         "working_tree_state": "unknown",
+        "git_dirty": None,
     }
     try:
         commit = subprocess.run(
@@ -61,6 +62,7 @@ def collect_git_metadata() -> dict[str, Any]:
         payload["commit"] = commit.stdout.strip() or None
         payload["branch"] = branch.stdout.strip() or None
         payload["working_tree_state"] = "dirty" if status.stdout.strip() else "clean"
+        payload["git_dirty"] = bool(status.stdout.strip())
     except (FileNotFoundError, subprocess.CalledProcessError):
         pass
     return payload

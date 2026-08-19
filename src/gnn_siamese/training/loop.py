@@ -41,7 +41,11 @@ from gnn_siamese.utils.manifest import (
     generate_run_id,
 )
 from gnn_siamese.utils.atomic_io import atomic_write_text
-from gnn_siamese.utils.fingerprints import fingerprint_hdf5_inputs, fingerprint_pairing_inventory
+from gnn_siamese.utils.fingerprints import (
+    fingerprint_hdf5_inputs,
+    fingerprint_pairing_inventory,
+    fingerprint_split_definition,
+)
 from gnn_siamese.utils.interruptions import InterruptionController
 
 
@@ -1007,7 +1011,7 @@ def _train_contrastive_pipeline_impl(
         split_bundle=pipeline.split_bundle,
     )
     dataset_fingerprint = build_dataset_fingerprint(pipeline.dataset)
-    split_fingerprint = str(pipeline.split_bundle.split.dataset_fingerprint)
+    split_fingerprint = fingerprint_split_definition(pipeline.split_bundle.split)
     selection = CheckpointSelectionConfig(
         monitor=str(training_cfg.get("checkpointing", {}).get("monitor", "validation_loss")),
         mode=str(training_cfg.get("checkpointing", {}).get("mode", "min")),
@@ -1037,6 +1041,42 @@ def _train_contrastive_pipeline_impl(
                     "schema_version": pipeline.schema.get("schema_version"),
                     "roles": ["mutants", "wt_companion"],
                 },
+                "inventory": {
+                    "hdf5_mutant_input_groups": (
+                        getattr(
+                            pipeline.dataset,
+                            "hdf5_mutant_input_group_count",
+                            len(pipeline.dataset.pairs),
+                        )
+                    ),
+                    "biological_variants": getattr(
+                        pipeline.dataset,
+                        "biological_variant_count",
+                        len(pipeline.dataset.pairs),
+                    ),
+                    "native_wt_controls": len(
+                        getattr(pipeline.dataset, "native_wt_controls", [])
+                    ),
+                    "trainable_variants": getattr(
+                        pipeline.dataset,
+                        "biological_variant_count",
+                        len(pipeline.dataset.pairs),
+                    ),
+                    "native_wt_control_ids": [
+                        record.variant_id
+                        for record in getattr(
+                            pipeline.dataset, "native_wt_controls", []
+                        )
+                    ],
+                    "native_wt_control_policy": {
+                        "role": "evaluation_control",
+                        "used_for_split": False,
+                        "used_for_training": False,
+                        "used_for_validation": False,
+                        "used_for_test_loss": False,
+                        "available_for_inference": True,
+                    },
+                },
                 "hdf5_content_fingerprint": hdf5_content_fingerprint,
                 "locators": {
                     "mutants": {"path": str(Path(pipeline.dataset.mutant_h5_path).resolve()), "provenance": "current_execution"},
@@ -1049,6 +1089,7 @@ def _train_contrastive_pipeline_impl(
                 "split_id": Path(pipeline.split_bundle.split_path).name,
                 "split_seed": split_cfg.get("seed"),
                 "split_fingerprint": split_fingerprint,
+                "split_source_path": str(Path(pipeline.split_bundle.split_path).resolve()),
                 "split_path": layout.relative_reference(layout.split_path),
                 "train_examples": len(pipeline.dataloaders.train_dataset),
                 "validation_examples": len(pipeline.dataloaders.validation_dataset),
@@ -1061,10 +1102,18 @@ def _train_contrastive_pipeline_impl(
                 "seed": project_cfg.get("seed"),
                 "seed_bundle": {
                     "project": project_cfg.get("seed"),
+                    "run": project_cfg.get("seed"),
+                    "split": split_cfg.get("seed"),
                     "python": reproducibility_cfg.get("seed_python"),
                     "numpy": reproducibility_cfg.get("seed_numpy"),
                     "torch": reproducibility_cfg.get("seed_torch"),
                     "cuda": reproducibility_cfg.get("seed_cuda"),
+                    "model_initialization": reproducibility_cfg.get("seed_torch"),
+                    "dataloader_configured": reproducibility_cfg.get("seed_dataloader"),
+                    # build_dataloaders currently seeds its effective generator
+                    # from project.seed. Keep both values explicit until the
+                    # historical shared A/B semantics are migrated deliberately.
+                    "dataloader_effective": project_cfg.get("seed"),
                 },
                 "node_feature_names": list(pipeline.dataset.node_feature_names),
                 "edge_feature_names": list(pipeline.dataset.edge_feature_names),
@@ -1083,6 +1132,11 @@ def _train_contrastive_pipeline_impl(
                     **(
                         {
                             "active_scales": list(model_cfg.get("active_scales", [])),
+                            "domain_scale_status": (
+                                "ENABLED_AND_USED"
+                                if "domain" in model_cfg.get("active_scales", [])
+                                else "DISABLED_DECLARED"
+                            ),
                             "encoder_a": dict(model_cfg.get("encoder_a", {})),
                             "node_delta": dict(model_cfg.get("node_delta", {})),
                         }
@@ -1138,6 +1192,7 @@ def _train_contrastive_pipeline_impl(
                 "weights": dict(pipeline.total_loss_assembler.weights),
             },
             "artifacts": {
+                "run_root": str(layout.run_dir.parent),
                 "run_dir": str(layout.run_dir),
                 "best_checkpoint": str(layout.checkpoints_dir / "best.pt"),
                 "last_checkpoint": str(layout.checkpoints_dir / "last.pt"),
