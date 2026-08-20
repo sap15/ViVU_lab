@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from dataclasses import replace
 
 import pytest
 
@@ -15,6 +16,11 @@ from gnn_siamese.data import (
     resolve_leave_position_out_config,
 )
 from gnn_siamese.data.splits import SplitRecord
+from gnn_siamese.utils.fingerprints import (
+    fingerprint_hdf5_inputs,
+    fingerprint_pairing_inventory,
+    fingerprint_split_definition,
+)
 
 
 def _records() -> list[dict[str, object]]:
@@ -182,3 +188,129 @@ def test_leave_position_out_round_trip_from_dict_preserves_assignments() -> None
     restored = LeavePositionOutSplit.from_dict(split.to_dict())
 
     assert restored == split
+
+
+def _portable_split_fixture(tmp_path: Path) -> tuple[Path, list[SplitRecord], dict]:
+    original_mutants = tmp_path / "original" / "mutants.hdf5"
+    original_wt = tmp_path / "original" / "wt.hdf5"
+    staged_mutants = tmp_path / "staged" / "mutants.hdf5"
+    staged_wt = tmp_path / "staged" / "wt.hdf5"
+    for path, content in (
+        (original_mutants, b"mutants-byte-identical"),
+        (original_wt, b"wt-byte-identical"),
+        (staged_mutants, b"mutants-byte-identical"),
+        (staged_wt, b"wt-byte-identical"),
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+
+    original_records = [
+        SplitRecord(
+            variant_id=str(item["variant_id"]),
+            position=int(item["position"]),
+            mutant_key=str(item["mutant_key"]),
+            wt_key=str(item["wt_key"]),
+            chain_id="A",
+            wt_aa="G",
+            mut_aa="D",
+            mutant_source_h5=str(original_mutants),
+            wt_source_h5=str(original_wt),
+        )
+        for item in _records()
+    ]
+    staged_records = [
+        replace(
+            record,
+            mutant_source_h5=str(staged_mutants),
+            wt_source_h5=str(staged_wt),
+        )
+        for record in original_records
+    ]
+    split = build_leave_position_out_split(original_records, _config(seed=5))
+    content = fingerprint_hdf5_inputs(
+        mutants_path=original_mutants,
+        wt_companion_path=original_wt,
+        dataset_id="portable-test",
+    )
+    payload = split.to_dict()
+    payload["audit_metadata"] = {
+        "legacy_fingerprint_limitation": "depends_on_physical_mutant_source_h5_and_wt_source_h5_paths",
+        "legacy_dataset_fingerprint": split.dataset_fingerprint,
+        "canonical_hdf5_paths": {
+            "mutants": str(original_mutants),
+            "wt_companion": str(original_wt),
+        },
+        "hdf5_content_fingerprint": content,
+        "pairing_inventory_fingerprint": fingerprint_pairing_inventory(original_records),
+        "split_fingerprint": fingerprint_split_definition(split),
+        "biological_variant_count": len(original_records),
+    }
+    path = tmp_path / "split.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    staged_content = fingerprint_hdf5_inputs(
+        mutants_path=staged_mutants,
+        wt_companion_path=staged_wt,
+        dataset_id="portable-test",
+    )
+    return path, staged_records, staged_content
+
+
+def test_relocated_byte_identical_hdf5_split_passes_strong_portable_validation(tmp_path: Path) -> None:
+    path, records, content = _portable_split_fixture(tmp_path)
+
+    split = load_leave_position_out_split(
+        path,
+        dataset_or_records=records,
+        hdf5_content_fingerprint=content,
+    )
+
+    assert sum(map(len, split.dataset_indices_by_partition(records).values())) == len(records)
+
+
+@pytest.mark.parametrize("role", ["mutants", "wt_companion"])
+def test_relocated_split_rejects_changed_individual_hdf5_digest(tmp_path: Path, role: str) -> None:
+    path, records, content = _portable_split_fixture(tmp_path)
+    next(item for item in content["files"] if item["role"] == role)["digest"] = "0" * 64
+
+    with pytest.raises(SplitSerializationError, match=role):
+        load_leave_position_out_split(path, dataset_or_records=records, hdf5_content_fingerprint=content)
+
+
+def test_relocated_split_rejects_inconsistent_combined_fingerprint(tmp_path: Path) -> None:
+    path, records, content = _portable_split_fixture(tmp_path)
+    content["combined"]["digest"] = "0" * 64
+    with pytest.raises(SplitSerializationError, match="combined"):
+        load_leave_position_out_split(path, dataset_or_records=records, hdf5_content_fingerprint=content)
+
+
+@pytest.mark.parametrize("change", ["variant_id", "position"])
+def test_relocated_split_rejects_changed_logical_inventory(tmp_path: Path, change: str) -> None:
+    path, records, content = _portable_split_fixture(tmp_path)
+    if change == "variant_id":
+        records[0] = replace(records[0], variant_id="unexpected_variant")
+    else:
+        records[0] = replace(records[0], position=999)
+    with pytest.raises(SplitSerializationError):
+        load_leave_position_out_split(path, dataset_or_records=records, hdf5_content_fingerprint=content)
+
+
+def test_relocated_split_rejects_modified_assignments(tmp_path: Path) -> None:
+    path, records, content = _portable_split_fixture(tmp_path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["assignments"][0]["partition"] = "validation"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(SplitSerializationError, match="split_fingerprint"):
+        load_leave_position_out_split(path, dataset_or_records=records, hdf5_content_fingerprint=content)
+
+
+def test_relocated_split_rejects_missing_portable_metadata_but_strict_load_still_works(tmp_path: Path) -> None:
+    path, relocated_records, content = _portable_split_fixture(tmp_path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload.pop("audit_metadata")
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(SplitSerializationError, match="portable audit_metadata"):
+        load_leave_position_out_split(
+            path,
+            dataset_or_records=relocated_records,
+            hdf5_content_fingerprint=content,
+        )

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
+import shutil
 
 import h5py
 import pytest
@@ -14,6 +16,11 @@ from gnn_siamese.losses import NTXentLoss
 from gnn_siamese.models import ModelBContrastiveBaseline
 from gnn_siamese.data.augmentations import AugmentationConfigError
 from gnn_siamese.data.dataset import MutWtPairDatasetError
+from gnn_siamese.utils.fingerprints import (
+    fingerprint_hdf5_inputs,
+    fingerprint_pairing_inventory,
+    fingerprint_split_definition,
+)
 from tests.model_b_test_utils import build_model_b_config, create_multi_pair_hdf5, write_schema_json
 
 
@@ -100,6 +107,63 @@ def test_split_is_reloaded_from_persisted_json_without_re_shuffling(tmp_path: Pa
     assert first_pipeline.split_bundle.created is True
     assert second_pipeline.split_bundle.created is False
     assert first_pipeline.split_bundle.split.assignments == second_pipeline.split_bundle.split.assignments
+
+
+def test_training_pipeline_reuses_frozen_split_after_byte_identical_hdf5_relocation(
+    tmp_path: Path,
+) -> None:
+    original = tmp_path / "original"
+    staged = tmp_path / "staged"
+    mutant_path = original / "mutants.hdf5"
+    wt_path = original / "wt_companion.hdf5"
+    staged_mutant_path = staged / mutant_path.name
+    staged_wt_path = staged / wt_path.name
+    schema_path = tmp_path / "schema.json"
+    split_path = tmp_path / "split.json"
+    original.mkdir()
+    staged.mkdir()
+    create_multi_pair_hdf5(mutant_path, wt_path)
+    write_schema_json(schema_path)
+
+    config = build_model_b_config(mutant_path, wt_path, schema_path, split_path)
+    config["__config_path__"] = str(tmp_path / "config.yaml")
+    original_pipeline = build_training_pipeline(config)
+    split = original_pipeline.split_bundle.split
+    content = fingerprint_hdf5_inputs(
+        mutants_path=mutant_path,
+        wt_companion_path=wt_path,
+        dataset_id=str(config["project"].get("name", "dataset")),
+    )
+    payload = json.loads(split_path.read_text(encoding="utf-8"))
+    payload["audit_metadata"] = {
+        "legacy_fingerprint_limitation": "depends_on_physical_mutant_source_h5_and_wt_source_h5_paths",
+        "legacy_dataset_fingerprint": split.dataset_fingerprint,
+        "canonical_hdf5_paths": {
+            "mutants": str(mutant_path),
+            "wt_companion": str(wt_path),
+        },
+        "hdf5_content_fingerprint": content,
+        "pairing_inventory_fingerprint": fingerprint_pairing_inventory(original_pipeline.dataset.pairs),
+        "split_fingerprint": fingerprint_split_definition(split),
+        "biological_variant_count": len(original_pipeline.dataset.pairs),
+    }
+    split_path.write_text(json.dumps(payload), encoding="utf-8")
+    shutil.copyfile(mutant_path, staged_mutant_path)
+    shutil.copyfile(wt_path, staged_wt_path)
+
+    staged_config = build_model_b_config(
+        staged_mutant_path,
+        staged_wt_path,
+        schema_path,
+        split_path,
+        overrides={"split": {"allow_create": False}},
+    )
+    staged_config["__config_path__"] = str(tmp_path / "staged-config.yaml")
+    staged_pipeline = build_training_pipeline(staged_config)
+
+    assert staged_pipeline.split_bundle.created is False
+    assert staged_pipeline.split_bundle.split.assignments == split.assignments
+    assert len(staged_pipeline.dataloaders.train_dataset) > 0
 
 
 def test_builder_infers_final_node_input_dim_from_graph_x_and_counts_is_mutation(tmp_path: Path) -> None:

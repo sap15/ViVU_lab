@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from copy import deepcopy
+import inspect
 import json
 from pathlib import Path
 
@@ -9,6 +10,10 @@ import pytest
 
 from gnn_siamese.config import load_config, save_config
 from gnn_siamese.data.splits import LeavePositionOutSplit
+from gnn_siamese.utils.fingerprints import (
+    combine_content_fingerprints,
+    resolve_hdf5_dataset_id,
+)
 from scripts.colab_preflight import (
     ColabPreflightError,
     MODEL_A_EXPECTED_PARTITIONS,
@@ -97,6 +102,26 @@ def test_model_a_frozen_dataset_identity_passes_and_reports_expected_vs_actual()
     assert result["expected_mutant_sha256"] == result["actual_mutant_sha256"]
     assert result["expected_wt_sha256"] == result["actual_wt_sha256"]
     assert result["expected_combined_fingerprint"] == result["actual_combined_fingerprint"]
+
+
+def test_model_a_portable_identity_uses_project_name_not_protein_id() -> None:
+    config = load_config(PILOT_CONFIG)
+    assert config["project"]["name"] == "gnn_siamese_pkp2"
+    assert config["data"]["protein_id"] == "PKP2"
+
+    dataset_id = resolve_hdf5_dataset_id(config)
+    actual = _frozen_content_fingerprint()
+    files = deepcopy(actual["files"])
+    for record in files:
+        record["logical_identity"] = f"{dataset_id}:{record['role']}"
+
+    assert dataset_id == "gnn_siamese_pkp2"
+    assert combine_content_fingerprints(files)["digest"] == (
+        "9a320862a54566d232e1ef2a4eafa468cf900a19186dc0fd7c92aaf0abe06c68"
+    )
+    preflight_source = inspect.getsource(validate_model_a_preflight)
+    assert "dataset_id=resolve_hdf5_dataset_id(config)" in preflight_source
+    assert 'dataset_id=str(_get_nested(config, "data.protein_id"))' not in preflight_source
 
 
 @pytest.mark.parametrize(
