@@ -16,6 +16,7 @@ from gnn_siamese.config import load_schema, resolve_training_device, validate_c1
 from gnn_siamese.data import (
     MutWtPairDataset,
     SmokeDataArtifacts,
+    SplitSerializationError,
     build_leave_position_out_split,
     collate_mut_wt_pairs,
     load_leave_position_out_split,
@@ -48,6 +49,7 @@ from gnn_siamese.models import (
 )
 from gnn_siamese.losses import NTXentLoss
 from gnn_siamese.training import ModelAContrastive, TotalLossAssembler
+from gnn_siamese.utils.fingerprints import fingerprint_hdf5_inputs, resolve_hdf5_dataset_id
 
 
 class BuilderError(ValueError):
@@ -285,7 +287,21 @@ def build_split_bundle(
     )
     allow_create = bool(split_cfg.get("allow_create", True))
     if split_path.exists():
-        split = load_leave_position_out_split(split_path, dataset_or_records=dataset)
+        try:
+            split = load_leave_position_out_split(split_path, dataset_or_records=dataset)
+        except SplitSerializationError as strict_error:
+            if "dataset_fingerprint" not in str(strict_error):
+                raise
+            content_fingerprint = fingerprint_hdf5_inputs(
+                mutants_path=dataset.mutant_h5_path,
+                wt_companion_path=dataset.wt_h5_path,
+                dataset_id=resolve_hdf5_dataset_id(config),
+            )
+            split = load_leave_position_out_split(
+                split_path,
+                dataset_or_records=dataset,
+                hdf5_content_fingerprint=content_fingerprint,
+            )
         created = False
     else:
         if not allow_create:

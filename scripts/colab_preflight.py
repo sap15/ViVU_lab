@@ -400,7 +400,7 @@ def validate_model_a_preflight(
 
     from gnn_siamese.builders import build_dataset_bundle, build_split_bundle
     from gnn_siamese.config import load_config
-    from gnn_siamese.utils.fingerprints import fingerprint_hdf5_inputs
+    from gnn_siamese.utils.fingerprints import fingerprint_hdf5_inputs, resolve_hdf5_dataset_id
 
     if mode not in {"fresh", "resume"}:
         raise ColabPreflightError(f"Model A mode must be 'fresh' or 'resume', got {mode!r}.")
@@ -511,7 +511,7 @@ def validate_model_a_preflight(
     fingerprints = fingerprint_hdf5_inputs(
         mutants_path=dataset.mutant_h5_path,
         wt_companion_path=dataset.wt_h5_path,
-        dataset_id=str(_get_nested(config, "data.protein_id")),
+        dataset_id=resolve_hdf5_dataset_id(config),
     )
     dataset_identity = validate_model_a_dataset_identity(
         fingerprints,

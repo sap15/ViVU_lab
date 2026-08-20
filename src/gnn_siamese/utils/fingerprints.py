@@ -14,6 +14,15 @@ CONTENT_FINGERPRINT_VERSION = 1
 CONTENT_FINGERPRINT_SCOPE = "raw_file_bytes"
 
 
+def resolve_hdf5_dataset_id(config: Mapping[str, Any]) -> str:
+    """Return the versioned logical identity used for HDF5 fingerprints."""
+
+    project = config.get("project")
+    if not isinstance(project, Mapping):
+        raise ValueError("config.project must be a mapping.")
+    return str(project.get("name", "dataset"))
+
+
 def fingerprint_file(
     path: str | Path,
     *,

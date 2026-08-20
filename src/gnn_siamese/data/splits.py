@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, replace
 import hashlib
 import json
 from pathlib import Path
@@ -72,6 +72,11 @@ class LeavePositionOutSplit:
     dataset_fingerprint: str
     config: LeavePositionOutSplitConfig
     assignments: tuple[SplitAssignment, ...]
+    _validated_relocated_fingerprint: str | None = field(
+        default=None,
+        compare=False,
+        repr=False,
+    )
 
     def assignments_by_partition(self) -> dict[str, tuple[SplitAssignment, ...]]:
         grouped: dict[str, list[SplitAssignment]] = {
@@ -121,11 +126,16 @@ class LeavePositionOutSplit:
 
     def validate_against_records(self, records: Sequence[SplitRecord]) -> None:
         expected_fingerprint = fingerprint_split_records(records)
-        if self.dataset_fingerprint != expected_fingerprint:
+        if (
+            self.dataset_fingerprint != expected_fingerprint
+            and self._validated_relocated_fingerprint != expected_fingerprint
+        ):
             raise SplitSerializationError(
                 "Persisted split dataset_fingerprint does not match the provided dataset."
             )
+        self._validate_inventory_and_assignments(records)
 
+    def _validate_inventory_and_assignments(self, records: Sequence[SplitRecord]) -> None:
         record_by_variant = {record.variant_id: record for record in records}
         if len(record_by_variant) != len(records):
             raise SplitSerializationError("Dataset records contain duplicated variant_id values.")
@@ -232,6 +242,7 @@ class LeavePositionOutSplit:
         path: str | Path,
         *,
         dataset_or_records: MutWtPairDataset | Sequence[MutWtPairRecord] | Sequence[SplitRecord] | Sequence[Mapping[str, Any]] | None = None,
+        hdf5_content_fingerprint: Mapping[str, Any] | None = None,
     ) -> "LeavePositionOutSplit":
         target = Path(path)
         payload = json.loads(target.read_text(encoding="utf-8"))
@@ -239,7 +250,25 @@ class LeavePositionOutSplit:
             raise SplitSerializationError("Persisted split JSON must contain a top-level object.")
         split = cls.from_dict(payload)
         if dataset_or_records is not None:
-            split.validate_against_records(_coerce_split_records(dataset_or_records))
+            records = _coerce_split_records(dataset_or_records)
+            current_fingerprint = fingerprint_split_records(records)
+            if split.dataset_fingerprint == current_fingerprint:
+                split.validate_against_records(records)
+            else:
+                if hdf5_content_fingerprint is None:
+                    raise SplitSerializationError(
+                        "Persisted split dataset_fingerprint does not match the provided dataset."
+                    )
+                _validate_relocated_split(
+                    split,
+                    records,
+                    payload=payload,
+                    hdf5_content_fingerprint=hdf5_content_fingerprint,
+                )
+                split = replace(
+                    split,
+                    _validated_relocated_fingerprint=current_fingerprint,
+                )
         return split
 
 
@@ -380,10 +409,128 @@ def load_leave_position_out_split(
     path: str | Path,
     *,
     dataset_or_records: MutWtPairDataset | Sequence[MutWtPairRecord] | Sequence[SplitRecord] | Sequence[Mapping[str, Any]] | None = None,
+    hdf5_content_fingerprint: Mapping[str, Any] | None = None,
 ) -> LeavePositionOutSplit:
     """Load a persisted leave-position-out split and optionally validate it."""
 
-    return LeavePositionOutSplit.load_json(path, dataset_or_records=dataset_or_records)
+    return LeavePositionOutSplit.load_json(
+        path,
+        dataset_or_records=dataset_or_records,
+        hdf5_content_fingerprint=hdf5_content_fingerprint,
+    )
+
+
+def _validate_relocated_split(
+    split: LeavePositionOutSplit,
+    records: Sequence[SplitRecord],
+    *,
+    payload: Mapping[str, Any],
+    hdf5_content_fingerprint: Mapping[str, Any] | None,
+) -> None:
+    """Accept a legacy path-sensitive split only after proving pure relocation."""
+
+    from gnn_siamese.utils.fingerprints import (
+        combine_content_fingerprints,
+        fingerprint_pairing_inventory,
+        fingerprint_split_definition,
+    )
+
+    metadata = payload.get("audit_metadata")
+    if not isinstance(metadata, Mapping):
+        raise SplitSerializationError(
+            "Persisted split dataset_fingerprint mismatch requires valid portable audit_metadata."
+        )
+    if metadata.get("legacy_fingerprint_limitation") != (
+        "depends_on_physical_mutant_source_h5_and_wt_source_h5_paths"
+    ):
+        raise SplitSerializationError(
+            "Persisted split does not document the supported legacy path-fingerprint limitation."
+        )
+    if metadata.get("legacy_dataset_fingerprint") != split.dataset_fingerprint:
+        raise SplitSerializationError("Portable metadata has an inconsistent legacy dataset fingerprint.")
+
+    canonical_paths = metadata.get("canonical_hdf5_paths")
+    if not isinstance(canonical_paths, Mapping):
+        raise SplitSerializationError("Portable metadata is missing canonical_hdf5_paths.")
+    mutant_path = canonical_paths.get("mutants")
+    wt_path = canonical_paths.get("wt_companion")
+    if not isinstance(mutant_path, str) or not mutant_path or not isinstance(wt_path, str) or not wt_path:
+        raise SplitSerializationError("Portable metadata contains invalid canonical HDF5 paths.")
+    historical_records = tuple(
+        replace(record, mutant_source_h5=mutant_path, wt_source_h5=wt_path)
+        for record in records
+    )
+    if fingerprint_split_records(historical_records) != split.dataset_fingerprint:
+        raise SplitSerializationError(
+            "Legacy dataset fingerprint cannot be reproduced by changing only physical HDF5 paths."
+        )
+
+    expected_content = metadata.get("hdf5_content_fingerprint")
+    if not isinstance(expected_content, Mapping) or not isinstance(hdf5_content_fingerprint, Mapping):
+        raise SplitSerializationError(
+            "Dataset relocation requires expected and current HDF5 content fingerprints."
+        )
+    try:
+        for content in (expected_content, hdf5_content_fingerprint):
+            if (
+                content.get("algorithm") != "sha256"
+                or content.get("version") != 1
+                or content.get("scope") != "raw_file_bytes"
+            ):
+                raise SplitSerializationError("Portable HDF5 content fingerprint metadata is invalid.")
+        expected_file_list = expected_content["files"]
+        actual_file_list = hdf5_content_fingerprint["files"]
+        expected_files = {str(item["role"]): item for item in expected_file_list}
+        actual_files = {str(item["role"]): item for item in actual_file_list}
+        if (
+            len(expected_file_list) != 2
+            or len(actual_file_list) != 2
+            or set(expected_files) != {"mutants", "wt_companion"}
+            or set(actual_files) != set(expected_files)
+        ):
+            raise ValueError("unexpected HDF5 roles")
+        identity_fields = (
+            "algorithm",
+            "version",
+            "scope",
+            "digest",
+            "size_bytes",
+            "logical_identity",
+        )
+        for role in sorted(expected_files):
+            if any(expected_files[role].get(key) != actual_files[role].get(key) for key in identity_fields):
+                raise SplitSerializationError(f"HDF5 content fingerprint mismatch for {role}.")
+        recomputed = combine_content_fingerprints(expected_files.values())
+        recomputed_actual = combine_content_fingerprints(actual_files.values())
+        expected_combined = expected_content["combined"]
+        actual_combined = hdf5_content_fingerprint["combined"]
+        for combined in (expected_combined, actual_combined):
+            if (
+                combined.get("algorithm") != "sha256"
+                or combined.get("version") != 1
+                or combined.get("scope") != "hdf5_content_set"
+            ):
+                raise SplitSerializationError("Portable metadata has invalid combined fingerprint metadata.")
+        if recomputed["digest"] != expected_combined.get("digest"):
+            raise SplitSerializationError("Portable metadata has an inconsistent combined fingerprint.")
+        if recomputed_actual["digest"] != actual_combined.get("digest"):
+            raise SplitSerializationError("Current combined HDF5 content fingerprint is inconsistent.")
+        if expected_combined.get("digest") != actual_combined.get("digest"):
+            raise SplitSerializationError("Combined HDF5 content fingerprint mismatch.")
+    except SplitSerializationError:
+        raise
+    except (KeyError, TypeError, ValueError) as exc:
+        raise SplitSerializationError("Portable HDF5 content fingerprint metadata is invalid.") from exc
+
+    if metadata.get("pairing_inventory_fingerprint") != fingerprint_pairing_inventory(records):
+        raise SplitSerializationError("Pairing inventory fingerprint does not match the current dataset.")
+    if metadata.get("split_fingerprint") != fingerprint_split_definition(split):
+        raise SplitSerializationError("Persisted split assignments/config do not match split_fingerprint.")
+    expected_count = metadata.get("biological_variant_count", metadata.get("created_from_variant_count"))
+    if expected_count != len(records):
+        raise SplitSerializationError("Portable metadata biological variant count does not match the dataset.")
+
+    split._validate_inventory_and_assignments(records)
 
 
 def _coerce_split_records(
