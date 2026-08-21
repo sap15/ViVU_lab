@@ -98,7 +98,7 @@ def test_model_a_manifest_records_scale_and_effective_seed_contract(tmp_path: Pa
     config["augmentation_pair_a"]["allowed_feature_names"] = ["bsa", "res_mass"]
     config["augmentation_pair_a"]["feature_mask_probability"] = 0.0
     config["loss"]["false_negative_mask"].update(
-        {"min_valid_negatives": 0, "min_valid_negative_fraction": 0.0}
+        {"min_valid_negatives": 1, "min_valid_negative_fraction": 0.0}
     )
     pipeline = build_training_pipeline(config)
     output = train_model_b_pipeline(pipeline, config_path=config["__config_path__"])

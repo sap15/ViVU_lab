@@ -212,6 +212,11 @@ def build_resume_compatibility_payload(
             "node_delta": _json_safe(dict(model_cfg.get("node_delta", {}))),
             "pair_fusion": _json_safe(dict(model_cfg.get("pair_fusion", {}))),
             "projection_pair_a": _json_safe(dict(model_cfg.get("projection_pair_a", {}))),
+            "batching": {
+                "strategy": "position_diverse",
+                "batch_size": int(training_cfg.get("batch_size", 4)),
+                "preserve_every_example": True,
+            },
         }
         payload["augmentations"] = _json_safe(dict(config.get("augmentation_pair_a", {})))
     if hdf5_content_fingerprint is not None:

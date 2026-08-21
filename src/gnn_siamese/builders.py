@@ -31,6 +31,7 @@ from gnn_siamese.data.model_a_pair_augmentations import (
     ModelAPairAugmentationConfig,
     ModelAPairAugmenter,
 )
+from gnn_siamese.data.position_batch_sampler import PositionDiverseBatchSampler
 from gnn_siamese.models import (
     EdgeAwareGraphEncoder,
     InstanceProjectionHead,
@@ -338,7 +339,6 @@ def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, spli
     test_dataset = _subset_dataset(dataset, split_bundle.test_indices)
 
     loader_kwargs = {
-        "batch_size": batch_size,
         "num_workers": num_workers,
         "pin_memory": bool(training_cfg.get("pin_memory", False)),
         "persistent_workers": bool(training_cfg.get("persistent_workers", False)),
@@ -346,6 +346,37 @@ def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, spli
     }
     train_generator = torch.Generator(device="cpu")
     train_generator.manual_seed(int(project_cfg.get("seed", 42)))
+    architecture = str(
+        _require_mapping(config.get("model"), field_name="config.model").get(
+            "architecture", "model_b"
+        )
+    )
+    if architecture == "model_a_nodal_multiscale_pair":
+        def positions(indices: list[int]) -> list[int]:
+            return [int(dataset.pairs[index].position) for index in indices]
+
+        train_sampler = PositionDiverseBatchSampler(
+            positions(split_bundle.train_indices), batch_size=batch_size,
+            generator=train_generator, partition="train",
+        )
+        validation_sampler = PositionDiverseBatchSampler(
+            positions(split_bundle.validation_indices), batch_size=batch_size,
+            partition="validation",
+        )
+        test_sampler = PositionDiverseBatchSampler(
+            positions(split_bundle.test_indices), batch_size=batch_size,
+            partition="test",
+        )
+        return DataLoadersBundle(
+            train_dataset=train_dataset,
+            validation_dataset=validation_dataset,
+            test_dataset=test_dataset,
+            train_loader=DataLoader(train_dataset, batch_sampler=train_sampler, **loader_kwargs),
+            validation_loader=DataLoader(validation_dataset, batch_sampler=validation_sampler, **loader_kwargs),
+            test_loader=DataLoader(test_dataset, batch_sampler=test_sampler, **loader_kwargs),
+            train_generator=train_generator,
+        )
+    loader_kwargs["batch_size"] = batch_size
     return DataLoadersBundle(
         train_dataset=train_dataset,
         validation_dataset=validation_dataset,
@@ -433,6 +464,27 @@ def _build_model_b(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Mode
 def _build_model_a(config: Mapping[str, Any], dataset: MutWtPairDataset) -> ModelANodalMultiscalePair:
     model_cfg = _require_mapping(config.get("model"), field_name="config.model")
     loss_cfg = _require_mapping(config.get("loss", {}), field_name="config.loss")
+    mask_cfg = _require_mapping(
+        loss_cfg.get("false_negative_mask", {}), field_name="config.loss.false_negative_mask"
+    )
+    expected_mask = {
+        "enabled": True,
+        "mode": "same_position",
+        "same_position": True,
+        "strict": True,
+        "min_valid_negatives": 1,
+        "min_valid_negative_fraction": 0.0,
+    }
+    mismatches = {
+        key: {"expected": expected, "actual": mask_cfg.get(key)}
+        for key, expected in expected_mask.items()
+        if mask_cfg.get(key) != expected
+    }
+    if mismatches:
+        raise BuilderError(
+            "Model A false-negative masking policy mismatch; the effective scientific "
+            f"contract must be explicit in YAML: {mismatches}."
+        )
     if float(loss_cfg.get("lambda_wt", 0.0)) > 0.0:
         raise BuilderError(
             "Model A currently supports only its contrastive loss; "
@@ -532,6 +584,10 @@ def _build_model_a(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Mode
                 projection_dim=int(projection_cfg.get("output_dim", 64)),
             ),
             nt_xent=loss,
+            mask_mode=str(mask_cfg["mode"]),
+            min_valid_negatives=int(mask_cfg["min_valid_negatives"]),
+            min_valid_fraction=float(mask_cfg["min_valid_negative_fraction"]),
+            strict=bool(mask_cfg["strict"]),
         ),
     )
 

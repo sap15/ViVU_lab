@@ -87,6 +87,15 @@ def test_model_a_pilot_contract_and_frozen_split_counts() -> None:
     assert config["split"]["allow_create"] is False
     assert config["loss"]["main"] == "nt_xent"
     assert config["loss"]["lambda_wt"] == config["loss"]["lambda_delta"] == 0.0
+    assert config["loss"]["false_negative_mask"] == {
+        **config["loss"]["false_negative_mask"],
+        "enabled": True,
+        "mode": "same_position",
+        "same_position": True,
+        "strict": True,
+        "min_valid_negatives": 1,
+        "min_valid_negative_fraction": 0.0,
+    }
     split = LeavePositionOutSplit.load_json(FROZEN_SPLIT)
     counts = {key: len(value) for key, value in split.assignments_by_partition().items()}
     assert counts == MODEL_A_EXPECTED_PARTITIONS

@@ -72,6 +72,15 @@ loss:
   temperature: 0.2
   lambda_wt: 0.0
   lambda_delta: 0.0
+  # Scientific Model A contract: variants at the same residue are neither
+  # positives nor valid contrastive negatives.
+  false_negative_mask:
+    enabled: true
+    mode: same_position
+    same_position: true
+    strict: true
+    min_valid_negatives: 1
+    min_valid_negative_fraction: 0.0
 
 split:
   type: leave_position_out

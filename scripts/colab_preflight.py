@@ -398,7 +398,7 @@ def validate_model_a_preflight(
 ) -> dict[str, Any]:
     """Fail closed unless a resolved config preserves the frozen A8.5 contract."""
 
-    from gnn_siamese.builders import build_dataset_bundle, build_split_bundle
+    from gnn_siamese.builders import build_dataloaders, build_dataset_bundle, build_split_bundle
     from gnn_siamese.config import load_config
     from gnn_siamese.utils.fingerprints import fingerprint_hdf5_inputs, resolve_hdf5_dataset_id
 
@@ -422,6 +422,12 @@ def validate_model_a_preflight(
         "loss.main": "nt_xent",
         "loss.lambda_wt": 0.0,
         "loss.lambda_delta": 0.0,
+        "loss.false_negative_mask.enabled": True,
+        "loss.false_negative_mask.mode": "same_position",
+        "loss.false_negative_mask.same_position": True,
+        "loss.false_negative_mask.strict": True,
+        "loss.false_negative_mask.min_valid_negatives": 1,
+        "loss.false_negative_mask.min_valid_negative_fraction": 0.0,
     }
     mismatches = {
         key: {"expected": expected, "actual": _get_nested(config, key)}
@@ -456,6 +462,7 @@ def validate_model_a_preflight(
         # the repository-relative frozen path as its scientific source of truth.
         split_load_config["split"]["persist_path"] = str(frozen_split)
         split_bundle = build_split_bundle(split_load_config, dataset_bundle.dataset)
+        dataloaders = build_dataloaders(config, dataset_bundle.dataset, split_bundle)
     except Exception as exc:
         raise ColabPreflightError(f"Model A dataset/split validation failed: {exc}") from exc
     dataset = dataset_bundle.dataset
@@ -536,11 +543,22 @@ def validate_model_a_preflight(
         "split_allow_create": False,
         "split_path": str(frozen_split),
         "split_created": False,
+        "position_diverse_batches": {
+            "train": len(dataloaders.train_loader),
+            "validation": len(dataloaders.validation_loader),
+            "test": len(dataloaders.test_loader),
+        },
         "variant_overlaps": 0,
         "position_overlaps": 0,
         "active_scales": scales,
         "domain_enabled": False,
-        "loss": {"main": "nt_xent", "lambda_wt": 0.0, "lambda_delta": 0.0},
+        "loss": {
+            "main": "nt_xent", "lambda_wt": 0.0, "lambda_delta": 0.0,
+            "false_negative_mask": {
+                "mode": "same_position", "min_valid_negatives": 1,
+                "min_valid_negative_fraction": 0.0, "strict": True,
+            },
+        },
         "run_root": str(output_root),
         "mode": mode,
         "epochs": epochs,

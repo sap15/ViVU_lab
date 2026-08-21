@@ -62,6 +62,14 @@ def _config(tmp_path: Path, architecture: str) -> dict:
             "masked_value": 0.0,
         }
         config["loss"]["temperature"] = 0.2
+        config["loss"]["false_negative_mask"] = {
+            "enabled": True,
+            "mode": "same_position",
+            "same_position": True,
+            "strict": True,
+            "min_valid_negatives": 1,
+            "min_valid_negative_fraction": 0.0,
+        }
     return config
 
 

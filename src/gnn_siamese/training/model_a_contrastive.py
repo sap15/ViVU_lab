@@ -31,6 +31,10 @@ class ModelAContrastive(nn.Module):
         *,
         projection_head: ModelAProjectionHead,
         nt_xent: NTXentLoss,
+        mask_mode: str = "same_position",
+        min_valid_negatives: int = 1,
+        min_valid_fraction: float = 0.0,
+        strict: bool = True,
     ) -> None:
         super().__init__()
         if not isinstance(projection_head, ModelAProjectionHead):
@@ -44,6 +48,14 @@ class ModelAContrastive(nn.Module):
             )
         self.projection_head = projection_head
         self.nt_xent = nt_xent
+        if (mask_mode, min_valid_negatives, min_valid_fraction, strict) != (
+            "same_position", 1, 0.0, True
+        ):
+            raise ValueError("Model A requires same_position/min=1/fraction=0/strict=true.")
+        self.mask_mode = mask_mode
+        self.min_valid_negatives = min_valid_negatives
+        self.min_valid_fraction = min_valid_fraction
+        self.strict = strict
 
     def forward(
         self,
@@ -68,11 +80,11 @@ class ModelAContrastive(nn.Module):
         batch_size = z_instance_pair_view1.shape[0]
         mask = build_false_negative_mask(
             batch_size=batch_size,
-            mode="same_position",
+            mode=self.mask_mode,
             positions=positions,
-            min_valid_negatives=1,
-            min_valid_fraction=0.0,
-            strict=True,
+            min_valid_negatives=self.min_valid_negatives,
+            min_valid_fraction=self.min_valid_fraction,
+            strict=self.strict,
         )
         loss_output = self.nt_xent(
             z_instance_pair_view1,
