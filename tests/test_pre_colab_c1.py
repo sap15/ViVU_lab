@@ -73,7 +73,8 @@ def test_pipeline_moves_model_before_optimizer_and_configures_loader(tmp_path: P
         ({"persistent_workers": True, "num_workers": 0}, "persistent_workers=true"),
         ({"mixed_precision": {"enabled": True}}, "mixed_precision.enabled=true"),
         ({"gradient_accumulation_steps": 2}, "gradient_accumulation_steps"),
-        ({"early_stopping": {"enabled": True}}, "early_stopping.enabled=true"),
+        ({"early_stopping": {"enabled": True, "patience": 0}}, "patience"),
+        ({"early_stopping": {"enabled": True, "patience": 2, "mode": "sideways"}}, "mode"),
     ],
 )
 def test_unsupported_or_invalid_training_options_fail_before_pipeline(

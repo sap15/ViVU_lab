@@ -1,0 +1,101 @@
+extends: model_a_pilot.yaml
+
+# Productive A9 contract. Runtime overrides may only select one declared run
+# seed, provide immutable HDF5 paths, select CUDA, and relocate this namespace.
+project:
+  seed: 11
+
+reproducibility:
+  seed_python: 11
+  seed_numpy: 11
+  seed_torch: 11
+  seed_cuda: 11
+  seed_dataloader: 11
+
+model:
+  architecture: model_a_nodal_multiscale_pair
+  active_scales:
+    - mutation
+    - local
+    - global
+  projection_instance:
+    enabled: false
+
+features:
+  domains:
+    enabled: false
+
+training:
+  device: auto
+  epochs: 100
+  batch_size: 4
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  scheduler: cosine
+  mixed_precision:
+    enabled: false
+    gpu_only: true
+  early_stopping:
+    enabled: true
+    monitor: validation_loss
+    mode: min
+    patience: 15
+    min_delta: 0.0
+  checkpointing:
+    enabled: true
+    monitor: validation_loss
+    mode: min
+    save_best: true
+    save_last: true
+  smoke_test:
+    enabled: false
+
+loss:
+  main: nt_xent
+  temperature: 0.2
+  lambda_wt: 0.0
+  lambda_delta: 0.0
+  false_negative_mask:
+    enabled: true
+    mode: same_position
+    same_position: true
+    strict: true
+    min_valid_negatives: 1
+    min_valid_negative_fraction: 0.0
+
+split:
+  type: leave_position_out
+  validation_fraction: 0.15
+  test_fraction: 0.15
+  group_key: position
+  shuffle_groups: true
+  seed: 42
+  persist_path: splits/leave_position_out_seed_42.json
+  allow_create: false
+
+a9:
+  protocol_version: 1
+  run_seeds: [11, 23, 37, 41, 53]
+  biological_variants: 483
+  native_wt_controls: 1
+  expected_partitions:
+    train: 342
+    validation: 78
+    test: 63
+  expected_hdf5_fingerprints:
+    mutants: 92eb242f5565db6194a5e29e3469775fbf7d8c07280ed2d8cdfd5ab98b5b5631
+    wt_companion: 29f68e98ae300207511594e0baf7621ba9e67c85d8df12ceee812a1dea3aa91a
+    combined: 9a320862a54566d232e1ef2a4eafa468cf900a19186dc0fd7c92aaf0abe06c68
+  expected_split_fingerprint: 8dcc611a6575b95242fda70d2b29e6bf4917a9c781bbeebd851e95e71391d7dd
+  acceptance:
+    reject_nonfinite: true
+    reject_exact_collapse: true
+    required_pair_representations:
+      - h_pair_delta
+      - z_delta_pair
+      - z_instance_pair
+
+outputs:
+  root_dir: runs/model_a_a9
+  model_name: model_a_nodal_multiscale_pair

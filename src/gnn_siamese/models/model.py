@@ -131,7 +131,13 @@ class SharedSiameseEncoderModel(nn.Module):
     def encode_graph(self, graph: object) -> EncoderBranchOutput:
         return self.shared_encoder(graph)
 
-    def forward(self, *, graph_mut: object, graph_wt: object) -> SharedSiameseEncoderOutput:
+    def forward(
+        self,
+        *,
+        graph_mut: object,
+        graph_wt: object,
+        allow_trainable_z_delta: bool = False,
+    ) -> SharedSiameseEncoderOutput:
         mut_branch = self.encode_graph(graph_mut)
         wt_branch = self.encode_graph(graph_wt)
         relational_output: RelationalOutput | None = None
@@ -147,10 +153,16 @@ class SharedSiameseEncoderModel(nn.Module):
             if self.pair_projection_source == "r_delta":
                 z_instance_pair = self.projection_pair(relational_output.r_delta, input_name="r_delta")
             else:
-                if not relational_output.z_delta_is_validated or relational_output.z_delta is None:
+                if relational_output.z_delta is None:
+                    raise ValueError(
+                        "projection_pair configured with source 'z_delta', but mlp_delta is unavailable."
+                    )
+                if not allow_trainable_z_delta and not relational_output.z_delta_is_validated:
                     raise ValueError(
                         "projection_pair configured with source 'z_delta', but z_delta is not validated."
                     )
+                if not relational_output.z_delta.isfinite().all():
+                    raise ValueError("projection_pair received non-finite trainable z_delta.")
                 z_instance_pair = self.projection_pair(relational_output.z_delta, input_name="z_delta")
 
         return SharedSiameseEncoderOutput(
@@ -193,6 +205,53 @@ class ModelBContrastiveBaseline(nn.Module):
         return ModelBContrastiveOutput(
             z1=view1.z_instance,
             z2=view2.z_instance,
+            view1=view1,
+            view2=view2,
+        )
+
+
+class ModelBGraphLevelRelationalContrastive(nn.Module):
+    """Contrast two complete Mut-WT relational views through ``z_delta``."""
+
+    architecture_name = "model_b_graph_level_relational"
+
+    def __init__(self, siamese_model: SharedSiameseEncoderModel) -> None:
+        super().__init__()
+        if siamese_model.relational_module is None:
+            raise ValueError("Relational Model B requires relational_module.")
+        if siamese_model.relational_module.mlp_delta is None:
+            raise ValueError("Relational Model B requires mlp_delta.")
+        if siamese_model.projection_pair is None:
+            raise ValueError("Relational Model B requires projection_pair.")
+        if siamese_model.pair_projection_source != "z_delta":
+            raise ValueError("Relational Model B requires projection_pair source='z_delta'.")
+        if siamese_model.projection_instance is not None:
+            raise ValueError("Relational Model B must not instantiate projection_instance.")
+        self.siamese_model = siamese_model
+
+    def forward(
+        self,
+        *,
+        view1_graph_mut: object,
+        view1_graph_wt: object,
+        view2_graph_mut: object,
+        view2_graph_wt: object,
+    ) -> ModelBContrastiveOutput:
+        view1 = self.siamese_model(
+            graph_mut=view1_graph_mut,
+            graph_wt=view1_graph_wt,
+            allow_trainable_z_delta=True,
+        )
+        view2 = self.siamese_model(
+            graph_mut=view2_graph_mut,
+            graph_wt=view2_graph_wt,
+            allow_trainable_z_delta=True,
+        )
+        if view1.z_instance_pair is None or view2.z_instance_pair is None:
+            raise ValueError("Relational Model B requires z_instance_pair in both augmented views.")
+        return ModelBContrastiveOutput(
+            z1=view1.z_instance_pair,
+            z2=view2.z_instance_pair,
             view1=view1,
             view2=view2,
         )

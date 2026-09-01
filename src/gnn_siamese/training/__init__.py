@@ -25,11 +25,16 @@ from gnn_siamese.training.loop import (
 from gnn_siamese.training.checkpointing import (
     build_legacy_resume_compatibility_payload,
     load_checkpoint,
+    load_validated_historical_best,
     move_optimizer_state_to_device,
     resume_from_checkpoint,
     save_checkpoint,
 )
-from gnn_siamese.training.gradient_audit import create_gradient_audit, finalize_gradient_audit
+from gnn_siamese.training.gradient_audit import (
+    create_gradient_audit,
+    expected_a9_active_module_names,
+    finalize_gradient_audit,
+)
 from gnn_siamese.training.model_a_contrastive import (
     ModelAContrastive,
     ModelAContrastiveOutput,
@@ -53,10 +58,12 @@ __all__ = [
     "bootstrap_operational_run",
     "complete_operational_run",
     "create_gradient_audit",
+    "expected_a9_active_module_names",
     "fit",
     "fit_model_b_baseline",
     "finalize_gradient_audit",
     "load_checkpoint",
+    "load_validated_historical_best",
     "move_optimizer_state_to_device",
     "run_model_b_epoch",
     "run_contrastive_epoch",

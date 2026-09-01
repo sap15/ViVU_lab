@@ -148,8 +148,29 @@ def validate_c1_config(config: Mapping[str, Any]) -> dict[str, Any]:
     accumulation = int(training.get("gradient_accumulation_steps", 1))
     if accumulation != 1:
         raise ConfigError("training.gradient_accumulation_steps must be 1; accumulation is not supported in Pre-Colab C1.")
-    if _option_enabled(training.get("early_stopping", False), field_name="training.early_stopping"):
-        raise ConfigError("training.early_stopping.enabled=true is not supported in Pre-Colab C1.")
+    early_stopping = training.get("early_stopping", {})
+    if not isinstance(early_stopping, Mapping):
+        raise ConfigError("training.early_stopping must be a mapping.")
+    if _option_enabled(early_stopping, field_name="training.early_stopping"):
+        monitor = str(early_stopping.get("monitor", "validation_loss"))
+        mode = str(early_stopping.get("mode", "min"))
+        patience = int(early_stopping.get("patience", 0))
+        min_delta = float(early_stopping.get("min_delta", 0.0))
+        if not monitor:
+            raise ConfigError("training.early_stopping.monitor must not be empty.")
+        if mode not in {"min", "max"}:
+            raise ConfigError("training.early_stopping.mode must be min or max.")
+        if patience <= 0:
+            raise ConfigError("training.early_stopping.patience must be greater than zero.")
+        if min_delta < 0.0:
+            raise ConfigError("training.early_stopping.min_delta must be non-negative.")
+        training["early_stopping"] = {
+            **dict(early_stopping),
+            "monitor": monitor,
+            "mode": mode,
+            "patience": patience,
+            "min_delta": min_delta,
+        }
 
     canonical_root = outputs.get("root_dir")
     legacy_root = paths.get("runs_root")

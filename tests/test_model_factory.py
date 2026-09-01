@@ -17,6 +17,7 @@ from gnn_siamese.models import (
     ModelANodalMultiscalePair,
     ModelAProjectionHead,
     ModelBContrastiveBaseline,
+    ModelBGraphLevelRelationalContrastive,
 )
 from gnn_siamese.training import (
     bootstrap_operational_run,
@@ -70,6 +71,10 @@ def _config(tmp_path: Path, architecture: str) -> dict:
             "min_valid_negatives": 1,
             "min_valid_negative_fraction": 0.0,
         }
+    elif architecture == "model_b_graph_level_relational":
+        config["model"]["projection_instance"]["enabled"] = False
+        config["model"]["mlp_delta"]["enabled"] = True
+        config["model"]["projection_pair"].update({"enabled": True, "input": "z_delta"})
     return config
 
 
@@ -89,9 +94,9 @@ def test_factory_builds_distinct_final_a_and_b_classes(tmp_path: Path) -> None:
     b = build_training_pipeline(_config(tmp_path / "b", "model_b_graph_level_relational"))
 
     assert isinstance(a.model, ModelANodalMultiscalePair)
-    assert isinstance(b.model, ModelBContrastiveBaseline)
+    assert isinstance(b.model, ModelBGraphLevelRelationalContrastive)
     assert type(a.model) is not type(b.model)
-    assert b.model.architecture_name == "model_b"
+    assert b.model.architecture_name == "model_b_graph_level_relational"
     assert a.model.two_view_model.one_view_model.multiscale_pooling.enabled_scales == (
         "mutation", "local", "global"
     )
@@ -110,7 +115,7 @@ def test_historical_model_b_selector_keeps_historical_type_and_contract(tmp_path
         run_seed=123,
         epoch=0,
     )
-    assert output.architecture == "model_b_graph_level_relational"
+    assert output.architecture == "model_b"
     assert output.loss is None
     assert {"z1", "z2"}.issubset(output.to_dict())
 

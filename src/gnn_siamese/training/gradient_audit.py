@@ -157,12 +157,15 @@ def build_module_registry(model: torch.nn.Module, loss_weights: Mapping[str, flo
             },
         }
     siamese_model = getattr(model, "siamese_model", None)
+    relational_contrastive = (
+        getattr(model, "architecture_name", None) == "model_b_graph_level_relational"
+    )
     shared_encoder = getattr(siamese_model, "shared_encoder", None)
     projection_instance = getattr(siamese_model, "projection_instance", None)
     projection_pair = getattr(siamese_model, "projection_pair", None)
     relational_module = getattr(siamese_model, "relational_module", None)
     mlp_delta = None if relational_module is None else getattr(relational_module, "mlp_delta", None)
-    pooling_fusion = None if shared_encoder is None else getattr(shared_encoder, "fusion_mlp", None)
+    pooling_fusion = None if shared_encoder is None else getattr(shared_encoder, "mlp_fusion", None)
     bio_head = getattr(siamese_model, "bio_head", None)
     relative_wt_head = getattr(siamese_model, "relative_wt_head", None)
     reconstruction_decoder = getattr(siamese_model, "reconstruction_decoder", None)
@@ -181,17 +184,25 @@ def build_module_registry(model: torch.nn.Module, loss_weights: Mapping[str, flo
         "projection_instance": {
             "module": projection_instance,
             "connected_losses": _connected_losses(["nt_xent"], loss_weights),
-            "status_hint": "active",
+            "status_hint": "not_applicable" if projection_instance is None else "active",
         },
         "projection_pair": {
             "module": projection_pair,
-            "connected_losses": _connected_losses(["delta"], loss_weights),
-            "status_hint": "inactive" if loss_weights.get("delta", 0.0) <= 0.0 else "active",
+            "connected_losses": _connected_losses(
+                ["nt_xent"] if relational_contrastive else ["delta"], loss_weights
+            ),
+            "status_hint": "active" if relational_contrastive else (
+                "inactive" if loss_weights.get("delta", 0.0) <= 0.0 else "active"
+            ),
         },
         "mlp_delta": {
             "module": mlp_delta,
-            "connected_losses": _connected_losses(["delta"], loss_weights),
-            "status_hint": "inactive" if loss_weights.get("delta", 0.0) <= 0.0 else "active",
+            "connected_losses": _connected_losses(
+                ["nt_xent"] if relational_contrastive else ["delta"], loss_weights
+            ),
+            "status_hint": "active" if relational_contrastive else (
+                "inactive" if loss_weights.get("delta", 0.0) <= 0.0 else "active"
+            ),
         },
         "relative_wt_head": {
             "module": relative_wt_head,
@@ -209,6 +220,17 @@ def build_module_registry(model: torch.nn.Module, loss_weights: Mapping[str, flo
             "status_hint": "not_applicable" if reconstruction_decoder is None else "inactive",
         },
     }
+
+
+def expected_a9_active_module_names(config: Mapping[str, Any]) -> tuple[str, ...]:
+    """Canonical A9 module inventory matching ``build_module_registry`` names."""
+
+    architecture = str(config.get("model", {}).get("architecture", ""))
+    if architecture == "model_a_nodal_multiscale_pair":
+        return ("encoder", "node_delta_block", "pair_fusion", "projection_pair_a")
+    if architecture == "model_b_graph_level_relational":
+        return ("encoder", "pooling_fusion", "mlp_delta", "projection_pair")
+    raise ValueError(f"Architecture is not an A9 productive architecture: {architecture!r}")
 
 
 def create_gradient_audit(

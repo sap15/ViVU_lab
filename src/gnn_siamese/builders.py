@@ -36,6 +36,7 @@ from gnn_siamese.models import (
     EdgeAwareGraphEncoder,
     InstanceProjectionHead,
     ModelBContrastiveBaseline,
+    ModelBGraphLevelRelationalContrastive,
     PairProjectionHead,
     ProjectionHeadConfig,
     RelationalRepresentation,
@@ -330,6 +331,9 @@ def _subset_dataset(dataset: MutWtPairDataset, indices: list[int]) -> Subset:
 def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, split_bundle: SplitBundle) -> DataLoadersBundle:
     training_cfg = _require_mapping(config.get("training"), field_name="config.training")
     project_cfg = _require_mapping(config.get("project"), field_name="config.project")
+    reproducibility_cfg = _require_mapping(
+        config.get("reproducibility", {}), field_name="config.reproducibility"
+    )
     batch_size = int(training_cfg.get("batch_size", 4))
     if batch_size <= 0:
         raise BuilderError("training.batch_size must be positive.")
@@ -345,7 +349,9 @@ def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, spli
         "collate_fn": collate_mut_wt_pairs,
     }
     train_generator = torch.Generator(device="cpu")
-    train_generator.manual_seed(int(project_cfg.get("seed", 42)))
+    train_generator.manual_seed(
+        int(reproducibility_cfg.get("seed_dataloader", project_cfg.get("seed", 42)))
+    )
     architecture = str(
         _require_mapping(config.get("model"), field_name="config.model").get(
             "architecture", "model_b"
@@ -388,8 +394,12 @@ def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, spli
     )
 
 
-def _build_model_b(config: Mapping[str, Any], dataset: MutWtPairDataset) -> ModelBContrastiveBaseline:
+def _build_model_b(
+    config: Mapping[str, Any], dataset: MutWtPairDataset
+) -> ModelBContrastiveBaseline | ModelBGraphLevelRelationalContrastive:
     model_cfg = _require_mapping(config.get("model"), field_name="config.model")
+    architecture = str(model_cfg.get("architecture", "model_b"))
+    relational_contrastive = architecture == "model_b_graph_level_relational"
 
     graph_dim = int(model_cfg.get("graph_dim", 128))
     encoder = EdgeAwareGraphEncoder(
@@ -411,7 +421,7 @@ def _build_model_b(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Mode
         model_cfg.get("projection_instance"),
         field_name="config.model.projection_instance",
     )
-    if not bool(projection_instance_cfg.get("enabled", True)):
+    if not relational_contrastive and not bool(projection_instance_cfg.get("enabled", True)):
         raise BuilderError("Model B baseline requires model.projection_instance.enabled=true.")
     if int(projection_instance_cfg.get("num_layers", 2)) != 2:
         raise BuilderError("Current projection_instance implementation only supports num_layers=2.")
@@ -432,7 +442,7 @@ def _build_model_b(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Mode
             mlp_delta_num_layers=int(mlp_delta_cfg.get("num_layers", 2)),
             mlp_delta_dropout=float(mlp_delta_cfg.get("dropout", 0.0)),
         ),
-        projection_instance=InstanceProjectionHead(
+        projection_instance=None if relational_contrastive else InstanceProjectionHead(
             config=ProjectionHeadConfig(
                 input_dim=graph_dim,
                 hidden_dim=int(projection_instance_cfg.get("hidden_dim", graph_dim)),
@@ -458,6 +468,16 @@ def _build_model_b(config: Mapping[str, Any], dataset: MutWtPairDataset) -> Mode
         ),
         pair_projection_source=str(projection_pair_cfg.get("input", "r_delta")),
     )
+    if relational_contrastive:
+        if bool(projection_instance_cfg.get("enabled", True)):
+            raise BuilderError("Relational Model B requires model.projection_instance.enabled=false.")
+        if not bool(mlp_delta_cfg.get("enabled", False)):
+            raise BuilderError("Relational Model B requires model.mlp_delta.enabled=true.")
+        if not bool(projection_pair_cfg.get("enabled", False)):
+            raise BuilderError("Relational Model B requires model.projection_pair.enabled=true.")
+        if str(projection_pair_cfg.get("input", "r_delta")) != "z_delta":
+            raise BuilderError("Relational Model B requires model.projection_pair.input=z_delta.")
+        return ModelBGraphLevelRelationalContrastive(siamese)
     return ModelBContrastiveBaseline(siamese)
 
 
@@ -612,9 +632,10 @@ def _validate_model_input_dim(dataset: MutWtPairDataset, model: torch.nn.Module)
     graph_mut, graph_wt = dataset._load_pair_graphs(dataset.pairs[0])
     mut_dim = int(graph_mut.x.shape[1])
     wt_dim = int(graph_wt.x.shape[1])
+    siamese_model = getattr(model, "siamese_model", None)
     encoder = (
-        model.siamese_model.shared_encoder
-        if isinstance(model, ModelBContrastiveBaseline)
+        siamese_model.shared_encoder
+        if siamese_model is not None
         else model.two_view_model.one_view_model.shared_encoder
     )
     configured_dim = int(encoder.input_projection.in_features)

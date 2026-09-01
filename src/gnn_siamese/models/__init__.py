@@ -9,6 +9,7 @@ from gnn_siamese.models.encoder import EdgeAwareGraphEncoder, EncoderBranchOutpu
 from gnn_siamese.models.model import (
     ModelBContrastiveBaseline,
     ModelBContrastiveOutput,
+    ModelBGraphLevelRelationalContrastive,
     SharedSiameseEncoderModel,
     SharedSiameseEncoderOutput,
 )
@@ -61,6 +62,7 @@ __all__ = [
     "ModelAMultiscaleRelationalOutput",
     "ModelBContrastiveBaseline",
     "ModelBContrastiveOutput",
+    "ModelBGraphLevelRelationalContrastive",
     "ModelAMultiscalePooling",
     "ModelAMultiscalePoolingOutput",
     "ModelAProjectionHead",

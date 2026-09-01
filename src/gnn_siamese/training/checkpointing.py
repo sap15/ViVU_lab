@@ -205,6 +205,8 @@ def build_resume_compatibility_payload(
         "split_fingerprint": fingerprint_split_definition(split_bundle.split),
         "split_type": str(split_bundle.split.split_type),
     }
+    if isinstance(config.get("a9"), Mapping):
+        payload["a9_run_seed"] = int(config.get("project", {}).get("seed", -1))
     if str(model_cfg.get("architecture", "model_b")) == "model_a_nodal_multiscale_pair":
         payload["architecture"]["model_a"] = {
             "active_scales": _json_safe(list(model_cfg.get("active_scales", []))),
@@ -236,6 +238,7 @@ def build_legacy_resume_compatibility_payload(
     payload.pop("compatibility_metadata", None)
     payload.pop("schema", None)
     payload.pop("hdf5_content_fingerprint", None)
+    payload.pop("a9_run_seed", None)
     payload["dataset_fingerprint"] = build_dataset_fingerprint(dataset)
     payload["split_fingerprint"] = str(split_bundle.split.dataset_fingerprint)
     return payload
@@ -269,6 +272,11 @@ def validate_resume_compatibility(
         return "legacy_unavailable_historical_controls_only"
 
     expected_normalized = _json_safe(expected)
+    if "a9_run_seed" not in expected_normalized:
+        for payload in (checkpoint_normalized, expected_normalized):
+            scheduler_config = payload.get("scheduler", {}).get("config")
+            if isinstance(scheduler_config, dict):
+                scheduler_config.pop("T_max", None)
     if checkpoint_normalized != expected_normalized:
         mismatch = _find_first_mismatch(checkpoint_normalized, expected_normalized, path="compatibility")
         raise ValueError(f"Checkpoint resume incompatibility detected for {mismatch}.")
@@ -297,6 +305,8 @@ def save_checkpoint(
     hdf5_content_fingerprint: Mapping[str, Any] | None = None,
     augmenter_state: Mapping[str, Any] | None = None,
     data_loader_state: Mapping[str, Any] | None = None,
+    early_stopping_bad_epochs: int = 0,
+    early_stopping_state: Mapping[str, Any] | None = None,
 ) -> None:
     payload = {
         "format_version": 1,
@@ -323,6 +333,8 @@ def save_checkpoint(
         "rng_state": capture_rng_state(),
         "augmenter_state": None if augmenter_state is None else dict(augmenter_state),
         "data_loader_state": None if data_loader_state is None else dict(data_loader_state),
+        "early_stopping_bad_epochs": int(early_stopping_bad_epochs),
+        "early_stopping": None if early_stopping_state is None else _json_safe(dict(early_stopping_state)),
     }
     save_checkpoint_payload_atomic(payload, path)
 
@@ -382,6 +394,34 @@ def load_checkpoint(path: str | Path, *, map_location: str | torch.device = "cpu
     if not isinstance(payload, dict):
         raise ValueError(f"Checkpoint payload must be a dict: {path}")
     return payload
+
+
+def load_validated_historical_best(
+    resume_path: str | Path,
+    *,
+    last_payload: Mapping[str, Any],
+    expected_compatibility: Mapping[str, Any],
+    legacy_expected_compatibility: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Load the real sibling best.pt; never relabel last.pt as best.pt."""
+
+    source = Path(resume_path).resolve()
+    best_path = source.parent / "best.pt"
+    if not best_path.is_file():
+        raise ValueError(f"Resume requires the historical best checkpoint: {best_path}")
+    best = load_checkpoint(best_path, map_location="cpu")
+    validate_resume_compatibility(
+        best, expected_compatibility, legacy_expected=legacy_expected_compatibility
+    )
+    for field in ("run_id", "architecture", "seed", "split_fingerprint", "dataset_fingerprint"):
+        if best.get(field) != last_payload.get(field):
+            raise ValueError(f"Historical best checkpoint mismatch for {field}.")
+    historical_best = last_payload.get("best_metric")
+    if historical_best is None or best.get("best_metric") != historical_best:
+        raise ValueError("Historical best checkpoint does not prove the last checkpoint's best_metric.")
+    if int(best.get("epoch_completed", -1)) > int(last_payload.get("epoch_completed", -1)):
+        raise ValueError("Historical best checkpoint epoch is later than the resume checkpoint.")
+    return best
 
 
 def resume_from_checkpoint(
@@ -467,8 +507,8 @@ def _optimizer_config_from_instance(optimizer: torch.optim.Optimizer) -> dict[st
 def _scheduler_config_from_instance(scheduler: Any | None, *, scheduler_name: str) -> dict[str, Any] | None:
     if scheduler is None:
         return None
-    config: dict[str, Any] = {"name": scheduler_name}
-    for key in ("gamma", "step_size", "eta_min"):
+    config: dict[str, Any] = {"name": scheduler_name, "step_semantics": "once_per_epoch"}
+    for key in ("gamma", "step_size", "eta_min", "T_max"):
         if hasattr(scheduler, key):
             config[key] = _json_safe(getattr(scheduler, key))
     return config
@@ -501,6 +541,13 @@ def _validate_scheduler_resume(
         )
     checkpoint_config = checkpoint_scheduler.get("config")
     expected_config = expected_scheduler.get("config")
+    if "a9_run_seed" not in expected_compatibility:
+        # Historical workflows allowed extending the planned epoch horizon.
+        # A9 alone freezes and enforces T_max=100.
+        checkpoint_config = dict(checkpoint_config or {})
+        expected_config = dict(expected_config or {})
+        checkpoint_config.pop("T_max", None)
+        expected_config.pop("T_max", None)
     if checkpoint_config != expected_config:
         raise ValueError(
             "Checkpoint resume incompatibility detected for scheduler config: "

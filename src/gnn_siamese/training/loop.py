@@ -23,6 +23,7 @@ from gnn_siamese.training.checkpointing import (
     build_legacy_resume_compatibility_payload,
     build_resume_compatibility_payload,
     load_checkpoint,
+    load_validated_historical_best,
     resume_from_checkpoint,
     save_checkpoint,
     save_checkpoint_payload_atomic,
@@ -1016,6 +1017,12 @@ def _train_contrastive_pipeline_impl(
         monitor=str(training_cfg.get("checkpointing", {}).get("monitor", "validation_loss")),
         mode=str(training_cfg.get("checkpointing", {}).get("mode", "min")),
     )
+    early_stopping_cfg = dict(training_cfg.get("early_stopping", {}))
+    early_stopping_enabled = bool(early_stopping_cfg.get("enabled", False))
+    early_stopping_monitor = str(early_stopping_cfg.get("monitor", selection.monitor))
+    early_stopping_mode = str(early_stopping_cfg.get("mode", selection.mode))
+    early_stopping_patience = int(early_stopping_cfg.get("patience", 15))
+    early_stopping_min_delta = float(early_stopping_cfg.get("min_delta", 0.0))
     manifest_writer.set_stage("expanding_manifest")
     manifest_writer.update(
         {
@@ -1167,7 +1174,9 @@ def _train_contrastive_pipeline_impl(
             },
             "training": {
                 "optimizer": str(training_cfg.get("optimizer", "adamw")),
+                "optimizer_class": pipeline.optimizer.__class__.__name__,
                 "scheduler": str(training_cfg.get("scheduler", "none")),
+                "scheduler_details": dict(compatibility.get("scheduler", {})),
                 "learning_rate": float(training_cfg.get("learning_rate", 0.0)),
                 "weight_decay": float(training_cfg.get("weight_decay", 0.0)),
                 "batch_size": int(training_cfg.get("batch_size", 0)),
@@ -1179,6 +1188,15 @@ def _train_contrastive_pipeline_impl(
                 "gradient_clipping": training_cfg.get("gradient_clip_norm"),
                 "best_selection": {"monitor": selection.monitor, "mode": selection.mode},
                 "resume_from": None if resume_from is None else str(resume_from),
+                "early_stopping": {
+                    "enabled": early_stopping_enabled,
+                    "monitor": early_stopping_monitor,
+                    "mode": early_stopping_mode,
+                    "patience": early_stopping_patience,
+                    "min_delta": early_stopping_min_delta,
+                    "bad_epochs": 0,
+                    "best_metric": None,
+                },
             },
             "losses": {
                 "main": str(loss_cfg.get("main", "nt_xent")),
@@ -1227,6 +1245,9 @@ def _train_contrastive_pipeline_impl(
     resumed_from_path: str | None = None
     resumed_epoch_completed = 0
     completed_epoch = 0
+    early_stopping_bad_epochs = 0
+    early_stopping_best_metric: float | None = None
+    stopped_early = False
     train_history: list[BaselineEpochOutput] = []
     validation_history: list[BaselineEpochOutput] = []
     try:
@@ -1234,6 +1255,18 @@ def _train_contrastive_pipeline_impl(
             pipeline.model,
             pipeline.optimizer,
             loss_weights=loss_weights,
+        )
+        manifest_writer.update(
+            {
+                "gradient_audit_identity": {
+                    "expected_active_modules": sorted(
+                        name
+                        for name, tracker in gradient_trackers.items()
+                        if tracker.status_hint == "active"
+                    ),
+                    "artifact": "gradient_audit.json",
+                }
+            }
         )
         if interruption_controller is not None:
             interruption_controller.raise_if_requested()
@@ -1255,6 +1288,32 @@ def _train_contrastive_pipeline_impl(
             resumed_from_path = resume_state.checkpoint_path
             resumed_epoch_completed = resume_state.epoch_completed
             completed_epoch = resume_state.epoch_completed
+            restored_early = resume_state.checkpoint_payload.get("early_stopping")
+            if isinstance(restored_early, Mapping):
+                expected_early = {
+                    "enabled": early_stopping_enabled,
+                    "monitor": early_stopping_monitor,
+                    "mode": early_stopping_mode,
+                    "patience": early_stopping_patience,
+                    "min_delta": early_stopping_min_delta,
+                }
+                mismatches = {
+                    key: (restored_early.get(key), value)
+                    for key, value in expected_early.items()
+                    if restored_early.get(key) != value
+                }
+                if mismatches:
+                    raise ValueError(f"Early-stopping resume incompatibility: {mismatches}")
+                early_stopping_bad_epochs = int(restored_early.get("bad_epochs", 0))
+                restored_best = restored_early.get("best_metric")
+                early_stopping_best_metric = None if restored_best is None else float(restored_best)
+            elif early_stopping_enabled and isinstance(config.get("a9"), Mapping):
+                raise ValueError("A9 resume checkpoint is missing required early_stopping state.")
+            else:
+                early_stopping_bad_epochs = int(
+                    resume_state.checkpoint_payload.get("early_stopping_bad_epochs", 0)
+                )
+                early_stopping_best_metric = best_metric
             _restore_pipeline_random_state(pipeline, resume_state.checkpoint_payload)
             legacy_content_fingerprint = (
                 resume_state.content_verification
@@ -1280,8 +1339,29 @@ def _train_contrastive_pipeline_impl(
                 }
             )
             if best_metric is not None:
+                if isinstance(config.get("a9"), Mapping):
+                    historical_best = load_validated_historical_best(
+                        resume_from,
+                        last_payload=resume_state.checkpoint_payload,
+                        expected_compatibility=compatibility,
+                        legacy_expected_compatibility=legacy_compatibility,
+                    )
+                else:
+                    # Historical standalone checkpoints predate the A9 paired
+                    # best/last contract and retain their explicit weak policy.
+                    sibling_best = Path(resume_from).resolve().parent / "best.pt"
+                    historical_best = (
+                        load_validated_historical_best(
+                            resume_from,
+                            last_payload=resume_state.checkpoint_payload,
+                            expected_compatibility=compatibility,
+                            legacy_expected_compatibility=legacy_compatibility,
+                        )
+                        if sibling_best.is_file()
+                        else resume_state.checkpoint_payload
+                    )
                 save_checkpoint_payload_atomic(
-                    resume_state.checkpoint_payload,
+                    historical_best,
                     layout.checkpoints_dir / "best.pt",
                 )
 
@@ -1330,6 +1410,32 @@ def _train_contrastive_pipeline_impl(
             metrics_writer.append(epoch_metrics)
 
             monitor_value = _select_monitor_value(selection.monitor, train_epoch, validation_epoch)
+            early_stopping_value = _select_monitor_value(
+                early_stopping_monitor,
+                train_epoch,
+                validation_epoch,
+            )
+            if early_stopping_enabled:
+                (
+                    early_stopping_best_metric,
+                    early_stopping_bad_epochs,
+                    improved_for_early_stopping,
+                ) = _update_early_stopping(
+                    early_stopping_value,
+                    early_stopping_best_metric,
+                    early_stopping_bad_epochs,
+                    mode=early_stopping_mode,
+                    min_delta=early_stopping_min_delta,
+                )
+            early_state = {
+                "enabled": early_stopping_enabled,
+                "monitor": early_stopping_monitor,
+                "mode": early_stopping_mode,
+                "patience": early_stopping_patience,
+                "min_delta": early_stopping_min_delta,
+                "bad_epochs": early_stopping_bad_epochs,
+                "best_metric": early_stopping_best_metric,
+            }
             if selection.is_improved(monitor_value, best_metric):
                 best_metric = float(monitor_value)
                 save_checkpoint(
@@ -1356,7 +1462,10 @@ def _train_contrastive_pipeline_impl(
                     run_id=run_id,
                     augmenter_state=_capture_augmenter_state(pipeline.augmenter),
                     data_loader_state=_capture_data_loader_state(pipeline.dataloaders),
+                    early_stopping_bad_epochs=early_stopping_bad_epochs,
+                    early_stopping_state=early_state,
                 )
+
             save_checkpoint(
                 layout.checkpoints_dir / "last.pt",
                 model=pipeline.model,
@@ -1381,6 +1490,8 @@ def _train_contrastive_pipeline_impl(
                 run_id=run_id,
                 augmenter_state=_capture_augmenter_state(pipeline.augmenter),
                 data_loader_state=_capture_data_loader_state(pipeline.dataloaders),
+                early_stopping_bad_epochs=early_stopping_bad_epochs,
+                early_stopping_state=early_state,
             )
             completed_epoch = epoch
             context.last_valid_checkpoint = "checkpoints/last.pt"
@@ -1395,9 +1506,21 @@ def _train_contrastive_pipeline_impl(
                         "global_step": global_step,
                         "best_metric": best_metric,
                         "last_epoch_metrics": epoch_metrics,
+                        "early_stopping": {
+                            "enabled": early_stopping_enabled,
+                            "monitor": early_stopping_monitor,
+                            "mode": early_stopping_mode,
+                            "patience": early_stopping_patience,
+                            "min_delta": early_stopping_min_delta,
+                            "bad_epochs": early_stopping_bad_epochs,
+                            "best_metric": early_stopping_best_metric,
+                        },
                     }
                 }
             )
+            if early_stopping_enabled and early_stopping_bad_epochs >= early_stopping_patience:
+                stopped_early = True
+                break
 
         manifest_writer.set_stage("finalizing")
         if interruption_controller is not None:
@@ -1419,6 +1542,8 @@ def _train_contrastive_pipeline_impl(
                 "epochs_completed": completed_epoch,
                 "epochs_run_this_invocation": completed_epoch - resumed_epoch_completed,
                 "best_metric": best_metric,
+                "stopped_early": stopped_early,
+                "stop_reason": "early_stopping" if stopped_early else None,
             },
             "modules": module_audit,
             "module_summary": {
@@ -1549,6 +1674,36 @@ def _select_monitor_value(
     raise KeyError(f"Configured checkpoint monitor {monitor!r} is unavailable.")
 
 
+def _metric_improved(
+    candidate: float,
+    best_so_far: float | None,
+    *,
+    mode: str,
+    min_delta: float,
+) -> bool:
+    if best_so_far is None:
+        return True
+    if mode == "min":
+        return candidate < best_so_far - min_delta
+    if mode == "max":
+        return candidate > best_so_far + min_delta
+    raise ValueError(f"Unsupported early-stopping mode {mode!r}.")
+
+
+def _update_early_stopping(
+    candidate: float,
+    best_so_far: float | None,
+    bad_epochs: int,
+    *,
+    mode: str,
+    min_delta: float,
+) -> tuple[float | None, int, bool]:
+    improved = _metric_improved(candidate, best_so_far, mode=mode, min_delta=min_delta)
+    if improved:
+        return float(candidate), 0, True
+    return best_so_far, int(bad_epochs) + 1, False
+
+
 def _resolve_model_name(outputs_cfg: Mapping[str, Any], *, architecture: str) -> str:
     configured = outputs_cfg.get("model_name")
     if configured not in (None, ""):
@@ -1619,9 +1774,11 @@ def _restore_pipeline_random_state(pipeline: Any, checkpoint_payload: Mapping[st
 def _resolve_z_delta_learned(module_record: Mapping[str, Any], *, config: Mapping[str, Any]) -> tuple[bool, str]:
     mlp_delta_enabled = bool(config.get("model", {}).get("mlp_delta", {}).get("enabled", False))
     lambda_delta = float(config.get("loss", {}).get("lambda_delta", 0.0))
+    architecture = str(config.get("model", {}).get("architecture", "model_b"))
+    relational_nt_xent = architecture == "model_b_graph_level_relational"
     if not mlp_delta_enabled:
         return False, "model.mlp_delta.enabled=false"
-    if lambda_delta <= 0.0:
+    if lambda_delta <= 0.0 and not relational_nt_xent:
         return False, "loss.lambda_delta=0"
     if not module_record:
         return False, "mlp_delta audit missing"
@@ -1629,12 +1786,13 @@ def _resolve_z_delta_learned(module_record: Mapping[str, Any], *, config: Mappin
         return False, f"mlp_delta status={module_record.get('status')}"
     if not module_record.get("optimizer_group"):
         return False, "mlp_delta missing optimizer group"
-    if "delta" not in list(module_record.get("connected_losses", [])):
-        return False, "mlp_delta not connected to L_delta"
+    expected_loss = "nt_xent" if relational_nt_xent else "delta"
+    if expected_loss not in list(module_record.get("connected_losses", [])):
+        return False, f"mlp_delta not connected to {expected_loss}"
     if bool(module_record.get("has_nan_or_inf", False)):
         return False, "mlp_delta gradients invalid"
     if float(module_record.get("mean_gradient_norm", 0.0)) <= 0.0 and float(module_record.get("max_gradient_norm", 0.0)) <= 0.0:
         return False, "mlp_delta gradients are zero"
     if float(module_record.get("relative_weight_change", 0.0)) <= 0.0:
         return False, "mlp_delta weights did not change"
-    return True, "mlp_delta trained and audited"
+    return True, f"mlp_delta trained by {expected_loss} and audited"
