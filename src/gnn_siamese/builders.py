@@ -357,7 +357,43 @@ def build_dataloaders(config: Mapping[str, Any], dataset: MutWtPairDataset, spli
             "architecture", "model_b"
         )
     )
-    if architecture == "model_a_nodal_multiscale_pair":
+
+    use_position_diverse_batching = architecture == "model_a_nodal_multiscale_pair"
+
+    if (
+        not use_position_diverse_batching
+        and architecture in {"model_b", "model_b_graph_level_relational"}
+    ):
+        loss_cfg = _require_mapping(
+            config.get("loss", {}),
+            field_name="config.loss",
+        )
+        mask_cfg = _require_mapping(
+            loss_cfg.get("false_negative_mask", {}),
+            field_name="config.loss.false_negative_mask",
+        )
+
+        min_valid_negatives = float(
+            mask_cfg.get("min_valid_negatives", 8.0)
+        )
+        min_valid_fraction = float(
+            mask_cfg.get(
+                "min_valid_negative_fraction",
+                mask_cfg.get("min_valid_fraction", 0.25),
+            )
+        )
+
+        use_position_diverse_batching = (
+            bool(mask_cfg.get("enabled", False))
+            and str(mask_cfg.get("mode", "none")) == "same_position"
+            and bool(mask_cfg.get("strict", False))
+            and (
+                min_valid_negatives > 0.0
+                or min_valid_fraction > 0.0
+            )
+        )
+
+    if use_position_diverse_batching:
         def positions(indices: list[int]) -> list[int]:
             return [int(dataset.pairs[index].position) for index in indices]
 

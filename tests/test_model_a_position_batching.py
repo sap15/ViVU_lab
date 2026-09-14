@@ -98,7 +98,7 @@ def test_model_a_policy_is_explicit_and_builder_rejects_drift() -> None:
         build_model(changed, Dataset())
 
 
-def test_model_b_keeps_standard_dataloader_behavior(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_model_b_without_strict_same_position_mask_keeps_standard_dataloader_behavior(monkeypatch: pytest.MonkeyPatch) -> None:
     class Pair:
         def __init__(self, position: int) -> None:
             self.position = position
@@ -126,6 +126,118 @@ def test_model_b_keeps_standard_dataloader_behavior(monkeypatch: pytest.MonkeyPa
     loaders = build_dataloaders(config, Dataset(), Split())
     assert not isinstance(loaders.train_loader.batch_sampler, PositionDiverseBatchSampler)
     assert list(loaders.validation_loader) == [[2, 3]]
+
+
+
+def test_model_b_a9_strict_same_position_uses_position_diverse_batching(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Pair:
+        def __init__(self, position: int) -> None:
+            self.position = position
+
+    class Dataset(torch.utils.data.Dataset):
+        pairs = [
+            Pair(10),
+            Pair(20),
+            Pair(30),
+            Pair(40),
+            Pair(827),
+            Pair(827),
+        ]
+
+        def __len__(self) -> int:
+            return len(self.pairs)
+
+        def __getitem__(self, index: int) -> int:
+            return index
+
+    class Split:
+        train_indices = list(range(6))
+        validation_indices = list(range(6))
+        test_indices = list(range(6))
+
+    monkeypatch.setattr(
+        "gnn_siamese.builders.collate_mut_wt_pairs",
+        lambda values: values,
+    )
+
+    # Contrato productivo real de Modelo B A9.
+    config = load_config("configs/model_b_a9.yaml")
+
+    loaders = build_dataloaders(
+        config,
+        Dataset(),
+        Split(),
+    )
+
+    assert isinstance(
+        loaders.train_loader.batch_sampler,
+        PositionDiverseBatchSampler,
+    )
+
+    assert isinstance(
+        loaders.validation_loader.batch_sampler,
+        PositionDiverseBatchSampler,
+    )
+
+    assert isinstance(
+        loaders.test_loader.batch_sampler,
+        PositionDiverseBatchSampler,
+    )
+
+    positions = [
+        pair.position
+        for pair in Dataset.pairs
+    ]
+
+    validation_batches = list(
+        loaders.validation_loader.batch_sampler
+    )
+
+    # Mismo tamaño total y mismo patrón 4 + 2.
+    assert [len(batch) for batch in validation_batches] == [4, 2]
+
+    # Cada variante exactamente una vez.
+    flat = [
+        index
+        for batch in validation_batches
+        for index in batch
+    ]
+
+    assert Counter(flat) == Counter(range(6))
+
+    # Cada batch debe disponer de al menos dos posiciones.
+    for batch in validation_batches:
+        batch_positions = [
+            positions[index]
+            for index in batch
+        ]
+
+        assert len(set(batch_positions)) >= 2
+
+        mask = build_false_negative_mask(
+            batch_size=len(batch),
+            mode="same_position",
+            positions=batch_positions,
+            min_valid_negatives=1,
+            min_valid_fraction=0.0,
+            strict=True,
+        )
+
+        assert min(
+            item.valid_negatives
+            for item in mask.per_anchor_stats
+        ) >= 1
+
+    terminal_positions = [
+        positions[index]
+        for index in validation_batches[-1]
+    ]
+
+    # El caso degenerado observado en B11 no puede reaparecer.
+    assert terminal_positions != [827, 827]
+
 
 
 def test_generator_state_reproduces_next_train_epoch_for_resume() -> None:

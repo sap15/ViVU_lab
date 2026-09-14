@@ -387,6 +387,9 @@ def test_same_position_mask_uses_real_positions_and_modifies_negative_weights(tm
             {"position": 100, "wt_full": "Glycine", "mut_full": "Serine", "wt_aa": "G", "mut_aa": "S"},
             {"position": 220, "wt_full": "Alanine", "mut_full": "Valine", "wt_aa": "A", "mut_aa": "V"},
             {"position": 221, "wt_full": "Alanine", "mut_full": "Threonine", "wt_aa": "A", "mut_aa": "T"},
+            {"position": 222, "wt_full": "Alanine", "mut_full": "Valine", "wt_aa": "A", "mut_aa": "V"},
+            {"position": 223, "wt_full": "Alanine", "mut_full": "Valine", "wt_aa": "A", "mut_aa": "V"},
+            {"position": 224, "wt_full": "Alanine", "mut_full": "Valine", "wt_aa": "A", "mut_aa": "V"},
         ],
     )
     write_schema_json(schema_path)
@@ -396,6 +399,9 @@ def test_same_position_mask_uses_real_positions_and_modifies_negative_weights(tm
         schema_path,
         split_path,
         overrides={
+            "training": {
+                "batch_size": 3,
+            },
             "loss": {
                 "false_negative_mask": {
                     "enabled": True,
@@ -404,7 +410,7 @@ def test_same_position_mask_uses_real_positions_and_modifies_negative_weights(tm
                     "min_valid_negative_fraction": 0.25,
                     "strict": True,
                 }
-            }
+            },
         },
     )
     config["__config_path__"] = str(tmp_path / "config.yaml")
