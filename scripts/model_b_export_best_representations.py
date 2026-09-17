@@ -23,7 +23,10 @@ for candidate in (str(REPO_ROOT), str(REPO_ROOT / "src")):
 
 from gnn_siamese.builders import build_dataset_bundle, build_model
 from gnn_siamese.data import collate_mut_wt_pairs, load_leave_position_out_split
-from gnn_siamese.training.a9_contract import MODEL_B_ARCHITECTURE
+from gnn_siamese.training.a9_contract import (
+    A9ContractError,
+    MODEL_B_ARCHITECTURE,
+)
 from gnn_siamese.utils.fingerprints import fingerprint_hdf5_inputs, fingerprint_split_definition, resolve_hdf5_dataset_id
 from scripts.model_b_analysis_common import (
     EXPECTED_SHAPES, REPRESENTATIONS, RUN_SEEDS, ModelBAnalysisError, canonical_ids,

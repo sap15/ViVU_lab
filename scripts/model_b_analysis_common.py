@@ -9,9 +9,17 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+import sys
 from typing import Any, Mapping, Sequence
 
 import numpy as np
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+
+for candidate in (str(REPO_ROOT), str(SRC_ROOT)):
+    if candidate not in sys.path:
+        sys.path.insert(0, candidate)
 
 from gnn_siamese.training.a9_contract import A9ContractError, _audit_representation
 
